@@ -1,5 +1,16 @@
 import {Connector} from "./Connector";
-import {Balances, Exchange, ExchangeOperation, Order, OrderBook, OrderType, Side, Status, Ticker, Trade} from "./Model";
+import {
+    Balances,
+    Exchange,
+    ExchangeOperation,
+    Order,
+    OrderBook,
+    OrderType,
+    Side,
+    Status,
+    Ticker,
+    Trade
+} from "../Model";
 import BigNumber from "bignumber.js";
 
 const ccxt = require('ccxt')

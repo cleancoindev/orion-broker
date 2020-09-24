@@ -1,4 +1,4 @@
-import {Balances, Exchange, ExchangeOperation, Order, OrderBook, Ticker, Trade} from "./Model";
+import {Balances, Exchange, ExchangeOperation, Order, OrderBook, Ticker, Trade} from "../Model";
 
 export interface Connector {
     exchange: Exchange;

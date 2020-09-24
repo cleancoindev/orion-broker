@@ -1,5 +1,5 @@
 import {Connector} from "./Connector";
-import {Balances, Exchange, ExchangeOperation, Order, OrderBook, Status, Ticker, Trade} from "./Model";
+import {Balances, Exchange, ExchangeOperation, Order, OrderBook, Status, Ticker, Trade} from "../Model";
 import {v1 as uuid} from "uuid";
 
 export class EmulatorConnector implements Connector {

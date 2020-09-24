@@ -1,9 +1,7 @@
-import {Order, Side, Trade} from "./connectors/Model";
-import {DbOrder} from "./db";
+import {Order, Side, Trade} from "./Model";
+import {DbOrder} from "./db/Db";
 import BigNumber from "bignumber.js";
 import {log} from "./log";
-
-const fetch = require("node-fetch");
 
 const Web3 = require("web3");
 const Long = require('long');
@@ -111,13 +109,11 @@ const Assets = {
 };
 
 export interface OrionBlockchainSettings {
-    orionBlockchainUrl: string;
     matcherAddress: string;
     privateKey: string;
 }
 
 export class OrionBlockchain {
-    orionBlockchainUrl: string;
     matcherAddress: string;
     bufferKey: Buffer;
     address: string;
@@ -125,7 +121,6 @@ export class OrionBlockchain {
     defaultExpiration: number;
 
     constructor(settings: OrionBlockchainSettings) {
-        this.orionBlockchainUrl = settings.orionBlockchainUrl + '/api';
         this.matcherAddress = settings.matcherAddress;
         try {
             this.bufferKey = Buffer.from(settings.privateKey.substr(2), "hex");
@@ -216,8 +211,7 @@ export class OrionBlockchain {
      * @param trade Trade
      * @returns {Promise<Order>}
      */
-    public async sendTrade(order: DbOrder, trade: Trade): Promise<any> {
-
+    public async signTrade(order: DbOrder, trade: Trade): Promise<any> {
         const bo = this.createBlockchainOrder(order, trade);
         const message = this.hashOrder(bo);
         const signature = this.signOrder(bo);
@@ -236,26 +230,6 @@ export class OrionBlockchain {
             ...bo
         };
 
-        log.log('Sending Trade', JSON.stringify(orionTrade));
-
-        return fetch(`${this.orionBlockchainUrl}/trade`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify(orionTrade)
-        })
-            .then((response) => {
-                log.log('Sending Trade Response', JSON.stringify(response));
-                if (!response.ok) {
-                    throw Error(response.statusText);
-                }
-                return response.json();
-            })
-            .catch((error) => {
-                log.log('Sending Trade Error', JSON.stringify(error));
-                throw error;
-            });
+        return orionTrade;
     }
 }

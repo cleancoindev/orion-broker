@@ -1,4 +1,4 @@
-import {EXCHANGES} from "./main";
+import {EXCHANGES} from "../Model";
 
 export enum DataType {
     EXCHANGE,

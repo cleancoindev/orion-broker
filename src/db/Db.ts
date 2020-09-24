@@ -1,10 +1,8 @@
-import {log} from "./log";
+import {Order, OrderType, Side, Status, Trade} from "../Model";
+import BigNumber from "bignumber.js";
 
 const sqlite3 = require('sqlite3')
 const fs = require('fs');
-
-import {Order, OrderType, Side, Status, Trade} from "./connectors/Model";
-import BigNumber from "bignumber.js";
 
 export interface DbOrder extends Order {
     exchange: string;
@@ -78,7 +76,7 @@ function parseTrade(row: any): Trade {
 }
 
 export class Db {
-    db: any;
+    private db: any; // sqlite3.Database
 
     constructor() {
     }
@@ -121,41 +119,41 @@ export class Db {
         return new Promise((resolve, reject) => {
             this.db.serialize(() => {
                 this.db.run(
-                        `CREATE TABLE "trades"
-                         (
-                             "id"            INTEGER PRIMARY KEY,
-                             "exchange"      VARCHAR(255)   NOT NULL,
-                             "exchangeOrdId" VARCHAR(255)   NOT NULL,
-                             "tradeId"       VARCHAR(255)   NOT NULL,
-                             "price"         DECIMAL(18, 8) NOT NULL,
-                             "qty"           DECIMAL(18, 8) NOT NULL,
-                             "status"        VARCHAR(255)   NOT NULL,
-                             "timestamp"     DATETIME       NOT NULL
-                         );`,
+                    `CREATE TABLE "trades"
+                     (
+                         "id"            INTEGER PRIMARY KEY,
+                         "exchange"      VARCHAR(255)   NOT NULL,
+                         "exchangeOrdId" VARCHAR(255)   NOT NULL,
+                         "tradeId"       VARCHAR(255)   NOT NULL,
+                         "price"         DECIMAL(18, 8) NOT NULL,
+                         "qty"           DECIMAL(18, 8) NOT NULL,
+                         "status"        VARCHAR(255)   NOT NULL,
+                         "timestamp"     DATETIME       NOT NULL
+                     );`,
                     [],
                     function (err) {
                     }
                 );
 
                 this.db.run(
-                        `CREATE TABLE "orders"
-                         (
-                             "id"            INTEGER PRIMARY KEY,
-                             "exchange"      VARCHAR(255)   NOT NULL,
-                             "exchangeOrdId" VARCHAR(255)   NOT NULL,
-                             "ordId"         VARCHAR(255)   NOT NULL,
-                             "subOrdId"      VARCHAR(255)   NOT NULL,
-                             "symbol"        VARCHAR(255)   NOT NULL,
-                             "side"          VARCHAR(255)   NOT NULL,
-                             "ordType"       VARCHAR(255)   NOT NULL,
-                             "price"         DECIMAL(18, 8) NOT NULL,
-                             "qty"           DECIMAL(18, 8) NOT NULL,
-                             "timestamp"     DATETIME       NOT NULL,
-                             "status"        VARCHAR(255)   NOT NULL,
-                             "clientOrdId"   VARCHAR(255)   NOT NULL,
-                             "filledQty"     DECIMAL(18, 8) NOT NULL,
-                             "totalCost"     DECIMAL(18, 8) NOT NULL
-                         );`,
+                    `CREATE TABLE "orders"
+                     (
+                         "id"            INTEGER PRIMARY KEY,
+                         "exchange"      VARCHAR(255)   NOT NULL,
+                         "exchangeOrdId" VARCHAR(255)   NOT NULL,
+                         "ordId"         VARCHAR(255)   NOT NULL,
+                         "subOrdId"      VARCHAR(255)   NOT NULL,
+                         "symbol"        VARCHAR(255)   NOT NULL,
+                         "side"          VARCHAR(255)   NOT NULL,
+                         "ordType"       VARCHAR(255)   NOT NULL,
+                         "price"         DECIMAL(18, 8) NOT NULL,
+                         "qty"           DECIMAL(18, 8) NOT NULL,
+                         "timestamp"     DATETIME       NOT NULL,
+                         "status"        VARCHAR(255)   NOT NULL,
+                         "clientOrdId"   VARCHAR(255)   NOT NULL,
+                         "filledQty"     DECIMAL(18, 8) NOT NULL,
+                         "totalCost"     DECIMAL(18, 8) NOT NULL
+                     );`,
                     [],
                     function (err) {
                         if (err) {
@@ -174,7 +172,8 @@ export class Db {
 
             const t = mapObject(trade);
 
-            this.db.run(`INSERT INTO trades (${t.fields}) VALUES (${t.quests})`, t.values, function (err) {
+            this.db.run(`INSERT INTO trades (${t.fields})
+                         VALUES (${t.quests})`, t.values, function (err) {
                 if (err) {
                     reject(err);
                 } else {
@@ -206,7 +205,8 @@ export class Db {
         return new Promise((resolve, reject) => {
             const t = mapObject(order);
 
-            this.db.run(`INSERT INTO orders (${t.fields}) VALUES (${t.quests})`, t.values, function (err) {
+            this.db.run(`INSERT INTO orders (${t.fields})
+                         VALUES (${t.quests})`, t.values, function (err) {
                 if (err) {
                     reject(err);
                 } else {
@@ -220,7 +220,8 @@ export class Db {
         return new Promise((resolve, reject) => {
             const t = mapObject(order);
 
-            this.db.run(`UPDATE orders SET ${t.update}
+            this.db.run(`UPDATE orders
+                         SET ${t.update}
                          WHERE subOrdId = ?`, t.values.concat([order.subOrdId]), function (err) {
                 if (err) {
                     reject(err);
@@ -293,7 +294,7 @@ export class Db {
 
     async getOrdersToCheck(): Promise<DbOrder[]> {
         return new Promise((resolve, reject) => {
-            this.db.all('SELECT * FROM orders WHERE status != "FILLED_AND_SENT_TO_ORION" AND status != "CANCELLED"', [], (err, rows) => {
+            this.db.all('SELECT * FROM orders WHERE status != "FILLED_AND_SENT_TO_ORION" AND status != "CANCELED"', [], (err, rows) => {
                 if (err) {
                     reject(err);
                 } else {

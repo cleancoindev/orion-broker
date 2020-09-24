@@ -1,10 +1,24 @@
 import BigNumber from "bignumber.js";
+import {ExchangeConfig} from "./connectors/Connectors";
 
 export interface Dictionary<T> {
     [key: string]: T;
 }
 
 export type Balances = Dictionary<BigNumber>;
+
+export const EXCHANGES = ['poloniex', 'bittrex', 'binance', 'bitmax', 'coinex', 'kucoin'];
+
+export function createEmulatorExchangeConfigs() {
+    const exchangeConfigs: Dictionary<ExchangeConfig> = {};
+    for (let exchange of EXCHANGES) {
+        exchangeConfigs[exchange] = {
+            secret: "",
+            key: "emulator",
+        }
+    }
+    return exchangeConfigs;
+}
 
 export enum Status {
     PREPARE = 'PREPARE',
@@ -68,4 +82,14 @@ export interface Trade {
     qty: BigNumber;
     status: Status;
     timestamp: number;
+}
+
+export function calculateTradeStatus(ordQty: BigNumber, filledQty: BigNumber): Status {
+    if (filledQty.isZero()) {
+        return Status.NEW;
+    } else if (filledQty.lt(ordQty)) {
+        return Status.PARTIALLY_FILLED;
+    } else {
+        return Status.FILLED;
+    }
 }

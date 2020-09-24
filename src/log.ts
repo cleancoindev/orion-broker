@@ -1,5 +1,6 @@
 const fs = require('fs');
 const util = require('util');
+
 let logFile = null;
 try {
     logFile = fs.createWriteStream('./broker.log', {flags: 'w'});

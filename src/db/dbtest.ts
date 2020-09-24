@@ -1,6 +1,6 @@
 import {Db} from "./db"
 import BigNumber from "bignumber.js";
-import {OrderType, Side, Status} from "./connectors/Model";
+import {OrderType, Side, Status} from "../Model";
 
 async function init() {
     const db = new Db();

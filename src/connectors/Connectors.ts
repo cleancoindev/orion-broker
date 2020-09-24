@@ -10,7 +10,7 @@ import {
     Side,
     Ticker,
     Trade
-} from "./Model";
+} from "../Model";
 import BigNumber from "bignumber.js";
 import {EmulatorConnector} from "./Emulator";
 import {CCXTConnector} from "./CCXTConnector";

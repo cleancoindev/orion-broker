@@ -1,4 +1,4 @@
-import {Dictionary, OrderType, Side} from "./Model";
+import {Dictionary, OrderType, Side} from "../Model";
 import {Connectors, ExchangeConfig} from "./Connectors";
 import BigNumber from "bignumber.js";
 

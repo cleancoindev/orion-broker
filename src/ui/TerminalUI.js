@@ -1,6 +1,5 @@
 const blessed = require('blessed');
 
-// Create a screen object.
 const screen = blessed.screen({
     smartCSR: true
 });
@@ -11,7 +10,7 @@ screen.key(['escape', 'q', 'C-c'], (ch, key) => {
     return process.exit(0);
 });
 
-export class UI {
+export class TerminalUI {
     constructor() {
         this.isProduction = false;
         this.log = null;
@@ -50,7 +49,7 @@ export class UI {
             type: 'ansi',
             width: 80,
             height: 10,
-            file: __dirname + '/logo.png',
+            file: __dirname + '/../logo.png',
             search: false
         });
 
@@ -406,10 +405,10 @@ data. Please store this password safely since there is no way to reset it.
 
         const history = blessed.log({
             parent: rightBox,
-            top: 0,
+            top: 1,
             left: 0,
             width: '100%-2',
-            height: '100%-2',
+            height: '100%-3',
         });
         this.history = history;
 
