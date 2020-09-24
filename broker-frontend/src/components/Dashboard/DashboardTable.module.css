@@ -1,0 +1,24 @@
+.tableControls {
+    display: flex;
+    padding-left: 16px;
+    width: 340px;
+    margin-top: 10px;
+}
+
+.checkboxLabel {
+    white-space: nowrap;
+    margin-left: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 14px;
+    color: var(--color-text);
+}
+
+.hideZeroCb {
+    align-items: center;
+}
+
+.searchInput {
+    margin-left: 24px;
+    width: 205px;
+}

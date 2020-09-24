@@ -1,0 +1,47 @@
+.notify {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 400px;
+
+    background-color: var(--bg-main-color);
+    border-radius: 4px;
+    box-shadow: 0px 2px 4px rgba(20, 16, 41, 0.12), 0px 0px 1px rgba(20, 16, 41, 0.24);
+
+    -webkit-animation: notifyShow 0.2s ease-in;
+    animation: notifyShow 0.2s ease-in;
+    will-change: opacity, transform;
+
+    cursor: pointer;
+    z-index: 1001;
+}
+
+@-webkit-keyframes notifyShow {
+    from { transform: translateX(400px); opacity: 0; }
+    to {  transform: translateX(0); opacity: 1; }
+}
+@keyframes notifyShow {
+    from { transform: translateX(400px); opacity: 0; }
+    to {  transform: translateX(0); opacity: 1; }
+}
+
+.dark .notify {
+    box-shadow: none;
+}
+
+.notify_h {
+    font-size: 25px;
+    font-weight: var(--semi-bold);
+    color: var(--color-text);
+    padding-top: 35px;
+    padding-bottom: 35px;
+    padding-left: 30px;
+    padding-right: 30px;
+    width: 100%;
+}
+
+@media (max-width: 400px) {
+    .notify {
+        width: calc(100% - 40px);
+    }
+}

@@ -1,0 +1,7 @@
+.idea/
+dist/
+build/
+node_modules/
+broker.db
+config.json
+broker.log

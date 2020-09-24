@@ -1,0 +1,160 @@
+/* ADD ITEM */
+
+.dashboard_addItem {
+    width: 413px;
+    min-height: 214px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    border: 1px solid rgba(144, 144, 168, 0.4);
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.dashboard_addItem-text {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    font-weight: var(--semi-bold);
+    color: var(--color-text-second);
+}
+
+.dashboard_addItem-text .icon {
+    width: 26px;
+    height: 26px;
+    margin-right: 5px;
+}
+
+/* WALLET ITEM */
+
+.dashboard_walletItem {
+    width: 42%;
+    border-radius: 2px;
+    position: relative;
+    padding: 15px;
+    padding-right: 20px;
+    margin-right: 10px;
+    flex-shrink: 0;
+    background-color: #F8F2FE;
+}
+
+@media (max-width: 1100px) {
+    .dashboard_walletItem {
+        width: 70%;
+    }
+}
+
+@media (max-width: 500px) {
+    .dashboard_walletItem {
+        width: 90%;
+    }
+}
+
+.dashboard_walletItem-btc {
+    background-color: #FEFAF5;
+}
+
+.dark .dashboard_walletItem {
+    background-color: #2C2945;
+}
+
+.dark .dashboard_walletItem-btc {
+    background-color: #2F2D3F;
+}
+
+.dashboard_walletItem-icon {
+    width: 48px;
+    height: 48px;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    margin-bottom: 12px;
+}
+
+.btn-lite.dashboard_walletItem-disconnect {
+    position: absolute;
+    right: 20px;
+    top: 15px;
+    padding-left: 10px;
+    padding-right: 14px;
+    line-height: 26px;
+    font-size: 10px;
+    color: var(--color-text-second);
+    background: rgba(136, 0, 255, 0.05);
+}
+
+.btn-lite.dashboard_walletItem-disconnect .icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 6px;
+}
+
+.dark .btn-lite.dashboard_walletItem-disconnect {
+    background: rgba(224, 224, 255, 0.02);
+}
+
+.dashboard_walletItem-details {
+    position: absolute;
+    right: 20px;
+    bottom: 15px;
+}
+
+.dashboard_walletItem-addressRow {
+    margin-bottom: 15px;
+    cursor: pointer;
+}
+
+.dashboard_walletItem-address {
+    font-size: 12px;
+    font-weight: var(--medium);
+    color: var(--color-text-second);
+    word-break: break-all;
+}
+
+.dashboard_walletItem-addressRow .icon {
+    width: 15px;
+    height: 15px;
+    margin-left: 20px;
+    flex-shrink: 0;
+}
+
+.dashboard_walletItem-balanceLabel {
+    font-size: 10px;
+    font-weight: var(--bold);
+    color: var(--color-text-second);
+    margin-bottom: 2px;
+}
+
+.dashboard_walletItem-balance {
+    font-size: 24px;
+    font-weight: var(--semi-bold);
+    color: var(--color-text);
+
+    margin-bottom: 14px;
+}
+
+.dashboard_walletItem-balanceCurrency {
+    font-size: 17px;
+    font-weight: var(--bold);
+}
+
+.dashboard_walletItem-balanceBtc {
+    font-size: 14px;
+    font-weight: var(--semi-bold);
+    color: rgba(20, 16, 41, 0.8);
+    margin-bottom: 4px;
+}
+
+.dashboard_walletItem-balanceUsd {
+    font-size: 14px;
+    color: rgba(20, 16, 41, 0.8);
+    font-weight: var(--semi-bold);
+}
+
+.dark .dashboard_walletItem-balanceBtc,
+.dark .dashboard_walletItem-balanceUsd {
+    color: #E0E0FF;
+}

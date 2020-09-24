@@ -1,0 +1,111 @@
+.trade {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    overflow: hidden;
+}
+
+.trade-col-left {
+    width: 220px;
+    flex-shrink: 0;
+}
+
+.trade-col-middle {
+    width: calc(100% - 220px - 280px);
+}
+
+.trade-col-right {
+    width: 280px;
+    flex-shrink: 0;
+}
+
+#chartContainer {
+    position: relative;
+}
+
+@media (max-width: 800px) {
+    .trade {
+        padding-top: 0;
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .tradePair {
+        display: none;
+    }
+
+    .tradeBuySell {
+        display: none;
+    }
+
+    .tradeChartRow {
+        display: none;
+    }
+
+    .tradeHistoryRow {
+        display: none;
+    }
+
+    .tradeOrderBookRow {
+        display: none;
+    }
+
+    .tradeChartRow .group,
+    .tradeHistoryRow .group,
+    .tradeOrderBookRow .group {
+        height: auto;
+    }
+
+    .tradeTab_pair .tradePairRow {
+        display: flex;
+        flex-grow: 1;
+    }
+
+    .tradeTab_buySell .tradeBuySell {
+        display: flex;
+        flex-grow: 1;
+    }
+
+    .tradeTab_pair .trade-col-left,
+    .tradeTab_buySell .trade-col-left {
+        flex-grow: 1;
+    }
+
+    .tradeTab_chart .tradeChartRow {
+        display: flex;
+        flex-grow: 1;
+    }
+
+    .tradeTab_history .tradeHistoryRow {
+        display: flex;
+        flex-grow: 1;
+    }
+
+    .tradeTab_chart .trade-col-middle,
+    .tradeTab_history .trade-col-middle {
+        flex-grow: 1;
+    }
+
+    .tradeTab_orderbook .tradeOrderBookRow {
+        display: flex;
+        flex-grow: 1;
+    }
+
+    .tradeTab_orderbook .trade-col-right {
+        flex-grow: 1;
+    }
+}
+
+@media screen and (min-width: 1600px) {
+    .trade {
+        padding-top: 72px;
+    }
+
+    .trade-col-left {
+        width: 293px;
+    }
+
+    .trade-col-right {
+        width: 372px;
+    }
+}

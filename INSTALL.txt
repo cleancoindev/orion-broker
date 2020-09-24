@@ -1,0 +1,89 @@
+==========================
+Source Installation Ubuntu
+==========================
+
+You can install Orion Broker with either of the following options:
+
+* Easy Install: download and use automated install scripts.
+
+* Manual Installation: run install commands manually.
+
+======================
+OPTION 1: EASY INSTALL
+======================
+
+# 1) Download install script
+wget https://raw.githubusercontent.com/orionprotocol/orion-broker/master/install-source-ubuntu.sh
+
+# 2) Enable script permissions
+chmod a+x install-source-ubuntu.sh
+
+# 3) Run installation
+./install-source-ubuntu.sh
+
+
+=============================
+OPTION 2: MANUAL INSTALLATION
+=============================
+
+# 1) Install dependencies (NodeJS 12.x, NPM, TypeScript 3.2.2)
+
+sudo apt update
+
+sudo apt install nodejs npm -y
+
+curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+sudo npm install --global typescript@3.2.2 --force
+
+# 2) Clone orion-broker
+
+git clone https://github.com/orionprotocol/orion-broker
+
+# 3) Compile broker-frontend code
+
+cd orion-broker/broker-frontend
+
+npm install
+
+npm run build
+
+# 4) Compile broker code
+
+cd ..
+
+cp config.template.json config.json
+
+npm install
+
+tsc
+
+cp src/*.png dist/
+
+# 5) Run
+
+nodejs dist/main.js
+
+=============================
+UPDATE
+=============================
+
+# 1) Go to broker directory (stop the orion-broker before that)
+cd orion-broker
+
+# 2) Enable script permissions
+chmod a+x update.sh
+
+# 3) Run installation
+./update.sh
+
+=============================
+RUN
+=============================
+
+# 1) Go to broker directory
+cd orion-broker
+
+# 2) Run
+nodejs dist/main.js
