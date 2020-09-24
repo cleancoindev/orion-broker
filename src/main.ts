@@ -321,7 +321,7 @@ app.post('/api/order', async (req, res) => {
 
         log.log('/api/order parsed request ', JSON.stringify(request));
 
-        const oldOrder = db.getOrderBySubOrdId(request.subOrdId);
+        const oldOrder = await db.getOrderBySubOrdId(request.subOrdId);
 
         if (oldOrder) {
             log.log('Order ' + request.subOrdId + ' already created');
