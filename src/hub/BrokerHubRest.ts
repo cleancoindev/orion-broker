@@ -55,10 +55,7 @@ export class BrokerHubRest implements BrokerHub {
         const body = JSON.stringify(data);
 
         return fetch(url, {method: 'POST', body, headers})
-            .then(response => {
-                log.log('Raw response ', response);
-                return response.json();
-            });
+            .then(response => response.json());
     }
 
     async register(data: BrokerHubRegisterRequest): Promise<void> {
