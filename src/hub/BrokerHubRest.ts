@@ -90,9 +90,6 @@ export class BrokerHubRest implements BrokerHub {
         return this.send(this.settings.orionBlockchainUrl + '/trade', data)
             .then((response) => {
                 log.log('Sending Trade Response', JSON.stringify(response));
-                if (!response.ok) {
-                    throw Error(response.statusText);
-                }
                 return response;
             })
             .catch((error) => {
