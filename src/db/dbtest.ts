@@ -1,4 +1,4 @@
-import {Db} from "./db"
+import {Db} from "./Db"
 import BigNumber from "bignumber.js";
 import {OrderType, Side, Status} from "../Model";
 

@@ -55,7 +55,10 @@ export class BrokerHubRest implements BrokerHub {
         const body = JSON.stringify(data);
 
         return fetch(url, {method: 'POST', body, headers})
-            .then(response => response.json());
+            .then(response => {
+                log.log('Raw response ', response);
+                return response.json();
+            });
     }
 
     async register(data: BrokerHubRegisterRequest): Promise<void> {
@@ -82,6 +85,8 @@ export class BrokerHubRest implements BrokerHub {
     }
 
     async sendTrade(data: any): Promise<void> {
+        log.log('Sending Trade', JSON.stringify(data));
+
         return this.send(this.settings.orionBlockchainUrl + '/trade', data)
             .then((response) => {
                 log.log('Sending Trade Response', JSON.stringify(response));
