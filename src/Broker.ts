@@ -164,8 +164,9 @@ export class Broker {
     startCheckOrders(): void {
         setInterval(async () => {
             try {
-                // log.log('Check orders status');
+                log.log('Check orders status');
                 const openOrders = await this.db.getOrdersToCheck();
+                log.log(openOrders.map(o => o.subOrdId).join(', '));
                 await this.connector.checkUpdates(openOrders);
             } catch (e) {
                 log.error('Orders check', e)
@@ -206,6 +207,8 @@ export class Broker {
                 await this.db.insertTrade(trade);
                 await this.db.updateOrder(dbOrder);
             })
+
+            log.log('Check order', dbOrder);
 
             if (this.settings.sendPartialTrades || (dbOrder.status === Status.FILLED)) {
                 const signedTrade = await this.orionBlockchain.signTrade(dbOrder, trade);
