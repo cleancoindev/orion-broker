@@ -83,13 +83,13 @@ export class BrokerHubRest implements BrokerHub {
             });
     }
 
-    async sendTrade(data: any): Promise<void> {
-        log.log('Sending Trade', JSON.stringify(data));
+    async sendTrade(order: DbOrder, signedTrade: any): Promise<void> {
+        log.log('Sending Trade', JSON.stringify(signedTrade));
 
-        return this.send(this.settings.orionBlockchainUrl + '/trade', data)
+        return this.send(this.settings.orionBlockchainUrl + '/trade', signedTrade)
             .then((response) => {
                 log.log('Sending Trade Response', JSON.stringify(response));
-                return this.onOrderStatusResponse(data);
+                return this.onOrderStatusResponse(signedTrade);
             })
             .catch((error) => {
                 log.log('Sending Trade Error', JSON.stringify(error));

@@ -209,7 +209,7 @@ export class Broker {
 
             if (this.settings.sendPartialTrades || (dbOrder.status === Status.FILLED)) {
                 const signedTrade = await this.orionBlockchain.signTrade(dbOrder, trade);
-                await this.brokerHub.sendTrade(signedTrade); // send signed trade to orion-blockchain
+                await this.brokerHub.sendTrade(dbOrder, signedTrade); // send signed trade to orion-blockchain
             }
 
             this.webUI.sendToFrontend(dbOrder);

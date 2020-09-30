@@ -99,8 +99,10 @@ export class BrokerHubWebsocket implements BrokerHub {
         await this.send('balance', data);
     }
 
-    async sendTrade(data: any): Promise<void> {
-        await this.send('order_status', data);
+    async sendTrade(order: DbOrder, signedTrade: any): Promise<void> {
+        const cloneOrder: any = {...order};
+        cloneOrder.trades = [signedTrade];
+        await this.send('order_status', cloneOrder);
     }
 }
 

@@ -17,7 +17,7 @@ export interface BrokerHub {
 
     sendBalances(data: any): Promise<void>;
 
-    sendTrade(data: any): Promise<void>;
+    sendTrade(order: DbOrder, signedTrade: any): Promise<void>;
 }
 
 export interface BrokerHubRegisterRequest {
