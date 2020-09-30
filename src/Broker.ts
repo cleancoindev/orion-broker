@@ -104,7 +104,19 @@ export class Broker {
         };
 
         brokerHub.onOrderStatusResponse = async (data: any) => {
-            // todo
+            const subOrdId = data.subOrdId;
+
+            const dbOrder: DbOrder = await this.db.getOrderBySubOrdId(subOrdId);
+
+            if (!dbOrder) {
+                throw new Error(`Order ${subOrdId} not found`);
+            }
+
+            if (dbOrder.status === Status.FILLED) {
+                dbOrder.status = Status.FILLED_AND_SENT_TO_ORION;
+                await this.db.updateOrder(dbOrder);
+                this.webUI.sendToFrontend(dbOrder);
+            }
         }
     }
 
@@ -185,22 +197,20 @@ export class Broker {
                 throw new Error(`Order ${trade.exchangeOrdId} in ${trade.exchange} not found`);
             }
 
-            const signedTrade = await this.orionBlockchain.signTrade(dbOrder, trade);
-            await this.brokerHub.sendTrade(signedTrade); // send signed trade to orion-blockchain
-
             dbOrder.filledQty = dbOrder.filledQty.plus(trade.qty);
             const tradeCost = trade.price.multipliedBy(trade.qty);
             dbOrder.totalCost = dbOrder.totalCost.plus(tradeCost);
-
             dbOrder.status = calculateTradeStatus(dbOrder.qty, dbOrder.filledQty);
 
-            if (dbOrder.status === Status.FILLED) {
-                dbOrder.status = Status.FILLED_AND_SENT_TO_ORION;
-            }
             await this.db.inTransaction(async () => {
                 await this.db.insertTrade(trade);
                 await this.db.updateOrder(dbOrder);
             })
+
+            if (this.settings.sendPartialTrades || (dbOrder.status === Status.FILLED)) {
+                const signedTrade = await this.orionBlockchain.signTrade(dbOrder, trade);
+                await this.brokerHub.sendTrade(signedTrade); // send signed trade to orion-blockchain
+            }
 
             this.webUI.sendToFrontend(dbOrder);
         } catch (e) {

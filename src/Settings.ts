@@ -16,8 +16,9 @@ export interface Settings extends OrionBlockchainSettings {
     wsPort: number;
     passwordHash: string;
     passwordSalt: string;
-    production: boolean,
-    exchanges: Dictionary<ExchangeConfig>
+    production: boolean;
+    exchanges: Dictionary<ExchangeConfig>;
+    sendPartialTrades: boolean;
 }
 
 export class SettingsManager {
