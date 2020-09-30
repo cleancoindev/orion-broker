@@ -102,6 +102,10 @@ export class Broker {
 
             return order;
         };
+
+        brokerHub.onOrderStatusResponse = async (data: any) => {
+            // todo
+        }
     }
 
     register(): void {

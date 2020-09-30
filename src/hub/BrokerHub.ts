@@ -7,6 +7,8 @@ export interface BrokerHub {
 
     onCancelOrder: (data: any) => Promise<DbOrder>;
 
+    onOrderStatusResponse: (data: any) => Promise<void>;
+
     connect(): Promise<void>;
 
     disconnect(): Promise<void>;

@@ -15,6 +15,8 @@ export class BrokerHubWebsocket implements BrokerHub {
 
     onCancelOrder: (data: any) => Promise<DbOrder>;
 
+    onOrderStatusResponse: (data: any) => Promise<void>;
+
     constructor(settings: Settings) {
         this.settings = settings;
     }
@@ -34,6 +36,19 @@ export class BrokerHubWebsocket implements BrokerHub {
             this.stomp = Stomp.over(this.socket);
             this.stomp.connect(brokerId, password, (frame) => {
                 log.log('Connected to hub ws:', frame);
+
+                this.stomp.subscribe('/register_response', async (data) => {
+                    log.log('Register response', data);
+                });
+
+                this.stomp.subscribe('/order_status_response', async (data) => {
+                    try {
+                        log.log('Order status response', data);
+                        await this.onOrderStatusResponse(data);
+                    } catch (error) {
+                        log.error(error);
+                    }
+                });
 
                 this.stomp.subscribe('/order', async (data) => {
                     try {

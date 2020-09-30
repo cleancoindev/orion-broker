@@ -12,6 +12,8 @@ export class BrokerHubRest implements BrokerHub {
 
     onCancelOrder: (data: any) => Promise<DbOrder>;
 
+    onOrderStatusResponse: (data: any) => Promise<void>;
+
     constructor(settings: Settings, app: any /* express app */) {
         this.settings = settings;
 
@@ -87,7 +89,7 @@ export class BrokerHubRest implements BrokerHub {
         return this.send(this.settings.orionBlockchainUrl + '/trade', data)
             .then((response) => {
                 log.log('Sending Trade Response', JSON.stringify(response));
-                return response;
+                return this.onOrderStatusResponse(response);
             })
             .catch((error) => {
                 log.log('Sending Trade Error', JSON.stringify(error));
