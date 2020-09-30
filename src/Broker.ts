@@ -191,6 +191,7 @@ export class Broker {
     // TRADE
 
     async orderChanged(trade: Trade): Promise<void> {
+        log.log('orderChanged', trade);
         try {
             const dbOrder: DbOrder = await this.db.getOrder(trade.exchange, trade.exchangeOrdId);
 

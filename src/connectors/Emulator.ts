@@ -1,6 +1,7 @@
 import {Connector} from "./Connector";
 import {Balances, Exchange, ExchangeOperation, Order, OrderBook, Status, Ticker, Trade} from "../Model";
 import {v1 as uuid} from "uuid";
+import {log} from "../log";
 
 export class EmulatorConnector implements Connector {
     exchange: Exchange;
@@ -66,6 +67,7 @@ export class EmulatorConnector implements Connector {
 
     async checkUpdates(orders: Order[]): Promise<void> {
         for (let order of orders) {
+            log.log('emulator.checkUpdates', order);
             const trade: Trade = {
                 exchange: this.exchange.id,
                 exchangeOrdId: order.exchangeOrdId,
