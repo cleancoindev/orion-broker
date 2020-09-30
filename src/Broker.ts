@@ -191,9 +191,10 @@ export class Broker {
     // TRADE
 
     async orderChanged(trade: Trade): Promise<void> {
-        log.log('orderChanged', trade);
         try {
             const dbOrder: DbOrder = await this.db.getOrder(trade.exchange, trade.exchangeOrdId);
+
+            log.log('orderChanged', dbOrder);
 
             if (!dbOrder) {
                 throw new Error(`Order ${trade.exchangeOrdId} in ${trade.exchange} not found`);

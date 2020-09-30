@@ -67,7 +67,6 @@ export class EmulatorConnector implements Connector {
 
     async checkUpdates(orders: Order[]): Promise<void> {
         for (let order of orders) {
-            log.log('emulator.checkUpdates', order);
             const trade: Trade = {
                 exchange: this.exchange.id,
                 exchangeOrdId: order.exchangeOrdId,

@@ -1,5 +1,6 @@
 import {Order, OrderType, Side, Status, Trade} from "../Model";
 import BigNumber from "bignumber.js";
+import {log} from "../log";
 
 const sqlite3 = require('sqlite3')
 const fs = require('fs');
@@ -191,6 +192,7 @@ export class Db {
                 try {
                     await fn();
                 } catch (e) {
+                    log.error(e);
                     this.db.run('ROLLBACK', [], () => {
                     });
                     return;
