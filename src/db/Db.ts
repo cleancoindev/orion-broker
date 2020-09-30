@@ -195,10 +195,12 @@ export class Db {
                     log.error(e);
                     this.db.run('ROLLBACK', [], () => {
                     });
+                    reject();
                     return;
                 }
                 this.db.run('COMMIT', [], () => {
                 });
+                resolve();
             });
         });
     }

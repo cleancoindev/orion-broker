@@ -164,9 +164,7 @@ export class Broker {
     startCheckOrders(): void {
         setInterval(async () => {
             try {
-                log.log('Check orders status');
                 const openOrders = await this.db.getOrdersToCheck();
-                log.log(openOrders.map(o => o.subOrdId).join(', '));
                 await this.connector.checkUpdates(openOrders);
             } catch (e) {
                 log.error('Orders check', e)
@@ -193,8 +191,6 @@ export class Broker {
     async orderChanged(trade: Trade): Promise<void> {
         try {
             const dbOrder: DbOrder = await this.db.getOrder(trade.exchange, trade.exchangeOrdId);
-
-            log.log('orderChanged', dbOrder);
 
             if (!dbOrder) {
                 throw new Error(`Order ${trade.exchangeOrdId} in ${trade.exchange} not found`);
