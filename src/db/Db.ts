@@ -297,8 +297,9 @@ export class Db {
     }
 
     async getOrdersToCheck(): Promise<DbOrder[]> {
+        // todo: status != "FILLED" is temporary, to support current stage
         return new Promise((resolve, reject) => {
-            this.db.all('SELECT * FROM orders WHERE status != "FILLED_AND_SENT_TO_ORION" AND status != "CANCELED"', [], (err, rows) => {
+            this.db.all('SELECT * FROM orders WHERE status != "FILLED_AND_SENT_TO_ORION" AND status != "CANCELED" AND status != "FILLED"', [], (err, rows) => {
                 if (err) {
                     reject(err);
                 } else {
