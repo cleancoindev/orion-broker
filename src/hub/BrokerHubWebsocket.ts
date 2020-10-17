@@ -164,7 +164,7 @@ export class BrokerHubWebsocket implements BrokerHub {
             address,
             exchanges
         }
-        await this.send('/broker/balance', {'x-action': 'update'}, data);
+        await this.send('/broker-hub/balance', {'x-action': 'update'}, data);
     }
 
     async sendTrade(tradeRequest: TradeRequest): Promise<void> {
