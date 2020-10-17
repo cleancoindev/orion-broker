@@ -1,9 +1,9 @@
 import {Order, OrderType, Side, Status, Trade} from "../Model";
 import BigNumber from "bignumber.js";
+import sqlite3 from "sqlite3";
 import {log} from "../log";
 
-const sqlite3 = require('sqlite3')
-const fs = require('fs');
+import fs from 'fs';
 
 export interface DbOrder extends Order {
     exchange: string;
@@ -77,13 +77,16 @@ function parseTrade(row: any): Trade {
 }
 
 export class Db {
-    private db: any; // sqlite3.Database
+    private db: sqlite3.Database;
 
-    constructor() {
+    constructor(private isInMemory: boolean = false) {
     }
 
     async init() {
-        const databaseExists = fs.existsSync('./broker.db');
+        let databaseExists = false
+        if (!this.isInMemory) {
+            databaseExists = fs.existsSync('./broker.db');
+        }
 
         await this.connectToDatabase();
 
@@ -94,7 +97,8 @@ export class Db {
 
     async connectToDatabase(): Promise<void> {
         return new Promise((resolve, reject) => {
-            this.db = new sqlite3.Database('./broker.db', (err) => {
+            const filename = this.isInMemory ? ':memory:' : './broker.db'
+            this.db = new sqlite3.Database(filename, (err) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -108,7 +112,7 @@ export class Db {
         return new Promise((resolve, reject) => {
             this.db.close((err) => {
                 if (err) {
-                    reject()
+                    reject(err)
                 } else {
                     resolve();
                 }
@@ -129,10 +133,14 @@ export class Db {
                          "price"         DECIMAL(18, 8) NOT NULL,
                          "qty"           DECIMAL(18, 8) NOT NULL,
                          "status"        VARCHAR(255)   NOT NULL,
-                         "timestamp"     DATETIME       NOT NULL
+                         "timestamp"     DATETIME       NOT NULL,
+                         UNIQUE ("exchange", "tradeId")
                      );`,
                     [],
                     function (err) {
+                        if (err) {
+                            reject(err)
+                        }
                     }
                 );
 
@@ -153,7 +161,11 @@ export class Db {
                          "status"        VARCHAR(255)   NOT NULL,
                          "clientOrdId"   VARCHAR(255)   NOT NULL,
                          "filledQty"     DECIMAL(18, 8) NOT NULL,
-                         "totalCost"     DECIMAL(18, 8) NOT NULL
+                         "totalCost"     DECIMAL(18, 8) NOT NULL,
+                         UNIQUE ("exchange", "exchangeOrdId"),
+                         UNIQUE ("ordId"),
+                         UNIQUE ("subOrdId"),
+                         UNIQUE ("clientOrdId")
                      );`,
                     [],
                     function (err) {
@@ -168,7 +180,7 @@ export class Db {
         })
     }
 
-    async insertTrade(trade: Trade): Promise<void> {
+    async insertTrade(trade: Trade): Promise<number> {
         return new Promise((resolve, reject) => {
 
             const t = mapObject(trade);
@@ -187,25 +199,36 @@ export class Db {
     async inTransaction(fn: () => Promise<void>): Promise<void> {
         return new Promise((resolve, reject) => {
             this.db.serialize(async () => {
-                this.db.run('BEGIN TRANSACTION', [], () => {
+                this.db.run('BEGIN TRANSACTION', [], (err) => {
+                    if (err) {
+                        log.error(err);
+                        reject(err)
+                    }
                 });
+
                 try {
                     await fn();
                 } catch (e) {
                     log.error(e);
                     this.db.run('ROLLBACK', [], () => {
+                        reject(e)
                     });
-                    reject();
                     return;
                 }
-                this.db.run('COMMIT', [], () => {
+
+                this.db.run('COMMIT', [], (err) => {
+                    if (err) {
+                        log.error(err);
+                        reject(err)
+                    } else {
+                        resolve()
+                    }
                 });
-                resolve();
             });
         });
     }
 
-    async insertOrder(order: DbOrder): Promise<void> {
+    async insertOrder(order: DbOrder): Promise<number> {
         return new Promise((resolve, reject) => {
             const t = mapObject(order);
 

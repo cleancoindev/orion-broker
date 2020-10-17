@@ -1,13 +1,13 @@
-import {OrderType, Side} from "../Model";
+import {BlockchainOrder, Dictionary, OrderType, Side, Status} from "../Model";
 import BigNumber from "bignumber.js";
 import {DbOrder} from "../db/Db";
 
 export interface BrokerHub {
-    onCreateOrder: (data: any) => Promise<DbOrder>;
+    onCreateOrder: (data: CreateOrderRequest) => Promise<DbOrder>;
 
-    onCancelOrder: (data: any) => Promise<DbOrder>;
+    onCancelOrder: (data: CancelOrderRequest) => Promise<DbOrder>;
 
-    onOrderStatusResponse: (data: any) => Promise<void>;
+    onOrderStatusResponse: (data: OrderStatusResponse) => Promise<void>;
 
     connect(): Promise<void>;
 
@@ -15,15 +15,20 @@ export interface BrokerHub {
 
     register(data: BrokerHubRegisterRequest): Promise<void>;
 
-    sendBalances(data: any): Promise<void>;
+    sendBalances(address: string, exchanges: Dictionary<Dictionary<string>>): Promise<void>;
 
-    sendTrade(order: DbOrder, signedTrade: any): Promise<void>;
+    sendTrade(tradeRequest: TradeRequest): Promise<void>;
 }
 
 export interface BrokerHubRegisterRequest {
     address: string;
     publicKey: string;
     signature: string;
+}
+
+export interface BalancesRequest {
+    address: string;
+    exchanges: Dictionary<Dictionary<string>>;
 }
 
 export interface CreateOrderRequest {
@@ -38,20 +43,23 @@ export interface CreateOrderRequest {
     clientOrdId: string;
 }
 
-export function parseCreateOrderRequest(request: any): CreateOrderRequest {
-    return {
-        side: request.side == 'sell' ? Side.SELL : Side.BUY,
-        symbol: request.symbol,
-        exchange: request.exchange,
-        ordType: request.ordType ? (OrderType[request.ordType] as OrderType) : OrderType.LIMIT,
-        price: new BigNumber(request.price),
-        subOrdQty: new BigNumber(request.subOrdQty),
-        ordId: request.ordId,
-        subOrdId: request.subOrdId,
-        clientOrdId: request.clientOrdId || '',
-    }
-}
-
 export interface CancelOrderRequest {
     subOrdId: string;
+}
+
+export interface OrderStatusResponse {
+    subOrdId: string;
+    status: Status;
+}
+
+export interface TradeRequest {
+    id: string;
+    subOrdId: string;
+    clientOrdId: string;
+    status: Status;
+    blockchainOrder?: BlockchainOrder;
+
+    ordId: string; // deprecated
+    tradeId: string; // deprecated
+    timestamp: number; // deprecated
 }

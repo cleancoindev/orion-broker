@@ -12,8 +12,7 @@ import {
     Trade
 } from "../Model";
 import BigNumber from "bignumber.js";
-
-const ccxt = require('ccxt')
+import ccxt from "ccxt";
 
 function toSymbol(symbol: string) {
     return symbol.split('-').join('/');
@@ -39,7 +38,7 @@ function fromType(type: string): OrderType {
     }
 }
 
-function toSide(side: Side): string {
+function toSide(side: Side): 'buy' | 'sell' {
     if (side === Side.BUY) {
         return 'buy';
     } else {
@@ -77,7 +76,7 @@ function fromStatus(status: string): Status {
 export class CCXTConnector implements Connector {
     exchange: Exchange;
     callback: (trade: Trade) => void;
-    ccxtExchange: any;
+    ccxtExchange: ccxt.Exchange;
 
     constructor(exchange: Exchange) {
         this.exchange = exchange;
@@ -93,7 +92,7 @@ export class CCXTConnector implements Connector {
 
     async checkUpdates(orders: Order[]) {
         for (let order of orders) {
-            const ccxtOrder = await this.ccxtExchange.fetchOrder(order.exchangeOrdId);
+            const ccxtOrder = await this.ccxtExchange.fetchOrder(order.exchangeOrdId, toSymbol(order.symbol));
             const newStatus = fromStatus(ccxtOrder.status);
             if (newStatus === Status.FILLED) {
                 const trade: Trade = {
@@ -125,7 +124,7 @@ export class CCXTConnector implements Connector {
             throw new Error(this.exchange.id + ' allow create only limit orders');
         }
 
-        const ccxtOrder: any = await this.ccxtExchange.createOrder(symbol, type, side, amount, price, {
+        const ccxtOrder: ccxt.Order = await this.ccxtExchange.createOrder(symbol, type, side, amount, price, {
             'clientOrderId': order.subOrdId,
         });
 
@@ -155,7 +154,7 @@ export class CCXTConnector implements Connector {
     }
 
     async getBalances(): Promise<Balances> {
-        const balances: any = await this.ccxtExchange.fetchBalance();
+        const balances: ccxt.Balances = await this.ccxtExchange.fetchBalance();
         const result: Balances = {};
         for (let currency in balances.free) {
             result[currency] = new BigNumber(balances.free[currency]);

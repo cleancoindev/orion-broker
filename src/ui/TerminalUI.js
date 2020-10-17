@@ -1,4 +1,4 @@
-const blessed = require('blessed');
+import blessed from 'blessed';
 
 const screen = blessed.screen({
     smartCSR: true
@@ -222,63 +222,296 @@ data. Please store this password safely since there is no way to reset it.
 
         submit.focus();
 
-        submit.on('press', () => {
-            const msg = blessed.message({
-                parent: screen,
-                top: 'center',
-                left: 'center',
-                height: 'shrink',
-                width: '50%',
-                align: 'center',
-                tags: true,
-                hidden: true,
-                border: 'line'
-            });
+        submit.on('press', () => this.showSetPasswordForm());
 
-            const prompt = blessed.prompt({
-                parent: screen,
-                top: 'center',
-                left: 'center',
-                height: 'shrink',
-                width: 'shrink',
-                keys: true,
-                vi: true,
-                mouse: true,
-                tags: true,
-                border: 'line',
-                hidden: true
-            });
-
-            prompt.input('Enter new password:', '', (err, value) => {
-                if (value === null) { // cancel
-                    this.showSetPassword();
-                } else if (err) {
-                    msg.error(err);
-                } else if (!value.length) {
-                    msg.error('Please enter password');
-                } else {
-                    const password = value;
-
-                    prompt.input('Confirm new password:', '', (err, value) => {
-                        if (value === null) { // cancel
-                            this.showSetPassword();
-                        } else if (err) {
-                            msg.error(err);
-                        } else if (value !== password) {
-                            msg.error('Try again');
-                        } else {
-                            this.onCreatePassword(password);
-                        }
-                    });
-                }
-            });
-            screen.render();
+        screen.render();
+    }
+    
+    showConfirmPasswordForm(password, err = null) {
+        const form = blessed.box({
+            parent: screen,
+            keys: true,
+            top: 'center',
+            left: 'center',
+            width: "50%",
+            height: "shrink",
+            tags: true,
+            border: {
+                type: 'line'
+            },
+            content: 'Confirm new password:'
         });
 
+
+        const msg = blessed.message({
+            parent: screen,
+            top: 'center',
+            left: 'center',
+            height: 'shrink',
+            width: '50%',
+            align: 'center',
+            tags: true,
+            hidden: true,
+            border: 'line'
+        });
+        
+
+
+        const passwordPrompt = blessed.textbox({
+            parent: form,
+            top: 3,
+            height: 1,
+            censor: true,
+            focusable: true,
+            inputOnFocus: true,
+            mouse: true,
+        })
+        
+        
+        if(err) {
+            msg.focus()
+            msg.error(err, () => passwordPrompt.focus() || screen.render());
+        }
+
+        const submit = blessed.button({
+            parent: form,
+            mouse: true,
+            keys: true,
+            top: 6,
+            left: 1,
+            height: 1,
+            width: 10,
+            tags: true,
+            name: 'submit',
+            focusable: false,
+            content: '{center}OK{/center}',
+            style: {
+                focus: {
+                    bg: '#4FA4E3'
+                },
+                hover: {
+                    bg: '#FF6F00'
+                }
+            }
+        })
+
+        const cancel = blessed.button({
+            parent: form,
+            mouse: true,
+            keys: true,
+            top: 6,
+            left: 11,
+            height: 1,
+            width: 10,
+            tags: true,
+            name: 'cancel',
+            content: '{center}Cancel{/center}',
+            style: {
+                focus: {
+                    bg: '#4FA4E3'
+                },
+                hover: {
+                    bg: '#FF6F00'
+                }
+            }
+        })
+
+        passwordPrompt.on("submit", (value) => {
+            if (value == null || !value.length) {
+                msg.focus()
+                msg.error('Please enter password', () => passwordPrompt.focus() || screen.render());
+            } else if (value !== password) {
+                msg.focus()
+                msg.error('Try again', () => passwordPrompt.focus() || screen.render());
+            } else {
+                this.onCreatePassword(password);
+            }
+        })
+
+        passwordPrompt.on("cancel", () => {
+            form.hide()
+            form.destroy()
+            screen.render()
+        })
+
+        submit.on('press', () => {
+            const value = passwordPrompt.getValue()
+            if (value == null || !value.length) {
+                this.showConfirmPasswordForm(password, 'Please enter password')
+            } else if (value !== password) {
+                this.showConfirmPasswordForm(password, 'Try again')
+            } else {
+                form.hide()
+                form.destroy()
+                screen.render()
+                
+                this.onCreatePassword(password);
+            }
+        });
+
+        cancel.on('press', function () {
+            passwordPrompt.cancel()
+        });
+
+
+        screen.render();
+
+        passwordPrompt.focus()
+        
+        screen.render();
+    }
+    
+    showSetPasswordForm(err = null) {
+        const form = blessed.box({
+            parent: screen,
+            keys: true,
+            top: 'center',
+            left: 'center',
+            width: "50%",
+            height: "shrink",
+            tags: true,
+            border: {
+                type: 'line'
+            },
+            content: 'Enter new password:'
+        });
+
+
+        const msg = blessed.message({
+            parent: screen,
+            top: 'center',
+            left: 'center',
+            height: 'shrink',
+            width: '50%',
+            align: 'center',
+            tags: true,
+            hidden: !err,
+            border: 'line'
+        });
+        
+
+
+        const passwordPrompt = blessed.textbox({
+            parent: form,
+            top: 3,
+            height: 1,
+            censor: true,
+            focusable: true,
+            inputOnFocus: true,
+            mouse: true,
+        })
+        
+        
+        if(err) {
+            msg.focus()
+            msg.error(err, () => passwordPrompt.focus() || screen.render());
+        }
+
+        const submit = blessed.button({
+            parent: form,
+            mouse: true,
+            keys: true,
+            top: 6,
+            left: 1,
+            height: 1,
+            width: 10,
+            tags: true,
+            name: 'submit',
+            focusable: false,
+            content: '{center}OK{/center}',
+            style: {
+                focus: {
+                    bg: '#4FA4E3'
+                },
+                hover: {
+                    bg: '#FF6F00'
+                }
+            }
+        })
+
+        const cancel = blessed.button({
+            parent: form,
+            mouse: true,
+            keys: true,
+            top: 6,
+            left: 11,
+            height: 1,
+            width: 10,
+            tags: true,
+            name: 'cancel',
+            content: '{center}Cancel{/center}',
+            style: {
+                focus: {
+                    bg: '#4FA4E3'
+                },
+                hover: {
+                    bg: '#FF6F00'
+                }
+            }
+        })
+
+        passwordPrompt.on("submit", (value) => {
+            if (value == null || !value.length) {
+                msg.focus()
+                msg.error('Please enter password', () => passwordPrompt.focus() || screen.render());
+            } else {
+                const password = value;
+
+                form.hide()
+                form.destroy()
+                screen.render()
+                
+                this.showConfirmPasswordForm(password)
+                
+                
+               
+            }
+        })
+
+        passwordPrompt.on("cancel", () => {
+            form.hide()
+            form.destroy()
+            screen.render()
+        })
+
+        submit.on('press', () => {
+            const value = passwordPrompt.getValue()
+            if (value == null || !value.length) {
+                this.showSetPasswordForm('Please enter password')
+            } else {
+                const password = value;
+
+                this.showConfirmPasswordForm(password)
+            }
+        });
+
+        cancel.on('press', function () {
+            passwordPrompt.cancel()
+        });
+
+
+        screen.render();
+
+        passwordPrompt.focus()
+        
         screen.render();
     }
 
     showLogin() {
+        const form = this.loginForm = blessed.box({
+            parent: screen,
+            keys: true,
+            top: 'center',
+            left: 'center',
+            width: "50%",
+            height: "shrink",
+            tags: true,
+            border: {
+                type: 'line'
+            },
+            content: 'Enter password:'
+        });
+
         const msg = blessed.message({
             parent: screen,
             top: 'center',
@@ -291,38 +524,101 @@ data. Please store this password safely since there is no way to reset it.
             border: 'line'
         });
 
-        const prompt = blessed.prompt({
-            parent: screen,
-            top: 'center',
-            left: 'center',
-            height: 'shrink',
-            width: 'shrink',
-            keys: true,
-            vi: true,
-            mouse: true,
-            tags: true,
-            border: 'line',
-            hidden: true
-        });
 
-        prompt.input('Enter password:', '', (err, value) => {
-            if (value === null) { // cancel
-                process.exit(0);
-            } else if (err) {
-                msg.error(err);
-            } else if (!value.length) {
-                this.showLogin();
-            } else {
-                if (!this.onLoginPassword(value)) {
-                    this.showLogin();
+        const passwordPrompt = blessed.textbox({
+            parent: form,
+            top: 3,
+            height: 1,
+            censor: true,
+            focusable: true,
+            inputOnFocus: true,
+            mouse: true,
+        })
+
+        const submit = blessed.button({
+            parent: form,
+            mouse: true,
+            keys: true,
+            top: 6,
+            left: 1,
+            height: 1,
+            width: 10,
+            tags: true,
+            name: 'submit',
+            content: '{center}OK{/center}',
+            style: {
+                focus: {
+                    bg: '#4FA4E3'
+                },
+                hover: {
+                    bg: '#FF6F00'
                 }
+            }
+        })
+
+        const cancel = blessed.button({
+            parent: form,
+            mouse: true,
+            keys: true,
+            top: 6,
+            left: 11,
+            height: 1,
+            width: 10,
+            tags: true,
+            name: 'cancel',
+            content: '{center}Cancel{/center}',
+            style: {
+                focus: {
+                    bg: '#4FA4E3'
+                },
+                hover: {
+                    bg: '#FF6F00'
+                }
+            }
+        })
+
+        const restoreFocus = () => {
+            passwordPrompt.focus()
+            screen.render()
+        }
+
+        passwordPrompt.on("submit", (value) => {
+            if (value == null || !value.length) {
+                msg.error('Please enter password', restoreFocus);
+            } else if (!this.onLoginPassword(value)) {
+                msg.error('Invalid password', restoreFocus);
+            } else {
+                form.destroy();
+                screen.render();
+            }
+        })
+
+        submit.on('press', () => {
+            const value = passwordPrompt.getValue()
+            if (value == null || !value.length) {
+                msg.error('Please enter password', restoreFocus);
+            } else if (!this.onLoginPassword(value)) {
+                msg.error('Invalid password', restoreFocus);
             }
         });
 
+        cancel.on('press', () => {
+            process.exit(0);
+        });
+
+        screen.render();
+
+        passwordPrompt.focus()
+        
         screen.render();
     }
 
     showMain() {
+        if(this.loginForm) {
+            this.loginForm.hide();
+            this.loginForm.destroy();
+            screen.render();
+        }
         const leftBox = blessed.box({
             parent: screen,
             keys: true,

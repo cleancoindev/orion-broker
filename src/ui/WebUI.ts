@@ -2,16 +2,16 @@ import {log} from "../log";
 import {Db, DbOrder} from "../db/Db";
 import {Settings} from "../Settings";
 
-const express = require('express');
+import express, {Express} from 'express';
 
-const WebSocket = require('ws');
+import WebSocket from 'ws';
 
 export class WebUI {
     settings: Settings;
     lastBalancesJson: string = '{}';
-    frontendWs: any;
+    frontendWs: WebSocket.Server;
 
-    constructor(db: Db, settings: Settings, app: any /* express app */) {
+    constructor(db: Db, settings: Settings, app: Express) {
         this.settings = settings;
 
         // STATIC

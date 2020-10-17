@@ -1,25 +1,60 @@
-import {BrokerHub, BrokerHubRegisterRequest} from "./BrokerHub";
+import {
+    BrokerHub,
+    BrokerHubRegisterRequest,
+    CancelOrderRequest,
+    CreateOrderRequest,
+    OrderStatusResponse,
+    TradeRequest
+} from "./BrokerHub";
 import {log} from "../log";
 import {Settings} from "../Settings";
 import {DbOrder} from "../db/Db";
+import {Dictionary, OrderType, Side} from "../Model";
+import BigNumber from "bignumber.js";
 
-const fetch = require("node-fetch");
+import fetch from "node-fetch";
+import {Express} from "express";
 
+export function parseCreateOrderRequest(request: any): CreateOrderRequest {
+    return {
+        side: request.side == 'sell' ? Side.SELL : Side.BUY,
+        symbol: request.symbol,
+        exchange: request.exchange,
+        ordType: request.ordType ? (OrderType[request.ordType] as OrderType) : OrderType.LIMIT,
+        price: new BigNumber(request.price),
+        subOrdQty: new BigNumber(request.subOrdQty),
+        ordId: request.ordId,
+        subOrdId: request.subOrdId,
+        clientOrdId: request.clientOrdId || '',
+    }
+}
+
+function parseCancelOrderRequest(request: any): CancelOrderRequest {
+    return {
+        subOrdId: request.subOrdId
+    }
+}
+
+/**
+ * @deprecated use BrokerHubWebsocket
+ */
 export class BrokerHubRest implements BrokerHub {
     private settings: Settings;
 
-    onCreateOrder: (data: any) => Promise<DbOrder>;
+    onCreateOrder: (data: CreateOrderRequest) => Promise<DbOrder>;
 
-    onCancelOrder: (data: any) => Promise<DbOrder>;
+    onCancelOrder: (data: CancelOrderRequest) => Promise<DbOrder>;
 
-    onOrderStatusResponse: (data: any) => Promise<void>;
+    onOrderStatusResponse: (data: OrderStatusResponse) => Promise<void>;
 
-    constructor(settings: Settings, app: any /* express app */) {
+    constructor(settings: Settings, app: Express) {
         this.settings = settings;
 
         app.post('/api/order', async (req, res) => {
             try {
-                const order = await this.onCreateOrder(req.body);
+                log.log('/api/order receive ', JSON.stringify(req.body));
+                const request = parseCreateOrderRequest(req.body);
+                const order = await this.onCreateOrder(request);
                 res.send(order);
             } catch (error) {
                 log.error(error);
@@ -30,7 +65,8 @@ export class BrokerHubRest implements BrokerHub {
 
         app.delete('/api/order', async (req, res) => {
             try {
-                const order = await this.onCancelOrder(req.body);
+                log.log('DELETE /api/order receive ', JSON.stringify(req.body));
+                const order = await this.onCancelOrder(parseCancelOrderRequest(req.body));
                 res.send(order);
             } catch (error) {
                 log.error(error);
@@ -76,20 +112,32 @@ export class BrokerHubRest implements BrokerHub {
             });
     }
 
-    async sendBalances(data: any): Promise<void> {
-        return this.send(this.settings.orionUrl + '/balance', data)
+    async sendBalances(address: string, exchanges: Dictionary<Dictionary<string>>): Promise<void> {
+        (exchanges as any).address = address;
+
+        return this.send(this.settings.orionUrl + '/balance', exchanges)
             .catch((error) => {
                 log.error('Error on broker/balance: ', error.message);
             });
     }
 
-    async sendTrade(order: DbOrder, signedTrade: any): Promise<void> {
-        log.log('Sending Trade', JSON.stringify(signedTrade));
+    async sendTrade(tradeRequest: TradeRequest): Promise<void> {
+        const data: any = {
+            "id": tradeRequest.id,
+            "ordId": tradeRequest.ordId,
+            "subOrdId": tradeRequest.subOrdId,
+            "clientOrdId": tradeRequest.clientOrdId,
+            "tradeId": tradeRequest.id,
+            "status": tradeRequest.status,
+            "timestamp": tradeRequest.timestamp,
+            ...tradeRequest.blockchainOrder
+        };
+        log.log('Sending Trade', JSON.stringify(data));
 
-        return this.send(this.settings.orionBlockchainUrl + '/trade', signedTrade)
+        return this.send(this.settings.orionBlockchainUrl + '/trade', data)
             .then((response) => {
                 log.log('Sending Trade Response', JSON.stringify(response));
-                return this.onOrderStatusResponse(signedTrade);
+                return this.onOrderStatusResponse({subOrdId: tradeRequest.subOrdId, status: tradeRequest.status});
             })
             .catch((error) => {
                 log.log('Sending Trade Error', JSON.stringify(error));

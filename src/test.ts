@@ -1,4 +1,4 @@
-var ccxt = require('ccxt')
+import ccxt from 'ccxt';
 
 const init = async () => {
     let bitfinex = new ccxt.bitfinex({verbose: false})

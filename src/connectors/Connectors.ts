@@ -28,34 +28,32 @@ export interface ExchangeResolve<T> {
 }
 
 export class Connectors {
+    emulatorBalances: Dictionary<string>;
     isProduction: boolean;
+
     exchangesIds: string[] = [];
     exchanges: Dictionary<Exchange> = {};
     connectors: Dictionary<Connector> = {};
     callback: (trade: Trade) => void = null;
 
-    constructor(exchangeConfigs: Dictionary<ExchangeConfig>, emulatorBalances: Dictionary<string>, isProduction: boolean) {
+    constructor(emulatorBalances: Dictionary<string>, isProduction: boolean) {
+        this.emulatorBalances = emulatorBalances;
         this.isProduction = isProduction;
+    }
 
-        for (let id in exchangeConfigs) {
-            const exchangeConfig = exchangeConfigs[id];
-            this.exchangesIds.push(id);
-
-            const balances: Balances = {}
-            if (!isProduction) {
-                for (let currency in emulatorBalances) {
-                    balances[currency] = new BigNumber(emulatorBalances[currency]);
-                }
+    private createBalances(): Dictionary<BigNumber> {
+        const balances: Balances = {}
+        if (!this.isProduction) {
+            for (let currency in this.emulatorBalances) {
+                balances[currency] = new BigNumber(this.emulatorBalances[currency]);
             }
+        }
+        return balances;
+    }
 
-            const exchange: Exchange = {
-                id: id,
-                apiKey: exchangeConfig.key,
-                secretKey: exchangeConfig.secret,
-                balances: balances
-            };
-            this.exchanges[id] = exchange;
-            this.connectors[id] = isProduction ? new CCXTConnector(exchange) : new EmulatorConnector(exchange);
+    updateExchanges(exchangeConfigs: Dictionary<ExchangeConfig>) {
+        for (let id in exchangeConfigs) {
+            this.updateExchange(id, exchangeConfigs[id]);
         }
     }
 
@@ -69,7 +67,7 @@ export class Connectors {
             id: id,
             apiKey: exchangeConfig.key,
             secretKey: exchangeConfig.secret,
-            balances: {}
+            balances: this.createBalances()
         };
         this.exchanges[id] = exchange;
         this.connectors[id] = this.isProduction ? new CCXTConnector(exchange) : new EmulatorConnector(exchange);

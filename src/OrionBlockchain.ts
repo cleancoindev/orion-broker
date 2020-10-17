@@ -1,12 +1,13 @@
-import {Order, Side, Trade} from "./Model";
+import {BlockchainOrder, Order, Side, Trade} from "./Model";
 import {DbOrder} from "./db/Db";
 import BigNumber from "bignumber.js";
 import {log} from "./log";
 
-const Web3 = require("web3");
-const Long = require('long');
-const sigUtil = require("eth-sig-util");
-const ethUtil = require('ethereumjs-util');
+import Web3 from "web3";
+import Long from 'long';
+import {signTypedMessage} from "eth-sig-util";
+import {privateToAddress} from 'ethereumjs-util';
+import {TradeRequest} from "./hub/BrokerHub";
 
 const DOMAIN_TYPE = [
     {name: "name", type: "string"},
@@ -36,22 +37,6 @@ const DOMAIN_DATA = {
     salt:
         "0xf2d857f4a3edcb9b78b4d503bfe733db1e3f6cdc2b7971ee739626c97e86a557",
 };
-
-interface OrderInfo {
-    id?: string,
-    signature?: string;
-    senderAddress: string;
-    matcherAddress: string;
-    baseAsset: string;
-    quoteAsset: string;
-    matcherFeeAsset: string;
-    amount: number;
-    price: number;
-    matcherFee: number;
-    nonce: number;
-    expiration: number;
-    side: Side;
-}
 
 const Assets = {
     BTC: "0x335123EB7029030805864805fC95f1AB16A64D61",
@@ -124,7 +109,7 @@ export class OrionBlockchain {
         this.matcherAddress = settings.matcherAddress;
         try {
             this.bufferKey = Buffer.from(settings.privateKey.substr(2), "hex");
-            this.address = '0x' + ethUtil.privateToAddress(this.bufferKey).toString('hex');
+            this.address = '0x' + privateToAddress(this.bufferKey).toString('hex');
             log.log('My address=' + this.address);
         } catch (e) {
             log.error('Orion blockchain init', e);
@@ -140,7 +125,7 @@ export class OrionBlockchain {
     }
 
     // === GET ORDER HASH=== //
-    private hashOrder(orderInfo: OrderInfo): string {
+    private hashOrder(orderInfo: BlockchainOrder): string {
         return Web3.utils.soliditySha3(
             "0x03",
             orderInfo.senderAddress,
@@ -153,7 +138,7 @@ export class OrionBlockchain {
             this.longToBytes(orderInfo.matcherFee),
             this.longToBytes(orderInfo.nonce),
             this.longToBytes(orderInfo.expiration),
-            orderInfo.side === Side.BUY ? "0x00" : "0x01"
+            orderInfo.side === Side.BUY ? "buy" : "sell"
         );
     }
 
@@ -163,7 +148,7 @@ export class OrionBlockchain {
     //     return sender;
     // }
 
-    private signOrder(orderInfo: OrderInfo): string {
+    private signOrder(orderInfo: BlockchainOrder): string {
         const data = {
             types: {
                 EIP712Domain: DOMAIN_TYPE,
@@ -175,8 +160,7 @@ export class OrionBlockchain {
         };
 
         const msgParams = {data};
-        const signedMessage = sigUtil.signTypedMessage(this.bufferKey, msgParams, "V3");
-        return signedMessage;
+        return signTypedMessage(this.bufferKey, msgParams as any, "V3");
     }
 
     private toBaseUnit(amount: BigNumber, decimals: number = 8): number {
@@ -187,7 +171,7 @@ export class OrionBlockchain {
         return side === Side.BUY ? Side.SELL : Side.BUY;
     }
 
-    private createBlockchainOrder(order: DbOrder, trade: Trade): OrderInfo {
+    private createBlockchainOrder(order: DbOrder, trade: Trade): BlockchainOrder {
         const nowTimestamp = Date.now();
         const assets = Assets.toAssets(order.symbol);
         return {
@@ -201,35 +185,29 @@ export class OrionBlockchain {
             matcherFee: this.defaultMatcherFee,
             nonce: nowTimestamp,
             expiration: nowTimestamp + this.defaultExpiration,
-            side: this.counterSide(order.side)
+            side: this.counterSide(order.side),
+            signature: ''
         };
     }
 
-    /**
-     *
-     * @param order Order
-     * @param trade Trade
-     * @returns {Promise<Order>}
-     */
-    public async signTrade(order: DbOrder, trade: Trade): Promise<any> {
+    public async signTrade(order: DbOrder, trade: Trade): Promise<TradeRequest> {
         const bo = this.createBlockchainOrder(order, trade);
-        const message = this.hashOrder(bo);
-        const signature = this.signOrder(bo);
+        const id = this.hashOrder(bo);
+        bo.signature = this.signOrder(bo);
 
         /* const sender = await this.validateSignature(bo.signature, bo); */
 
-        const orionTrade = {
-            "id": message,
-            "ordId": order.ordId,
-            "subOrdId": order.subOrdId,
-            "clientOrdId": order.clientOrdId,
-            "tradeId": bo.id,
-            "status": trade.status,
-            "timestamp": trade.timestamp,
-            "signature": signature,
-            ...bo
-        };
+        return {
+            id: id,
+            subOrdId: order.subOrdId,
+            clientOrdId: order.clientOrdId,
+            status: trade.status,
 
-        return orionTrade;
+            ordId: order.ordId, // deprecated
+            tradeId: id, // deprecated
+            timestamp: trade.timestamp,  // deprecated
+
+            blockchainOrder: bo
+        };
     }
 }

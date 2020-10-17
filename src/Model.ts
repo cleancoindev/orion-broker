@@ -27,6 +27,7 @@ export enum Status {
     FILLED = 'FILLED',
     FILLED_AND_SENT_TO_ORION = 'FILLED_AND_SENT_TO_ORION',
     CANCELED = 'CANCELED',
+    REJECTED = 'REJECTED',
 }
 
 export enum Side {
@@ -92,4 +93,19 @@ export function calculateTradeStatus(ordQty: BigNumber, filledQty: BigNumber): S
     } else {
         return Status.FILLED;
     }
+}
+
+export interface BlockchainOrder {
+    senderAddress: string;
+    matcherAddress: string;
+    baseAsset: string;
+    quoteAsset: string;
+    matcherFeeAsset: string;
+    amount: number;
+    price: number;
+    matcherFee: number;
+    nonce: number;
+    expiration: number;
+    side: string;
+    signature: string;
 }

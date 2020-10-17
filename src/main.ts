@@ -11,20 +11,18 @@ import {v1 as uuid} from "uuid";
 import {Broker} from "./Broker";
 import {BrokerHubWebsocket} from "./hub/BrokerHubWebsocket";
 
-const Cryptr = require('cryptr');
-const fs = require('fs');
-const express = require('express');
-const bodyParser = require('body-parser');
+import Cryptr from 'cryptr';
+import fs from 'fs';
+import express from 'express';
+import bodyParser from 'body-parser';
 
 
-const settingsManger = new SettingsManager('./config.json');
-const settings = settingsManger.settings;
+const settingsManager = new SettingsManager('./config.json');
+const settings = settingsManager.settings;
 
-const emulatorBalances: Dictionary<string> = JSON.parse(fs.readFileSync('./emulator_balances.json'));
+const emulatorBalances: Dictionary<string> = JSON.parse(fs.readFileSync('./emulator_balances.json').toString());
 
-const exchangeConfigs: Dictionary<ExchangeConfig> = settings.production ? {} : createEmulatorExchangeConfigs();
-
-const connector: Connectors = new Connectors(exchangeConfigs, emulatorBalances, settings.production);
+const connector: Connectors = new Connectors(emulatorBalances, settings.production);
 
 const app = express();
 
@@ -47,24 +45,24 @@ db.init();
 
 const brokerHub: BrokerHub = settings.transport === 'ws' ? new BrokerHubWebsocket(settings) : new BrokerHubRest(settings, app);
 const webUI = new WebUI(db, settings, app);
-const terminal = new Terminal(settingsManger);
+const terminal = new Terminal(settingsManager);
 
 const broker = new Broker(settings, brokerHub, db, webUI, connector);
 connector.orderWatcher(trade => broker.orderChanged(trade));
 
 terminal.onCreatePassword = async (password: string): Promise<void> => {
-    settingsManger.cryptr = new Cryptr(password);
+    settingsManager.cryptr = new Cryptr(password);
     settings.passwordSalt = uuid().toString();
     settings.passwordHash = hashPassword(password + settings.passwordSalt);
-    await settingsManger.save();
+    await settingsManager.save();
     start();
 }
 
 terminal.onLoginPassword = (password: string): boolean => {
     const hash = hashPassword(password + settings.passwordSalt);
     if (settings.passwordHash === hash) {
-        settingsManger.cryptr = new Cryptr(password);
-        settingsManger.decrypt();
+        settingsManager.cryptr = new Cryptr(password);
+        settingsManager.decrypt();
         start();
         return true;
     }
@@ -76,17 +74,20 @@ terminal.onConnectExchange = (exchange: string, apiKey: string, privateKey: stri
         key: apiKey,
         secret: privateKey,
     }
-    settingsManger.save();
+    settingsManager.save();
     connector.updateExchange(exchange, settings.exchanges[exchange]);
 }
 
 terminal.onSetPrivateKey = (privateKey: string): void => {
     settings.privateKey = privateKey;
-    settingsManger.save();
+    settingsManager.save();
     broker.connectToOrion();
 }
 
 function start(): void {
+    const exchangeConfigs: Dictionary<ExchangeConfig> = settings.production ? settings.exchanges : createEmulatorExchangeConfigs();
+    connector.updateExchanges(exchangeConfigs);
+
     terminal.ui.showMain();
     webUI.initWs();
     initHttpServer()

@@ -1,9 +1,8 @@
 import {OrionBlockchainSettings} from "./OrionBlockchain";
 import {Dictionary} from "./Model";
 import {ExchangeConfig} from "./connectors/Connectors";
-
-const crypto = require('crypto');
-const fs = require('fs');
+import crypto from 'crypto';
+import fs from 'fs';
 
 export interface Settings extends OrionBlockchainSettings {
     orionUrl: string;
@@ -28,7 +27,7 @@ export class SettingsManager {
 
     constructor(configPath) {
         this.configPath = configPath;
-        this.settings = JSON.parse(fs.readFileSync(configPath));
+        this.settings = JSON.parse(fs.readFileSync(configPath).toString());
     }
 
     async save(): Promise<void> {

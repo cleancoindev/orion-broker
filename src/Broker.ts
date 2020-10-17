@@ -1,4 +1,10 @@
-import {BrokerHub, BrokerHubRegisterRequest, parseCreateOrderRequest} from "./hub/BrokerHub";
+import {
+    BrokerHub,
+    BrokerHubRegisterRequest,
+    CancelOrderRequest,
+    CreateOrderRequest,
+    OrderStatusResponse,
+} from "./hub/BrokerHub";
 import {Db, DbOrder} from "./db/Db";
 import {log} from "./log";
 import {Balances, calculateTradeStatus, Dictionary, Order, Status, Trade} from "./Model";
@@ -23,102 +29,98 @@ export class Broker {
         this.webUI = webUI;
         this.connector = connector;
 
-        // CREATE ORDER
+        brokerHub.onCreateOrder = this.onCreateOrder
+        brokerHub.onCancelOrder = this.onCancelOrder
+        brokerHub.onOrderStatusResponse = this.onOrderStatusResponse;
+    }
 
-        brokerHub.onCreateOrder = async (data: any) => {
-            log.log('/api/order receive ', JSON.stringify(data));
+    onOrderStatusResponse = async (data: OrderStatusResponse): Promise<void> => {
+        const subOrdId = data.subOrdId;
 
-            const request = parseCreateOrderRequest(data);
+        const dbOrder: DbOrder = await this.db.getOrderBySubOrdId(subOrdId);
 
-            log.log('/api/order parsed request ', JSON.stringify(request));
+        if (!dbOrder) {
+            throw new Error(`Order ${subOrdId} not found`);
+        }
 
-            const oldOrder = await db.getOrderBySubOrdId(request.subOrdId);
-
-            if (oldOrder) {
-                log.log('Order ' + request.subOrdId + ' already created');
-                return oldOrder;
-            }
-
-            const dbOrder: DbOrder = {
-                exchange: request.exchange,
-                exchangeOrdId: '',
-                ordId: request.ordId,
-                subOrdId: request.subOrdId,
-                symbol: request.symbol,
-                side: request.side,
-                ordType: request.ordType,
-                price: request.price,
-                qty: request.subOrdQty,
-                timestamp: Date.now(),
-                status: Status.PREPARE,
-                clientOrdId: request.clientOrdId,
-                filledQty: new BigNumber(0),
-                totalCost: new BigNumber(0),
-            }
-            await db.insertOrder(dbOrder);
-
-            log.log('/api/order order inserted');
-
-            const order: Order = await connector.createOrder(request.subOrdId, request.ordType, request.exchange, request.symbol, request.side, request.subOrdQty, request.price);
-
-            dbOrder.exchangeOrdId = order.exchangeOrdId;
-            dbOrder.timestamp = order.timestamp;
-            dbOrder.status = order.status;
-            await db.updateOrder(dbOrder);
-
-            log.log('/api/order order updated ', JSON.stringify(dbOrder));
-
-            webUI.sendToFrontend(dbOrder);
-
-            return dbOrder;
-        };
-
-        // CANCEL ORDER
-
-        brokerHub.onCancelOrder = async (data: any) => {
-            log.log('DELETE /api/order receive ', JSON.stringify(data));
-
-            const subOrdId: string = data.subOrdId;
-
-            const order: DbOrder = await db.getOrderBySubOrdId(subOrdId);
-
-            if (!order) throw new Error('Cant find order ' + order.subOrdId);
-
-            if (order.status === Status.PREPARE || order.status === Status.CANCELED) {
-                // nothing to do
-            } else if (order.status === Status.NEW) {
-                const cancelResult = await connector.cancelOrder(order);
-
-                if (!cancelResult) throw new Error('Cant cancel order ' + order.subOrdId);
-
-                order.status = Status.CANCELED;
-
-                await db.updateOrder(order);
-                webUI.sendToFrontend(order);
-
-            } else {
-                throw new Error('Cant cancel order in status ' + order.status);
-            }
-
-            return order;
-        };
-
-        brokerHub.onOrderStatusResponse = async (data: any) => {
-            const subOrdId = data.subOrdId;
-
-            const dbOrder: DbOrder = await this.db.getOrderBySubOrdId(subOrdId);
-
-            if (!dbOrder) {
-                throw new Error(`Order ${subOrdId} not found`);
-            }
-
-            if (dbOrder.status === Status.FILLED) {
-                dbOrder.status = Status.FILLED_AND_SENT_TO_ORION;
-                await this.db.updateOrder(dbOrder);
-                this.webUI.sendToFrontend(dbOrder);
-            }
+        if (dbOrder.status === Status.FILLED && data.status === Status.FILLED) {
+            dbOrder.status = Status.FILLED_AND_SENT_TO_ORION;
+            await this.db.updateOrder(dbOrder);
+            this.webUI.sendToFrontend(dbOrder);
         }
     }
+
+    onCreateOrder = async (request: CreateOrderRequest): Promise<DbOrder> => {
+        log.log('/api/order parsed request ', JSON.stringify(request));
+
+        const oldOrder = await this.db.getOrderBySubOrdId(request.subOrdId);
+
+        if (oldOrder) {
+            log.log('Order ' + request.subOrdId + ' already created');
+            return oldOrder;
+        }
+
+        const dbOrder: DbOrder = {
+            exchange: request.exchange,
+            exchangeOrdId: '',
+            ordId: request.ordId,
+            subOrdId: request.subOrdId,
+            symbol: request.symbol,
+            side: request.side,
+            ordType: request.ordType,
+            price: request.price,
+            qty: request.subOrdQty,
+            timestamp: Date.now(),
+            status: Status.PREPARE,
+            clientOrdId: request.clientOrdId,
+            filledQty: new BigNumber(0),
+            totalCost: new BigNumber(0),
+        }
+        await this.db.insertOrder(dbOrder);
+
+        log.log('/api/order order inserted');
+
+        const order: Order = await this.connector.createOrder(request.subOrdId, request.ordType, request.exchange, request.symbol, request.side, request.subOrdQty, request.price);
+
+        dbOrder.exchangeOrdId = order.exchangeOrdId;
+        dbOrder.timestamp = order.timestamp;
+        dbOrder.status = order.status;
+        await this.db.updateOrder(dbOrder);
+
+        log.log('/api/order order updated ', JSON.stringify(dbOrder));
+
+        this.webUI.sendToFrontend(dbOrder);
+
+        return dbOrder;
+    };
+
+    onCancelOrder = async (data: CancelOrderRequest): Promise<DbOrder> => {
+        log.log('DELETE /api/order receive ', JSON.stringify(data));
+
+        const subOrdId: string = data.subOrdId;
+
+        const order: DbOrder = await this.db.getOrderBySubOrdId(subOrdId);
+
+        if (!order) throw new Error('Cant find order ' + order.subOrdId);
+
+        if (order.status === Status.PREPARE || order.status === Status.CANCELED) {
+            // nothing to do
+        } else if (order.status === Status.NEW) {
+            const cancelResult = await this.connector.cancelOrder(order);
+
+            if (!cancelResult) throw new Error('Cant cancel order ' + order.subOrdId);
+
+            order.status = Status.CANCELED;
+
+            await this.db.updateOrder(order);
+            this.webUI.sendToFrontend(order);
+
+        } else {
+            throw new Error('Cant cancel order in status ' + order.status);
+        }
+
+        return order;
+    };
 
     register(): void {
         const body: BrokerHubRegisterRequest = {
@@ -134,21 +136,22 @@ export class Broker {
     sendUpdateBalance(balances: Dictionary<ExchangeResolve<Balances>>): Promise<void> {
         // log.log('Get balances and send to Orion Blockchain');
 
-        const body: any = {
-            address: this.orionBlockchain.address,
-        }
+        const exchanges: Dictionary<Dictionary<string>> = {};
+
         for (let exchange in balances) {
             const exchangeBalances: ExchangeResolve<Balances> = balances[exchange];
-            if (!exchangeBalances.error) {
-                body[exchange] = {};
+            if (exchangeBalances.error) {
+                log.error(exchange + ' balances', exchangeBalances.error);
+            } else {
+                exchanges[exchange] = {};
                 for (let currency in exchangeBalances.result) {
                     const v = exchangeBalances.result[currency];
-                    body[exchange][currency] = v.toString();
+                    exchanges[exchange][currency] = v.toString();
                 }
             }
         }
-        this.webUI.lastBalancesJson = JSON.stringify(body);
-        return this.brokerHub.sendBalances(body);
+        this.webUI.lastBalancesJson = JSON.stringify(exchanges);
+        return this.brokerHub.sendBalances(this.orionBlockchain.address, exchanges);
     }
 
     startUpdateBalances(): void {
@@ -209,8 +212,8 @@ export class Broker {
             log.log('Check order', dbOrder);
 
             if (this.settings.sendPartialTrades || (dbOrder.status === Status.FILLED)) {
-                const signedTrade = await this.orionBlockchain.signTrade(dbOrder, trade);
-                await this.brokerHub.sendTrade(dbOrder, signedTrade); // send signed trade to orion-blockchain
+                const tradeRequest = await this.orionBlockchain.signTrade(dbOrder, trade);
+                await this.brokerHub.sendTrade(tradeRequest); // send signed trade to orion-blockchain
             }
 
             this.webUI.sendToFrontend(dbOrder);

@@ -5,7 +5,8 @@
   "main": "dist/main.js",
   "scripts": {
     "start": "tsc && node dist/main.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "coverage": "jest --coverage"
   },
   "repository": {
     "type": "git",
@@ -20,34 +21,38 @@
   "homepage": "https://github.com/orionprotocol/orion-broker#readme",
   "devDependencies": {
     "@types/express": "^4.17.7",
+    "@types/jest": "^26.0.14",
+    "jest": "^26.4.2",
+    "ts-jest": "^26.4.0",
     "tslint": "^6.1.3",
     "typescript": "^3.9.7"
   },
   "dependencies": {
-    "blessed": "^0.1.81",
-    "ccxt": "^1.33.21",
-    "express": "^4.17.1",
-    "bignumber.js": "9.0.0",
-    "@types/uuid": "8.3.0",
-    "uuid": "8.3.0",
-    "body-parser": "^1.19.0",
-    "dotenv": "^8.2.0",
+    "@types/blessed": "^0.1.17",
     "@types/eth-sig-util": "^2.1.0",
-    "eth-sig-util": "^2.5.3",
+    "@types/ethereumjs-util": "^6.1.0",
     "@types/long": "^4.0.0",
+    "@types/sockjs-client": "^1.1.1",
+    "@types/sqlite3": "^3.1.6",
+    "@types/stompjs": "^2.3.4",
+    "@types/uuid": "8.3.0",
+    "@types/web3": "^1.2.2",
+    "bignumber.js": "9.0.0",
+    "blessed": "^0.1.81",
+    "body-parser": "^1.19.0",
+    "ccxt": "^1.33.21",
+    "cryptr": "^6.0.2",
+    "dotenv": "^8.2.0",
+    "eth-sig-util": "^2.5.3",
+    "ethereumjs-util": "^7.0.5",
+    "express": "^4.17.1",
     "long": "^4.0.0",
     "node-fetch": "^2.3.0",
-    "@types/sqlite3": "^3.1.6",
-    "sqlite3": "^5.0.0",
-    "@types/web3": "^1.2.2",
-    "web3": "^1.2.8",
-    "@types/ethereumjs-util": "^6.1.0",
-    "ethereumjs-util": "^7.0.5",
-    "ws": "^6.2.1",
-    "cryptr": "^6.0.2",
     "sockjs-client": "^1.5.0",
-    "@types/sockjs-client": "^1.1.1",
+    "sqlite3": "^5.0.0",
     "stompjs": "^2.3.3",
-    "@types/stompjs": "^2.3.4"
+    "uuid": "8.3.0",
+    "web3": "^1.2.8",
+    "ws": "^6.2.1"
   }
 }
