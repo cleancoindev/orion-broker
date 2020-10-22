@@ -14,6 +14,11 @@ import {Dictionary, OrderType, Side, Status} from "../Model";
 import BigNumber from "bignumber.js";
 import Stomp, {Message} from 'stompjs';
 import SockJS from 'sockjs-client';
+import jsrsasign from 'jsrsasign';
+import fetch from "node-fetch";
+import Signature = jsrsasign.KJUR.crypto.Signature;
+import ECDSA = jsrsasign.KJUR.crypto.ECDSA;
+import {privateToPublic} from 'ethereumjs-util';
 
 const X_RESPONSE_STATUS_NOT_FINAL = 10;
 const X_RESPONSE_STATUS_FINAL = 20;
@@ -63,6 +68,7 @@ export class BrokerHubWebsocket implements BrokerHub {
     private settings: Settings;
     private socket: WebSocket;
     private stomp: Stomp.Client;
+    private keyPair: ECDSA;
 
     onCreateOrder: (data: CreateOrderRequest) => Promise<DbOrder>;
 
@@ -74,66 +80,87 @@ export class BrokerHubWebsocket implements BrokerHub {
         this.settings = settings;
     }
 
-    connect(): Promise<void> {
+    private sign(data: any): string {
+        const sig = new Signature({alg: 'SHA1withECDSA'});
+        sig.init(this.keyPair);
+        const json = typeof data === 'string' ? data : JSON.stringify(data, Object.keys(data).sort());
+        sig.updateString(json);
+        return sig.sign();
+    }
+
+    async connect(): Promise<void> {
         return new Promise((resolve, reject) => {
             if (this.stomp) {
                 this.disconnect();
             }
 
             const brokerId = '1';
-            const password = 'password is not used by now';
+            const bufferKey = Buffer.from(this.settings.privateKey.substr(2), "hex");
+            this.keyPair = new ECDSA();
+            this.keyPair.setPublicKeyHex(privateToPublic(bufferKey).toString('hex'));
+            this.keyPair.setPrivateKeyHex(this.settings.privateKey);
 
-            log.log('Try to connect hub ws', this.settings.orionUrl);
+            fetch(this.settings.orionUrl + '/broker-hub/auth/broker/' + brokerId, {method: 'POST'}).then(async authResponse => {
+                const authPayload = await authResponse.text();
+                log.log('authPayload=' + authPayload);
+                const sign = this.sign(authPayload);
+                log.log('sign=' + sign);
+                log.log('Try to connect hub ws', this.settings.orionUrl);
 
-            this.socket = new SockJS(this.settings.orionUrl);
-            this.stomp = Stomp.over(this.socket);
-            this.stomp.connect(brokerId, password, (frame) => {
-                log.log('Connected to hub ws:', frame);
+                this.socket = new SockJS(this.settings.orionUrl + '/ws');
+                this.stomp = Stomp.over(this.socket);
+                this.stomp.connect({
+                    'x-broker-id': brokerId,
+                    'x-auth-payload': authPayload,
+                    'x-sign': sign
+                }, (frame) => {
+                    log.log('Connected to hub ws:', frame);
 
-                this.stomp.subscribe('/broker/register_response', async (data: Message) => {
-                    log.log('Register response', data.body);
-                });
+                    this.stomp.subscribe('/broker/register_response', async (data: Message) => {
+                        log.log('Register response', data.body);
+                    });
 
-                this.stomp.subscribe('/broker/trade_response', async (data: Message) => {
-                    try {
-                        log.log('Order status response', data.body);
-                        await this.onOrderStatusResponse(parseOrderStatusResponse(JSON.parse(data.body)));
-                    } catch (error) {
-                        log.error(error);
-                    }
-                });
-
-                this.stomp.subscribe('/broker/suborder', async (message: Message) => {
-                    let body: any;
-
-                    try {
-                        log.log('Suborder from ws', message.body);
-
-                        const actionHeader = message.headers['x-action'];
-                        body = JSON.parse(message.body);
-
-                        switch (actionHeader) {
-                            case 'execute':
-                                const createdOrder = await this.onCreateOrder(parseCreateOrderRequest(body));
-                                await this.sendTrade(orderToTradeRequest(createdOrder));
-                                break;
-                            case 'cancel':
-                                const cancelledOrder = await this.onCancelOrder(parseCancelOrderRequest(body));
-                                await this.sendTrade(orderToTradeRequest(cancelledOrder));
-                                break;
-                            default:
-                                throw new Error('Unknown suborder header ' + actionHeader);
+                    this.stomp.subscribe('/broker/trade_response', async (data: Message) => {
+                        try {
+                            log.log('Order status response', data.body);
+                            await this.onOrderStatusResponse(parseOrderStatusResponse(JSON.parse(data.body)));
+                        } catch (error) {
+                            log.error(error);
                         }
-                    } catch (error) {
-                        log.error(error);
-                        await this.send('/broker/suborder', {'x-response-status': X_RESPONSE_STATUS_NOT_FATAL_ERROR}, {
-                            subOrderId: body ? body.subOrderId : 0,
-                            error: error.message
-                        });
-                    }
-                });
+                    });
 
-                resolve();
+                    this.stomp.subscribe('/broker/suborder', async (message: Message) => {
+                        let body: any;
+
+                        try {
+                            log.log('Suborder from ws', message.body);
+
+                            const actionHeader = message.headers['x-action'];
+                            body = JSON.parse(message.body);
+
+                            switch (actionHeader) {
+                                case 'execute':
+                                    const createdOrder = await this.onCreateOrder(parseCreateOrderRequest(body));
+                                    await this.sendTrade(orderToTradeRequest(createdOrder));
+                                    break;
+                                case 'cancel':
+                                    const cancelledOrder = await this.onCancelOrder(parseCancelOrderRequest(body));
+                                    await this.sendTrade(orderToTradeRequest(cancelledOrder));
+                                    break;
+                                default:
+                                    throw new Error('Unknown suborder header ' + actionHeader);
+                            }
+                        } catch (error) {
+                            log.error(error);
+                            await this.send('/broker/suborder', {'x-response-status': X_RESPONSE_STATUS_NOT_FATAL_ERROR}, {
+                                subOrderId: body ? body.subOrderId : 0,
+                                error: error.message
+                            });
+                        }
+                    });
+
+                    resolve();
+                });
             });
         });
     }
@@ -149,6 +176,7 @@ export class BrokerHubWebsocket implements BrokerHub {
 
     private async send(method: string, headers: {}, data: any): Promise<void> {
         try {
+            headers['x-sign'] = this.sign(data);
             this.stomp.send(method, headers, JSON.stringify(data));
         } catch (e) {
             log.error(e);
@@ -164,6 +192,7 @@ export class BrokerHubWebsocket implements BrokerHub {
             address,
             exchanges
         }
+        log.log('send balances');
         await this.send('/broker-hub/balance', {'x-action': 'update'}, data);
     }
 
