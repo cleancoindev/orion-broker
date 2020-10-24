@@ -109,58 +109,64 @@ export class BrokerHubWebsocket implements BrokerHub {
 
                 this.socket = new SockJS(this.settings.orionUrl + '/ws');
                 this.stomp = Stomp.over(this.socket);
-                this.stomp.connect({
-                    'x-broker-id': brokerId,
-                    'x-auth-payload': authPayload,
-                    'x-sign': sign
-                }, (frame) => {
-                    log.log('Connected to hub ws:', frame);
+                this.stomp.connect(
+                    {
+                        'x-broker-id': brokerId,
+                        'x-auth-payload': authPayload,
+                        'x-sign': sign
+                    },
+                    (frame) => {
+                        log.log('Connected to hub ws:', frame);
 
-                    this.stomp.subscribe('/broker/register_response', async (data: Message) => {
-                        log.log('Register response', data.body);
-                    });
+                        this.stomp.subscribe('/broker/register_response', async (data: Message) => {
+                            log.log('Register response', data.body);
+                        });
 
-                    this.stomp.subscribe('/broker/trade_response', async (data: Message) => {
-                        try {
-                            log.log('Order status response', data.body);
-                            await this.onOrderStatusResponse(parseOrderStatusResponse(JSON.parse(data.body)));
-                        } catch (error) {
-                            log.error(error);
-                        }
-                    });
-
-                    this.stomp.subscribe('/broker/suborder', async (message: Message) => {
-                        let body: any;
-
-                        try {
-                            log.log('Suborder from ws', message.body);
-
-                            const actionHeader = message.headers['x-action'];
-                            body = JSON.parse(message.body);
-
-                            switch (actionHeader) {
-                                case 'execute':
-                                    const createdOrder = await this.onCreateOrder(parseCreateOrderRequest(body));
-                                    await this.sendTrade(orderToTradeRequest(createdOrder));
-                                    break;
-                                case 'cancel':
-                                    const cancelledOrder = await this.onCancelOrder(parseCancelOrderRequest(body));
-                                    await this.sendTrade(orderToTradeRequest(cancelledOrder));
-                                    break;
-                                default:
-                                    throw new Error('Unknown suborder header ' + actionHeader);
+                        this.stomp.subscribe('/broker/trade_response', async (data: Message) => {
+                            try {
+                                log.log('Order status response', data.body);
+                                await this.onOrderStatusResponse(parseOrderStatusResponse(JSON.parse(data.body)));
+                            } catch (error) {
+                                log.error(error);
                             }
-                        } catch (error) {
-                            log.error(error);
-                            await this.send('/broker/suborder', {'x-response-status': X_RESPONSE_STATUS_NOT_FATAL_ERROR}, {
-                                subOrderId: body ? body.subOrderId : 0,
-                                error: error.message
-                            });
-                        }
-                    });
+                        });
 
-                    resolve();
-                });
+                        this.stomp.subscribe('/broker/suborder', async (message: Message) => {
+                            let body: any;
+
+                            try {
+                                log.log('Suborder from ws', message.body);
+
+                                const actionHeader = message.headers['x-action'];
+                                body = JSON.parse(message.body);
+
+                                switch (actionHeader) {
+                                    case 'execute':
+                                        const createdOrder = await this.onCreateOrder(parseCreateOrderRequest(body));
+                                        await this.sendTrade(orderToTradeRequest(createdOrder));
+                                        break;
+                                    case 'cancel':
+                                        const cancelledOrder = await this.onCancelOrder(parseCancelOrderRequest(body));
+                                        await this.sendTrade(orderToTradeRequest(cancelledOrder));
+                                        break;
+                                    default:
+                                        throw new Error('Unknown suborder header ' + actionHeader);
+                                }
+                            } catch (error) {
+                                log.error(error);
+                                await this.send('/broker/suborder', {'x-response-status': X_RESPONSE_STATUS_NOT_FATAL_ERROR}, {
+                                    subOrderId: body ? body.subOrderId : 0,
+                                    error: error.message
+                                });
+                            }
+                        });
+
+                        resolve();
+                    },
+                    error => {
+                        log.error(error);
+                    }
+                );
             });
         });
     }
