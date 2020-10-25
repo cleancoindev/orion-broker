@@ -25,6 +25,8 @@ const X_RESPONSE_STATUS_FINAL = 20;
 const X_RESPONSE_STATUS_NOT_FATAL_ERROR = 30;
 const X_RESPONSE_STATUS_FATAL_ERROR = 40;
 
+const BROKER_ID = '0x69ae0b74d23a741a25a6e997de6418f374a0cf4d';
+
 function parseCreateOrderRequest(request: any): CreateOrderRequest {
     return {
         subOrdId: request.subOrderId,
@@ -94,7 +96,7 @@ export class BrokerHubWebsocket implements BrokerHub {
                 this.disconnect();
             }
 
-            const brokerId = '1';
+            const brokerId = BROKER_ID;
             const bufferKey = Buffer.from(this.settings.privateKey.substr(2), "hex");
             this.keyPair = new ECDSA();
             this.keyPair.setPublicKeyHex(privateToPublic(bufferKey).toString('hex'));
@@ -105,7 +107,7 @@ export class BrokerHubWebsocket implements BrokerHub {
                 log.log('authPayload=' + authPayload);
                 const sign = this.sign(authPayload);
                 log.log('sign=' + sign);
-                log.log('Try to connect hub ws', this.settings.orionUrl);
+                log.log('Try to connect hub ws', this.settings.orionUrl + '/ws');
 
                 this.socket = new SockJS(this.settings.orionUrl + '/ws');
                 this.stomp = Stomp.over(this.socket);
@@ -183,6 +185,7 @@ export class BrokerHubWebsocket implements BrokerHub {
     private async send(method: string, headers: {}, data: any): Promise<void> {
         try {
             headers['x-sign'] = this.sign(data);
+            headers['x-broker-id'] = BROKER_ID;
             this.stomp.send(method, headers, JSON.stringify(data));
         } catch (e) {
             log.error(e);
@@ -195,7 +198,6 @@ export class BrokerHubWebsocket implements BrokerHub {
 
     async sendBalances(address: string, exchanges: Dictionary<Dictionary<string>>): Promise<void> {
         const data: BalancesRequest = {
-            address,
             exchanges
         }
         log.log('send balances');

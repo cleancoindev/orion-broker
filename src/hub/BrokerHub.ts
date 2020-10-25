@@ -27,7 +27,6 @@ export interface BrokerHubRegisterRequest {
 }
 
 export interface BalancesRequest {
-    address: string;
     exchanges: Dictionary<Dictionary<string>>;
 }
 
