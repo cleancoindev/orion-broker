@@ -124,7 +124,7 @@ export class BrokerHubWebsocket implements BrokerHub {
                             log.log('Register response', data.body);
                         });
 
-                        this.stomp.subscribe('/broker/trade_response', async (data: Message) => {
+                        this.stomp.subscribe('/broker/trade', async (data: Message) => {
                             try {
                                 log.log('Order status response', data.body);
                                 await this.onOrderStatusResponse(parseOrderStatusResponse(JSON.parse(data.body)));
