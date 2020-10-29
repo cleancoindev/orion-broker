@@ -162,9 +162,9 @@ export class Db {
                          "clientOrdId"   VARCHAR(255)   NOT NULL,
                          "filledQty"     DECIMAL(18, 8) NOT NULL,
                          "totalCost"     DECIMAL(18, 8) NOT NULL,
-                         UNIQUE ("exchange", "exchangeOrdId"),
                          UNIQUE ("subOrdId")
                      );`,
+                    // todo: UNIQUE ("exchange", "exchangeOrdId"),
                     [],
                     function (err) {
                         if (err) {
