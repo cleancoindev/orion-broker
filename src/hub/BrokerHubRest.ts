@@ -122,19 +122,9 @@ export class BrokerHubRest implements BrokerHub {
     }
 
     async sendTrade(tradeRequest: TradeRequest): Promise<void> {
-        const data: any = {
-            "id": tradeRequest.id,
-            "ordId": tradeRequest.ordId,
-            "subOrdId": tradeRequest.subOrdId,
-            "clientOrdId": tradeRequest.clientOrdId,
-            "tradeId": tradeRequest.id,
-            "status": tradeRequest.status,
-            "timestamp": tradeRequest.timestamp,
-            ...tradeRequest.blockchainOrder
-        };
-        log.log('Sending Trade', JSON.stringify(data));
+        log.log('Sending Trade', JSON.stringify(tradeRequest));
 
-        return this.send(this.settings.orionBlockchainUrl + '/trade', data)
+        return this.send(this.settings.orionBlockchainUrl + '/trade', tradeRequest)
             .then((response) => {
                 log.log('Sending Trade Response', JSON.stringify(response));
                 return this.onOrderStatusResponse({subOrdId: tradeRequest.subOrdId, status: tradeRequest.status});
