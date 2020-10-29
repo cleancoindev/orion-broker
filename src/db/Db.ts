@@ -163,9 +163,7 @@ export class Db {
                          "filledQty"     DECIMAL(18, 8) NOT NULL,
                          "totalCost"     DECIMAL(18, 8) NOT NULL,
                          UNIQUE ("exchange", "exchangeOrdId"),
-                         UNIQUE ("ordId"),
-                         UNIQUE ("subOrdId"),
-                         UNIQUE ("clientOrdId")
+                         UNIQUE ("subOrdId")
                      );`,
                     [],
                     function (err) {
