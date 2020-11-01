@@ -106,6 +106,6 @@ export interface BlockchainOrder {
     matcherFee: number;
     nonce: number;
     expiration: number;
-    side: string;
+    buySide: number;
     signature: string;
 }
