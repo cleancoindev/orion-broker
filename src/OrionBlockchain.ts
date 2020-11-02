@@ -27,7 +27,7 @@ const ORDER_TYPE = [
     {name: "matcherFee", type: "uint64"},
     {name: "nonce", type: "uint64"},
     {name: "expiration", type: "uint64"},
-    {name: "side", type: "string"},
+    {name: "buySide", type: "uint8"},
 ];
 
 const DOMAIN_DATA = {
@@ -138,7 +138,7 @@ export class OrionBlockchain {
             this.longToBytes(orderInfo.matcherFee),
             this.longToBytes(orderInfo.nonce),
             this.longToBytes(orderInfo.expiration),
-            orderInfo.side === Side.BUY ? "buy" : "sell"
+            orderInfo.buySide
         );
     }
 
@@ -160,15 +160,15 @@ export class OrionBlockchain {
         };
 
         const msgParams = {data};
-        return signTypedMessage(this.bufferKey, msgParams as any, "V3");
+        return signTypedMessage(this.bufferKey, msgParams as any, "V4");
     }
 
     private toBaseUnit(amount: BigNumber, decimals: number = 8): number {
         return Math.round(amount.toNumber() * 10 ** decimals);
     }
 
-    private counterSide(side: Side): Side {
-        return side === Side.BUY ? Side.SELL : Side.BUY;
+    private counterSide(side: Side): number {
+        return side === Side.BUY ? 0 : 1;
     }
 
     private createBlockchainOrder(order: DbOrder, trade: Trade): BlockchainOrder {
@@ -185,7 +185,7 @@ export class OrionBlockchain {
             matcherFee: this.defaultMatcherFee,
             nonce: nowTimestamp,
             expiration: nowTimestamp + this.defaultExpiration,
-            side: this.counterSide(order.side),
+            buySide: this.counterSide(order.side),
             signature: ''
         };
     }
