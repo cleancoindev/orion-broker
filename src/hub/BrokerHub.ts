@@ -7,7 +7,7 @@ export interface BrokerHub {
 
     onCancelSubOrder: (data: CancelSubOrder) => Promise<DbSubOrder>;
 
-    onSubOrderStatusResponse: (data: SubOrderStatusResponse) => Promise<void>;
+    onSubOrderStatusAccepted: (data: SubOrderStatusAccepted) => Promise<void>;
 
     connect(): Promise<void>;
 
@@ -25,7 +25,7 @@ export interface BrokerHubRegisterRequest {
 }
 
 export interface BalancesRequest {
-    exchanges: Dictionary<Dictionary<string>>;
+    exchanges: string; // JSON.stringify( Dictionary<Dictionary<string>> )
 }
 
 export interface CreateSubOrder {
@@ -47,7 +47,7 @@ export interface SubOrderStatus {
     blockchainOrder?: BlockchainOrder;
 }
 
-export interface SubOrderStatusResponse {
+export interface SubOrderStatusAccepted {
     id: number;
     status: Status;
 }

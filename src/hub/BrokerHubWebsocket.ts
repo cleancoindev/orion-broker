@@ -6,7 +6,7 @@ import {
     CancelSubOrder,
     CreateSubOrder,
     SubOrderStatus,
-    SubOrderStatusResponse
+    SubOrderStatusAccepted
 } from "./BrokerHub";
 import {Settings} from "../Settings";
 import {DbSubOrder} from "../db/Db";
@@ -31,7 +31,7 @@ function parseCancelSubOrder(request: any): CancelSubOrder {
     }
 }
 
-function parseSubOrderStatusResponse(data: any): SubOrderStatusResponse {
+function parseSubOrderStatusAccepted(data: any): SubOrderStatusAccepted {
     return {
         id: data.id,
         status: Status[data.status]
@@ -53,7 +53,7 @@ export class BrokerHubWebsocket implements BrokerHub {
 
     onCancelSubOrder: (data: CancelSubOrder) => Promise<DbSubOrder>;
 
-    onSubOrderStatusResponse: (data: SubOrderStatusResponse) => Promise<void>;
+    onSubOrderStatusAccepted: (data: SubOrderStatusAccepted) => Promise<void>;
 
     constructor(settings: Settings) {
         this.settings = settings;
@@ -79,14 +79,14 @@ export class BrokerHubWebsocket implements BrokerHub {
             this.socket = null;
         });
 
-        this.socket.on('register_response', (data: any) => {
-            log.log('Register response', data);
+        this.socket.on('register_accepted', (data: any) => {
+            log.log('Register accepted', data);
         });
 
-        this.socket.on('suborder_status_response', async (data: any) => {
+        this.socket.on('suborder_status_accepted', async (data: any) => {
             try {
-                log.log('Suborder status response', data);
-                await this.onSubOrderStatusResponse(parseSubOrderStatusResponse(data));
+                log.log('Suborder status accepted', data);
+                await this.onSubOrderStatusAccepted(parseSubOrderStatusAccepted(data));
             } catch (error) {
                 log.error(error);
             }
@@ -127,7 +127,7 @@ export class BrokerHubWebsocket implements BrokerHub {
 
     async sendBalances(exchanges: Dictionary<Dictionary<string>>): Promise<void> {
         const data: BalancesRequest = {
-            exchanges
+            exchanges: JSON.stringify(exchanges)
         }
         log.log('send balances');
         await this.send('balances', data);

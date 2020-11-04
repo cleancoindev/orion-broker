@@ -1,4 +1,4 @@
-import {BrokerHub, CancelSubOrder, CreateSubOrder, SubOrderStatusResponse,} from "./hub/BrokerHub";
+import {BrokerHub, CancelSubOrder, CreateSubOrder, SubOrderStatusAccepted,} from "./hub/BrokerHub";
 import {Db, DbSubOrder} from "./db/Db";
 import {log} from "./log";
 import {Balances, calculateTradeStatus, Dictionary, Status, SubOrder, Trade} from "./Model";
@@ -25,10 +25,10 @@ export class Broker {
 
         brokerHub.onCreateSubOrder = this.onCreateSubOrder
         brokerHub.onCancelSubOrder = this.onCancelSubOrder
-        brokerHub.onSubOrderStatusResponse = this.onSubOrderStatusResponse;
+        brokerHub.onSubOrderStatusAccepted = this.onSubOrderStatusAccepted;
     }
 
-    onSubOrderStatusResponse = async (data: SubOrderStatusResponse): Promise<void> => {
+    onSubOrderStatusAccepted = async (data: SubOrderStatusAccepted): Promise<void> => {
         const id = data.id;
 
         const dbSubOrder: DbSubOrder = await this.db.getSubOrderById(id);

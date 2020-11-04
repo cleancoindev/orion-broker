@@ -104,7 +104,7 @@ test("order creation", async () => {
         filledAmount: amount,
     })
 
-    await broker.onSubOrderStatusResponse({id: order.id, status: Status.FILLED});
+    await broker.onSubOrderStatusAccepted({id: order.id, status: Status.FILLED});
     await expect(db.getSubOrder(order.exchange, order.exchangeOrderId)).resolves.toEqual({
         ...order,
         status: Status.FILLED_AND_SENT_TO_ORION,
@@ -146,7 +146,7 @@ test("order partially filled", async () => {
         status: Status.FILLED,
         filledAmount: amount,
     })
-    await broker.onSubOrderStatusResponse({id: order.id, status: Status.FILLED});
+    await broker.onSubOrderStatusAccepted({id: order.id, status: Status.FILLED});
     await expect(db.getSubOrder(order.exchange, order.exchangeOrderId)).resolves.toEqual({
         ...order,
         status: Status.FILLED_AND_SENT_TO_ORION,
