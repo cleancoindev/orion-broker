@@ -19,7 +19,7 @@ export function parseCreateSubOrder(request: any): CreateSubOrder {
         id: request.id,
         side: request.side,
         symbol: request.symbol,
-        exchange: request.exchange,
+        exchange: request.exchange.toLowerCase(),
         price: new BigNumber(request.price),
         amount: new BigNumber(request.amount),
     }
@@ -85,7 +85,7 @@ export class BrokerHubWebsocket implements BrokerHub {
 
         this.socket.on('suborder_status_response', async (data: any) => {
             try {
-                log.log('Order status response', data);
+                log.log('Suborder status response', data);
                 await this.onSubOrderStatusResponse(parseSubOrderStatusResponse(data));
             } catch (error) {
                 log.error(error);
