@@ -1,13 +1,13 @@
-import {BlockchainOrder, Dictionary, OrderType, Side, Status} from "../Model";
+import {BlockchainOrder, Dictionary, Side, Status} from "../Model";
 import BigNumber from "bignumber.js";
-import {DbOrder} from "../db/Db";
+import {DbSubOrder} from "../db/Db";
 
 export interface BrokerHub {
-    onCreateOrder: (data: CreateOrderRequest) => Promise<DbOrder>;
+    onCreateSubOrder: (data: CreateSubOrder) => Promise<DbSubOrder>;
 
-    onCancelOrder: (data: CancelOrderRequest) => Promise<DbOrder>;
+    onCancelSubOrder: (data: CancelSubOrder) => Promise<DbSubOrder>;
 
-    onOrderStatusResponse: (data: OrderStatusResponse) => Promise<void>;
+    onSubOrderStatusResponse: (data: SubOrderStatusResponse) => Promise<void>;
 
     connect(): Promise<void>;
 
@@ -15,50 +15,39 @@ export interface BrokerHub {
 
     register(data: BrokerHubRegisterRequest): Promise<void>;
 
-    sendBalances(address: string, exchanges: Dictionary<Dictionary<string>>): Promise<void>;
+    sendBalances(exchanges: Dictionary<Dictionary<string>>): Promise<void>;
 
-    sendTrade(tradeRequest: TradeRequest): Promise<void>;
+    sendSubOrderStatus(subOrderStatus: SubOrderStatus): Promise<void>;
 }
 
 export interface BrokerHubRegisterRequest {
     address: string;
-    publicKey: string;
-    signature: string;
 }
 
 export interface BalancesRequest {
     exchanges: Dictionary<Dictionary<string>>;
 }
 
-export interface CreateOrderRequest {
+export interface CreateSubOrder {
+    id: number;
     side: Side;
     symbol: string;
     exchange: string;
-    ordType: OrderType;
     price: BigNumber;
-    subOrdQty: BigNumber;
-    ordId: string;
-    subOrdId: string;
-    clientOrdId: string;
+    amount: BigNumber;
 }
 
-export interface CancelOrderRequest {
-    subOrdId: string;
+export interface CancelSubOrder {
+    id: number;
 }
 
-export interface OrderStatusResponse {
-    subOrdId: string;
-    status: Status;
-}
-
-export interface TradeRequest {
-    id: string;
-    subOrdId: string;
-    clientOrdId: string;
+export interface SubOrderStatus {
+    id: number;
     status: Status;
     blockchainOrder?: BlockchainOrder;
+}
 
-    ordId: string; // deprecated
-    tradeId: string; // deprecated
-    timestamp: number; // deprecated
+export interface SubOrderStatusResponse {
+    id: number;
+    status: Status;
 }

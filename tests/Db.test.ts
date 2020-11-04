@@ -1,5 +1,5 @@
-import {Db, DbOrder} from "../src/db/Db";
-import {OrderType, Side, Status, Trade} from "../src/Model";
+import {Db, DbSubOrder} from "../src/db/Db";
+import {Status, Trade} from "../src/Model";
 import BigNumber from "bignumber.js";
 import {v1 as uuid} from "uuid";
 
@@ -9,47 +9,41 @@ export async function createTestDatabase(): Promise<Db> {
     return db
 }
 
-const dbOrder: DbOrder = {
+const dbOrder: DbSubOrder = {
     exchange: "bittrex",
-    exchangeOrdId: '1',
-    ordId: "1",
-    subOrdId: "1",
+    exchangeOrderId: '1',
+    id: 1,
     symbol: "ETH-BTC",
-    side: Side.BUY,
-    ordType: OrderType.LIMIT,
+    side: 'buy',
     price: new BigNumber(100),
-    qty: new BigNumber(1),
+    amount: new BigNumber(1),
     timestamp: Date.now(),
     status: Status.PREPARE,
-    clientOrdId: "1",
-    filledQty: new BigNumber(0),
-    totalCost: new BigNumber(0),
+    filledAmount: new BigNumber(0),
 };
 
 test("orders", async () => {
     const db = await createTestDatabase()
 
-    await expect(db.getAllOrders()).resolves.toEqual([]);
-    await expect(db.insertOrder(dbOrder)).resolves.toBe(1)
-    await expect(db.getAllOrders()).resolves.toEqual([dbOrder]);
+    await expect(db.getAllSubOrders()).resolves.toEqual([]);
+    await expect(db.insertSubOrder(dbOrder)).resolves.toBe(1)
+    await expect(db.getAllSubOrders()).resolves.toEqual([dbOrder]);
 
     let otherOrder = Object.assign({}, dbOrder)
     otherOrder.symbol = "BTC-ETH";
 
-    await expect(db.updateOrder(otherOrder)).resolves.toBeUndefined();
-    await expect(db.getAllOrders()).resolves.toEqual([otherOrder]);
+    await expect(db.updateSubOrder(otherOrder)).resolves.toBeUndefined();
+    await expect(db.getAllSubOrders()).resolves.toEqual([otherOrder]);
 
     // Unique test
-    await expect(db.insertOrder(dbOrder)).rejects.toThrowError()
+    await expect(db.insertSubOrder(dbOrder)).rejects.toThrowError()
 
     // Same exchangeOrdId but on different exchange
     otherOrder = Object.assign({}, dbOrder)
-    otherOrder.ordId = "2"
-    otherOrder.subOrdId = "2"
-    otherOrder.clientOrdId = "2"
+    otherOrder.id = 2
     otherOrder.exchange = "poloniex"
-    otherOrder.exchangeOrdId = "1"
-    await expect(db.insertOrder(otherOrder)).resolves.toBe(2)
+    otherOrder.exchangeOrderId = "1"
+    await expect(db.insertSubOrder(otherOrder)).resolves.toBe(2)
 
     await expect(db.close()).resolves.toBeUndefined()
 });
@@ -65,9 +59,9 @@ test("recreating tables", async () => {
 test("get order", async () => {
     const db = await createTestDatabase()
 
-    await expect(db.insertOrder(dbOrder)).resolves.toBe(1)
-    await expect(db.getOrder(dbOrder.exchange, dbOrder.exchangeOrdId)).resolves.toEqual(dbOrder)
-    await expect(db.getOrder("something", dbOrder.exchangeOrdId)).resolves.toBeUndefined()
+    await expect(db.insertSubOrder(dbOrder)).resolves.toBe(1)
+    await expect(db.getSubOrder(dbOrder.exchange, dbOrder.exchangeOrderId)).resolves.toEqual(dbOrder)
+    await expect(db.getSubOrder("something", dbOrder.exchangeOrderId)).resolves.toBeUndefined()
 
     await expect(db.close()).resolves.toBeUndefined()
 })
@@ -76,7 +70,7 @@ test("in transaction", async () => {
     const db = await createTestDatabase()
 
     await expect(db.inTransaction(async () => {
-        await db.insertOrder(dbOrder)
+        await db.insertSubOrder(dbOrder)
     })).resolves.toBeUndefined()
 
     await expect(db.inTransaction(async () => {
@@ -92,21 +86,18 @@ test("trades", async () => {
 
     const trade: Trade = {
         exchange: 'bittrex',
-        exchangeOrdId: '123',
-        tradeId: uuid().toString(),
+        exchangeOrderId: '123',
         price: new BigNumber(100.500),
-        qty: new BigNumber(200.700),
-        status: Status.NEW,
+        amount: new BigNumber(200.700),
         timestamp: Date.now(),
     };
 
     await expect(db.insertTrade(trade)).resolves.toBe(1)
-    await expect(db.insertTrade(trade)).rejects.toThrowError()
 
     let otherTrade = Object.assign({}, trade)
-    otherTrade.tradeId = uuid().toString()
+    otherTrade.exchangeOrderId = uuid().toString()
     await expect(db.insertTrade(otherTrade)).resolves.toBe(2)
-    console.log(await db.getOrderTrades(trade.exchange, trade.exchangeOrdId))
+    console.log(await db.getSubOrderTrades(trade.exchange, trade.exchangeOrderId))
 
     await expect(db.close()).resolves.toBeUndefined()
 });

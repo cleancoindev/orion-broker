@@ -13,8 +13,8 @@ export function createEmulatorExchangeConfigs() {
     const exchangeConfigs: Dictionary<ExchangeConfig> = {};
     for (let exchange of EXCHANGES) {
         exchangeConfigs[exchange] = {
-            secret: "",
-            key: "emulator",
+            secret: '',
+            key: 'emulator',
         }
     }
     return exchangeConfigs;
@@ -30,15 +30,7 @@ export enum Status {
     REJECTED = 'REJECTED',
 }
 
-export enum Side {
-    BUY = 'buy',
-    SELL = 'sell',
-}
-
-export enum OrderType {
-    LIMIT = 'LIMIT',
-    MARKET = 'MARKET',
-}
+export type Side = 'buy' | 'sell';
 
 export interface Exchange {
     id: string;
@@ -47,48 +39,30 @@ export interface Exchange {
     balances: Balances;
 }
 
-export interface ExchangeOperation {
-    subOrdId: string;
-    ordType: OrderType;
+export interface SubOrder {
+    id: number;
     symbol: string; // 'BTC-ETH'
     side: Side;
     price: BigNumber;
-    qty: BigNumber;
-}
-
-export interface Order extends ExchangeOperation {
-    exchangeOrdId: string;
+    amount: BigNumber;
     exchange: string;
-    timestamp: number;
+    exchangeOrderId?: string;
+    timestamp: number; // create time on exchange
     status: Status;
-}
-
-export interface OrderBook {
-    bids: ExchangeOperation[];
-    asks: ExchangeOperation[];
-}
-
-export interface Ticker {
-    last: BigNumber;
-    ask: BigNumber;
-    bid: BigNumber;
-    pair: string;
 }
 
 export interface Trade {
     exchange: string;
-    exchangeOrdId: string;
-    tradeId: string;
+    exchangeOrderId: string;
     price: BigNumber;
-    qty: BigNumber;
-    status: Status;
-    timestamp: number;
+    amount: BigNumber;
+    timestamp: number; // lastTradeTimestamp
 }
 
-export function calculateTradeStatus(ordQty: BigNumber, filledQty: BigNumber): Status {
-    if (filledQty.isZero()) {
+export function calculateTradeStatus(orderAmount: BigNumber, filledAmount: BigNumber): Status {
+    if (filledAmount.isZero()) {
         return Status.NEW;
-    } else if (filledQty.lt(ordQty)) {
+    } else if (filledAmount.lt(orderAmount)) {
         return Status.PARTIALLY_FILLED;
     } else {
         return Status.FILLED;

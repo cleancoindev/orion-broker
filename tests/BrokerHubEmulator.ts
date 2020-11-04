@@ -1,22 +1,19 @@
 import {
     BrokerHub,
-    BrokerHubRegisterRequest,
-    CancelOrderRequest,
-    CreateOrderRequest,
-    OrderStatusResponse, TradeRequest
+    BrokerHubRegisterRequest, CancelSubOrder, CreateSubOrder, SubOrderStatus, SubOrderStatusResponse,
 } from "../src/hub/BrokerHub";
 import {Settings} from "../src/Settings";
-import {DbOrder} from "../src/db/Db";
+import {DbSubOrder} from "../src/db/Db";
 import {log} from "../src/log";
 
 export class BrokerHubEmulator implements BrokerHub {
     private settings: Settings;
 
-    onCreateOrder: (data: CreateOrderRequest) => Promise<DbOrder>;
+    onCreateSubOrder: (data: CreateSubOrder) => Promise<DbSubOrder>;
 
-    onCancelOrder: (data: CancelOrderRequest) => Promise<DbOrder>;
+    onCancelSubOrder: (data: CancelSubOrder) => Promise<DbSubOrder>;
 
-    onOrderStatusResponse: (data: OrderStatusResponse) => Promise<void>;
+    onSubOrderStatusResponse: (data: SubOrderStatusResponse) => Promise<void>;
 
     constructor(settings: Settings) {
         this.settings = settings;
@@ -24,7 +21,7 @@ export class BrokerHubEmulator implements BrokerHub {
 
     async createOrder(data) {
         try {
-            const order = await this.onCreateOrder(data);
+            const order = await this.onCreateSubOrder(data);
             await this.send('order_response', {success: order});
         } catch (error) {
             log.error(error);
@@ -34,7 +31,7 @@ export class BrokerHubEmulator implements BrokerHub {
 
     async cancelOrder(data) {
         try {
-            const order = await this.onCancelOrder(data);
+            const order = await this.onCancelSubOrder(data);
             await this.send('cancel_order_response', {success: order});
         } catch (error) {
             log.error(error);
@@ -104,7 +101,7 @@ export class BrokerHubEmulator implements BrokerHub {
         await this.send('balance', data);
     }
 
-    async sendTrade(data: TradeRequest): Promise<void> {
+    async sendSubOrderStatus(data: SubOrderStatus): Promise<void> {
         await this.send('order_status', data);
     }
 }

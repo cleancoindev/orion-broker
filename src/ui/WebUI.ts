@@ -1,5 +1,5 @@
 import {log} from "../log";
-import {Db, DbOrder} from "../db/Db";
+import {Db, DbSubOrder} from "../db/Db";
 import {Settings} from "../Settings";
 
 import express, {Express} from 'express';
@@ -32,7 +32,7 @@ export class WebUI {
 
         app.get('/api/openorders', async (req, res) => {
             try {
-                res.send(await db.getOpenOrders());
+                res.send(await db.getOpenSubOrders());
             } catch (error) {
                 log.error(error);
                 res.status(400);
@@ -42,7 +42,7 @@ export class WebUI {
 
         app.get('/api/orderhistory', async (req, res) => {
             try {
-                res.send(await db.getAllOrders());
+                res.send(await db.getAllSubOrders());
             } catch (error) {
                 log.error(error);
                 res.status(400);
@@ -74,7 +74,7 @@ export class WebUI {
         });
     }
 
-    sendToFrontend(data: DbOrder): void {
+    sendToFrontend(data: DbSubOrder): void {
         try {
             if (this.frontendWs) {
                 this.frontendWs.send(JSON.stringify(data));

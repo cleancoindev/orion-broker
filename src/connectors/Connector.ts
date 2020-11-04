@@ -1,27 +1,18 @@
-import {Balances, Exchange, ExchangeOperation, Order, OrderBook, Ticker, Trade} from "../Model";
+import {Balances, Exchange, Side, SubOrder, Trade} from "../Model";
+import BigNumber from "bignumber.js";
 
 export interface Connector {
     exchange: Exchange;
 
-    submitOrder(order: ExchangeOperation): Promise<Order>;
+    submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber): Promise<SubOrder>;
 
-    cancelOrder(order: Order): Promise<boolean>;
+    cancelSubOrder(subOrder: SubOrder): Promise<boolean>;
 
     getBalances(): Promise<Balances>;
 
-    getTicker(pair: string): Promise<Ticker>;
+    setOnTradeListener(onTrade: (trade: Trade) => void): void;
 
-    getOrderBook(pair: string): Promise<OrderBook>;
-
-    getOrderStatus(id: string): Promise<Order>;
-
-    getOrderHistory(pair: string, startTime: number, endTime: number): Promise<Order[]>
-
-    getOpenOrders(pair: string): Promise<Order[]>;
-
-    subscribeToOrderUpdates(callback: (trade: Trade) => void): void;
-
-    checkUpdates(orders: Order[]): Promise<void>;
+    checkSubOrders(subOrders: SubOrder[]): Promise<void>;
 
     destroy(): void;
 }

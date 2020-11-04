@@ -1,16 +1,5 @@
 import {Connector} from "./Connector";
-import {
-    Balances,
-    Exchange,
-    ExchangeOperation,
-    Order,
-    OrderBook,
-    OrderType,
-    Side,
-    Status,
-    Ticker,
-    Trade
-} from "../Model";
+import {Balances, Exchange, Side, Status, SubOrder, Trade} from "../Model";
 import BigNumber from "bignumber.js";
 import ccxt from "ccxt";
 
@@ -20,38 +9,6 @@ function toSymbol(symbol: string) {
 
 function fromSymbol(symbol: string) {
     return symbol.split('/').join('-');
-}
-
-function toType(type: OrderType): string {
-    if (type === OrderType.LIMIT) {
-        return 'limit';
-    } else {
-        return 'market';
-    }
-}
-
-function fromType(type: string): OrderType {
-    if (type === 'limit') {
-        return OrderType.LIMIT;
-    } else {
-        return OrderType.MARKET;
-    }
-}
-
-function toSide(side: Side): 'buy' | 'sell' {
-    if (side === Side.BUY) {
-        return 'buy';
-    } else {
-        return 'sell';
-    }
-}
-
-function fromSide(type: string): Side {
-    if (type === 'buy') {
-        return Side.BUY;
-    } else {
-        return Side.SELL;
-    }
 }
 
 function toNumber(x: BigNumber): number {
@@ -70,13 +27,15 @@ function fromStatus(status: string): Status {
             return Status.FILLED;
         case 'canceled':
             return Status.CANCELED;
+        default:
+            throw new Error('Unknown ccxt status ' + status);
     }
 }
 
 export class CCXTConnector implements Connector {
-    exchange: Exchange;
-    callback: (trade: Trade) => void;
-    ccxtExchange: ccxt.Exchange;
+    readonly exchange: Exchange;
+    private readonly ccxtExchange: ccxt.Exchange;
+    private onTrade: (trade: Trade) => void;
 
     constructor(exchange: Exchange) {
         this.exchange = exchange;
@@ -90,63 +49,32 @@ export class CCXTConnector implements Connector {
     destroy(): void {
     }
 
-    async checkUpdates(orders: Order[]) {
-        for (let order of orders) {
-            const ccxtOrder = await this.ccxtExchange.fetchOrder(order.exchangeOrdId, toSymbol(order.symbol));
-            const newStatus = fromStatus(ccxtOrder.status);
-            if (newStatus === Status.FILLED) {
-                const trade: Trade = {
-                    exchange: order.exchange,
-                    exchangeOrdId: order.exchangeOrdId,
-                    tradeId: order.exchangeOrdId, // todo
-                    price: order.price,
-                    qty: order.qty,
-                    status: Status.FILLED,
-                    timestamp: ccxtOrder.lastTradeTimestamp,
-                }
-                this.callback(trade);
-            }
-        }
-    }
+    async submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber): Promise<SubOrder> {
+        const ccxtOrder: ccxt.Order = await this.ccxtExchange.createOrder(
+            toSymbol(symbol),
+            'limit',
+            side,
+            toNumber(amount),
+            toNumber(price),
+            {'clientOrderId': subOrderId}
+        );
 
-    subscribeToOrderUpdates(callback: (trade: Trade) => void): void {
-        this.callback = callback;
-    }
-
-    async submitOrder(order: ExchangeOperation): Promise<Order> {
-        const symbol = toSymbol(order.symbol);
-        const type = toType(order.ordType);
-        const side = toSide(order.side);
-        const amount = toNumber(order.qty);
-        const price = toNumber(order.price);
-
-        if (type === 'market' && !this.ccxtExchange.has['createMarketOrder']) {
-            throw new Error(this.exchange.id + ' allow create only limit orders');
-        }
-
-        const ccxtOrder: ccxt.Order = await this.ccxtExchange.createOrder(symbol, type, side, amount, price, {
-            'clientOrderId': order.subOrdId,
-        });
-
-        const result: Order = {
-            subOrdId: order.subOrdId,
-            symbol: order.symbol,
-            side: order.side,
-            price: order.price,
-            qty: order.qty,
-            exchangeOrdId: ccxtOrder.id,
-            ordType: OrderType.LIMIT,
+        return {
+            id: subOrderId,
+            symbol: symbol,
+            side: side,
+            price: price,
+            amount: amount,
             exchange: this.exchange.id,
+            exchangeOrderId: ccxtOrder.id,
             timestamp: ccxtOrder.timestamp,
             status: fromStatus(ccxtOrder.status),
-        }
-
-        return result;
+        };
     }
 
-    async cancelOrder(order: Order): Promise<boolean> {
+    async cancelSubOrder(subOrder: SubOrder): Promise<boolean> {
         try {
-            await this.ccxtExchange.cancelOrder(order.exchangeOrdId, toSymbol(order.symbol));
+            await this.ccxtExchange.cancelOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
             return true;
         } catch (e) {
             return false;
@@ -162,23 +90,23 @@ export class CCXTConnector implements Connector {
         return result;
     }
 
-    getOpenOrders(pair: string): Promise<Order[]> {
-        throw new Error("Unsupported");
+    setOnTradeListener(onTrade: (trade: Trade) => void): void {
+        this.onTrade = onTrade;
     }
 
-    getOrderBook(pair: string): Promise<OrderBook> {
-        throw new Error("Unsupported");
-    }
-
-    getOrderHistory(pair: string, startTime: number, endTime: number): Promise<Order[]> {
-        throw new Error("Unsupported");
-    }
-
-    getOrderStatus(id: string): Promise<Order> {
-        throw new Error("Unsupported");
-    }
-
-    getTicker(pair: string): Promise<Ticker> {
-        throw new Error("Unsupported");
+    async checkSubOrders(subOrders: SubOrder[]) {
+        for (let subOrder of subOrders) {
+            const ccxtOrder: ccxt.Order = await this.ccxtExchange.fetchOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
+            const newStatus = fromStatus(ccxtOrder.status);
+            if (newStatus === Status.FILLED) {
+                this.onTrade({
+                    exchange: subOrder.exchange,
+                    exchangeOrderId: subOrder.exchangeOrderId,
+                    price: subOrder.price,
+                    amount: subOrder.amount,
+                    timestamp: ccxtOrder.lastTradeTimestamp,
+                });
+            }
+        }
     }
 }

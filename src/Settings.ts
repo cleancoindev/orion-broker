@@ -7,7 +7,6 @@ import fs from 'fs';
 export interface Settings extends OrionBlockchainSettings {
     orionUrl: string;
     orionBlockchainUrl: string;
-    transport: string;
     callbackUrl: string;
     matcherAddress: string;
     privateKey: string;

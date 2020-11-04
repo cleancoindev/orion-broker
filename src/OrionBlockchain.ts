@@ -1,5 +1,5 @@
-import {BlockchainOrder, Order, Side, Trade} from "./Model";
-import {DbOrder} from "./db/Db";
+import {BlockchainOrder, SubOrder, Side, Trade} from "./Model";
+import {DbSubOrder} from "./db/Db";
 import BigNumber from "bignumber.js";
 import {log} from "./log";
 
@@ -7,7 +7,6 @@ import Web3 from "web3";
 import Long from 'long';
 import {signTypedMessage} from "eth-sig-util";
 import {privateToAddress} from 'ethereumjs-util';
-import {TradeRequest} from "./hub/BrokerHub";
 
 const DOMAIN_TYPE = [
     {name: "name", type: "string"},
@@ -125,20 +124,20 @@ export class OrionBlockchain {
     }
 
     // === GET ORDER HASH=== //
-    private hashOrder(orderInfo: BlockchainOrder): string {
+    private hashOrder(order: BlockchainOrder): string {
         return Web3.utils.soliditySha3(
             "0x03",
-            orderInfo.senderAddress,
-            orderInfo.matcherAddress,
-            orderInfo.baseAsset,
-            orderInfo.quoteAsset,
-            orderInfo.matcherFeeAsset,
-            this.longToBytes(orderInfo.amount),
-            this.longToBytes(orderInfo.price),
-            this.longToBytes(orderInfo.matcherFee),
-            this.longToBytes(orderInfo.nonce),
-            this.longToBytes(orderInfo.expiration),
-            orderInfo.buySide
+            order.senderAddress,
+            order.matcherAddress,
+            order.baseAsset,
+            order.quoteAsset,
+            order.matcherFeeAsset,
+            this.longToBytes(order.amount),
+            this.longToBytes(order.price),
+            this.longToBytes(order.matcherFee),
+            this.longToBytes(order.nonce),
+            this.longToBytes(order.expiration),
+            order.buySide
         );
     }
 
@@ -148,7 +147,7 @@ export class OrionBlockchain {
     //     return sender;
     // }
 
-    private signOrder(orderInfo: BlockchainOrder): string {
+    private signOrder(order: BlockchainOrder): string {
         const data = {
             types: {
                 EIP712Domain: DOMAIN_TYPE,
@@ -156,7 +155,7 @@ export class OrionBlockchain {
             },
             domain: DOMAIN_DATA,
             primaryType: "Order",
-            message: orderInfo,
+            message: order,
         };
 
         const msgParams = {data};
@@ -168,46 +167,34 @@ export class OrionBlockchain {
     }
 
     private counterSide(side: Side): number {
-        return side === Side.BUY ? 0 : 1;
+        return side === 'buy' ? 0 : 1;
     }
 
-    private createBlockchainOrder(order: DbOrder, trade: Trade): BlockchainOrder {
+    private createBlockchainOrder(subOrder: DbSubOrder, trade: Trade): BlockchainOrder {
         const nowTimestamp = Date.now();
-        const assets = Assets.toAssets(order.symbol);
+        const assets = Assets.toAssets(subOrder.symbol);
         return {
             senderAddress: this.address,
             matcherAddress: this.matcherAddress,
             baseAsset: assets[0],
             quoteAsset: assets[1],
             matcherFeeAsset: assets[1],
-            amount: this.toBaseUnit(trade.qty),
+            amount: this.toBaseUnit(trade.amount),
             price: this.toBaseUnit(trade.price),
             matcherFee: this.defaultMatcherFee,
             nonce: nowTimestamp,
             expiration: nowTimestamp + this.defaultExpiration,
-            buySide: this.counterSide(order.side),
+            buySide: this.counterSide(subOrder.side),
             signature: ''
         };
     }
 
-    public async signTrade(order: DbOrder, trade: Trade): Promise<TradeRequest> {
-        const bo = this.createBlockchainOrder(order, trade);
+    public async signTrade(subOrder: DbSubOrder, trade: Trade): Promise<BlockchainOrder> {
+        const bo = this.createBlockchainOrder(subOrder, trade);
         const id = this.hashOrder(bo);
         bo.signature = this.signOrder(bo);
 
         /* const sender = await this.validateSignature(bo.signature, bo); */
-
-        return {
-            id: id,
-            subOrdId: order.subOrdId,
-            clientOrdId: order.clientOrdId,
-            status: trade.status,
-
-            ordId: order.ordId, // deprecated
-            tradeId: id, // deprecated
-            timestamp: trade.timestamp,  // deprecated
-
-            blockchainOrder: bo
-        };
+        return bo;
     }
 }

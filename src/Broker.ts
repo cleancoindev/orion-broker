@@ -1,13 +1,7 @@
-import {
-    BrokerHub,
-    BrokerHubRegisterRequest,
-    CancelOrderRequest,
-    CreateOrderRequest,
-    OrderStatusResponse,
-} from "./hub/BrokerHub";
-import {Db, DbOrder} from "./db/Db";
+import {BrokerHub, CancelSubOrder, CreateSubOrder, SubOrderStatusResponse,} from "./hub/BrokerHub";
+import {Db, DbSubOrder} from "./db/Db";
 import {log} from "./log";
-import {Balances, calculateTradeStatus, Dictionary, Order, Status, Trade} from "./Model";
+import {Balances, calculateTradeStatus, Dictionary, Status, SubOrder, Trade} from "./Model";
 import BigNumber from "bignumber.js";
 import {WebUI} from "./ui/WebUI";
 import {Connectors, ExchangeResolve} from "./connectors/Connectors";
@@ -29,108 +23,99 @@ export class Broker {
         this.webUI = webUI;
         this.connector = connector;
 
-        brokerHub.onCreateOrder = this.onCreateOrder
-        brokerHub.onCancelOrder = this.onCancelOrder
-        brokerHub.onOrderStatusResponse = this.onOrderStatusResponse;
+        brokerHub.onCreateSubOrder = this.onCreateSubOrder
+        brokerHub.onCancelSubOrder = this.onCancelSubOrder
+        brokerHub.onSubOrderStatusResponse = this.onSubOrderStatusResponse;
     }
 
-    onOrderStatusResponse = async (data: OrderStatusResponse): Promise<void> => {
-        const subOrdId = data.subOrdId;
+    onSubOrderStatusResponse = async (data: SubOrderStatusResponse): Promise<void> => {
+        const id = data.id;
 
-        const dbOrder: DbOrder = await this.db.getOrderBySubOrdId(subOrdId);
+        const dbSubOrder: DbSubOrder = await this.db.getSubOrderById(id);
 
-        if (!dbOrder) {
-            throw new Error(`Order ${subOrdId} not found`);
+        if (!dbSubOrder) {
+            throw new Error(`Sub order ${id} not found`);
         }
 
-        if (dbOrder.status === Status.FILLED && data.status === Status.FILLED) {
-            dbOrder.status = Status.FILLED_AND_SENT_TO_ORION;
-            await this.db.updateOrder(dbOrder);
-            this.webUI.sendToFrontend(dbOrder);
+        if (dbSubOrder.status === Status.FILLED && data.status === Status.FILLED) {
+            dbSubOrder.status = Status.FILLED_AND_SENT_TO_ORION;
+            await this.db.updateSubOrder(dbSubOrder);
+            this.webUI.sendToFrontend(dbSubOrder);
         }
     }
 
-    onCreateOrder = async (request: CreateOrderRequest): Promise<DbOrder> => {
+    onCreateSubOrder = async (request: CreateSubOrder): Promise<DbSubOrder> => {
         log.log('/api/order parsed request ', JSON.stringify(request));
 
-        const oldOrder = await this.db.getOrderBySubOrdId(request.subOrdId);
+        const oldSubOrder = await this.db.getSubOrderById(request.id);
 
-        if (oldOrder) {
-            log.log('Order ' + request.subOrdId + ' already created');
-            return oldOrder;
+        if (oldSubOrder) {
+            log.log('Sub Order ' + request.id + ' already created');
+            return oldSubOrder;
         }
 
-        const dbOrder: DbOrder = {
-            exchange: request.exchange,
-            exchangeOrdId: '',
-            ordId: request.ordId,
-            subOrdId: request.subOrdId,
+        const dbSubOrder: DbSubOrder = {
+            id: request.id,
             symbol: request.symbol,
             side: request.side,
-            ordType: request.ordType,
             price: request.price,
-            qty: request.subOrdQty,
+            amount: request.amount,
+            exchange: request.exchange,
             timestamp: Date.now(),
             status: Status.PREPARE,
-            clientOrdId: request.clientOrdId,
-            filledQty: new BigNumber(0),
-            totalCost: new BigNumber(0),
+            filledAmount: new BigNumber(0),
         }
-        await this.db.insertOrder(dbOrder);
+        await this.db.insertSubOrder(dbSubOrder);
 
         log.log('/api/order order inserted');
 
-        const order: Order = await this.connector.createOrder(request.subOrdId, request.ordType, request.exchange, request.symbol, request.side, request.subOrdQty, request.price);
+        const subOrder: SubOrder = await this.connector.submitSubOrder(request.exchange, dbSubOrder.id, dbSubOrder.symbol, dbSubOrder.side, dbSubOrder.amount, dbSubOrder.price);
 
-        dbOrder.exchangeOrdId = order.exchangeOrdId;
-        dbOrder.timestamp = order.timestamp;
-        dbOrder.status = order.status;
-        await this.db.updateOrder(dbOrder);
+        dbSubOrder.exchangeOrderId = subOrder.exchangeOrderId;
+        dbSubOrder.timestamp = subOrder.timestamp;
+        dbSubOrder.status = subOrder.status;
+        await this.db.updateSubOrder(dbSubOrder);
 
-        log.log('/api/order order updated ', JSON.stringify(dbOrder));
+        log.log('/api/order order updated ', JSON.stringify(dbSubOrder));
 
-        this.webUI.sendToFrontend(dbOrder);
+        this.webUI.sendToFrontend(dbSubOrder);
 
-        return dbOrder;
+        return dbSubOrder;
     };
 
-    onCancelOrder = async (data: CancelOrderRequest): Promise<DbOrder> => {
+    onCancelSubOrder = async (data: CancelSubOrder): Promise<DbSubOrder> => {
         log.log('DELETE /api/order receive ', JSON.stringify(data));
 
-        const subOrdId: string = data.subOrdId;
+        const id: number = data.id;
 
-        const order: DbOrder = await this.db.getOrderBySubOrdId(subOrdId);
+        const subOrder: DbSubOrder = await this.db.getSubOrderById(id);
 
-        if (!order) throw new Error('Cant find order ' + order.subOrdId);
+        if (!subOrder) throw new Error('Cant find sub order ' + subOrder.id);
 
-        if (order.status === Status.PREPARE || order.status === Status.CANCELED) {
+        if (subOrder.status === Status.PREPARE || subOrder.status === Status.CANCELED) {
             // nothing to do
-        } else if (order.status === Status.NEW) {
-            const cancelResult = await this.connector.cancelOrder(order);
+        } else if (subOrder.status === Status.NEW) {
+            const cancelResult = await this.connector.cancelSubOrder(subOrder);
 
-            if (!cancelResult) throw new Error('Cant cancel order ' + order.subOrdId);
+            if (!cancelResult) throw new Error('Cant cancel sub order ' + subOrder.id);
 
-            order.status = Status.CANCELED;
+            subOrder.status = Status.CANCELED;
 
-            await this.db.updateOrder(order);
-            this.webUI.sendToFrontend(order);
+            await this.db.updateSubOrder(subOrder);
+            this.webUI.sendToFrontend(subOrder);
 
         } else {
-            throw new Error('Cant cancel order in status ' + order.status);
+            throw new Error('Cant cancel sub order in status ' + subOrder.status);
         }
 
-        return order;
+        return subOrder;
     };
 
     register(): void {
-        const body: BrokerHubRegisterRequest = {
-            address: this.orionBlockchain.address,
-            publicKey: this.orionBlockchain.address,
-            signature: ''
-        };
-
         log.log('Registering in Orion Blockchain');
-        this.brokerHub.register(body);
+        this.brokerHub.register({
+            address: this.orionBlockchain.address,
+        });
     }
 
     sendUpdateBalance(balances: Dictionary<ExchangeResolve<Balances>>): Promise<void> {
@@ -151,7 +136,7 @@ export class Broker {
             }
         }
         this.webUI.lastBalancesJson = JSON.stringify(exchanges);
-        return this.brokerHub.sendBalances(this.orionBlockchain.address, exchanges);
+        return this.brokerHub.sendBalances(exchanges);
     }
 
     startUpdateBalances(): void {
@@ -164,13 +149,13 @@ export class Broker {
         }, 10000);
     }
 
-    startCheckOrders(): void {
+    startCheckSubOrders(): void {
         setInterval(async () => {
             try {
-                const openOrders = await this.db.getOrdersToCheck();
-                await this.connector.checkUpdates(openOrders);
+                const openSubOrders = await this.db.getSubOrdersToCheck();
+                await this.connector.checkSubOrders(openSubOrders);
             } catch (e) {
-                log.error('Orders check', e)
+                log.error('Sub Orders check', e)
             }
         }, this.settings.production ? 10000 : 3000);
     }
@@ -185,38 +170,40 @@ export class Broker {
                 log.error('Cant register broker ', e);
             }
             this.startUpdateBalances();
-            this.startCheckOrders();
+            this.startCheckSubOrders();
         }
     }
 
     // TRADE
 
-    async orderChanged(trade: Trade): Promise<void> {
+    async onTrade(trade: Trade): Promise<void> {
         try {
-            const dbOrder: DbOrder = await this.db.getOrder(trade.exchange, trade.exchangeOrdId);
+            const dbSubOrder: DbSubOrder = await this.db.getSubOrder(trade.exchange, trade.exchangeOrderId);
 
-            if (!dbOrder) {
-                throw new Error(`Order ${trade.exchangeOrdId} in ${trade.exchange} not found`);
+            if (!dbSubOrder) {
+                throw new Error(`Sub Order ${trade.exchangeOrderId} in ${trade.exchange} not found`);
             }
 
-            dbOrder.filledQty = dbOrder.filledQty.plus(trade.qty);
-            const tradeCost = trade.price.multipliedBy(trade.qty);
-            dbOrder.totalCost = dbOrder.totalCost.plus(tradeCost);
-            dbOrder.status = calculateTradeStatus(dbOrder.qty, dbOrder.filledQty);
+            dbSubOrder.filledAmount = dbSubOrder.filledAmount.plus(trade.amount);
+            dbSubOrder.status = calculateTradeStatus(dbSubOrder.amount, dbSubOrder.filledAmount);
 
             await this.db.inTransaction(async () => {
                 await this.db.insertTrade(trade);
-                await this.db.updateOrder(dbOrder);
+                await this.db.updateSubOrder(dbSubOrder);
             })
 
-            log.log('Check order', dbOrder);
+            log.log('Check sub order', dbSubOrder);
 
-            if (this.settings.sendPartialTrades || (dbOrder.status === Status.FILLED)) {
-                const tradeRequest = await this.orionBlockchain.signTrade(dbOrder, trade);
-                await this.brokerHub.sendTrade(tradeRequest); // send signed trade to orion-blockchain
+            if (this.settings.sendPartialTrades || (dbSubOrder.status === Status.FILLED)) {
+                const blockchainOrder = await this.orionBlockchain.signTrade(dbSubOrder, trade);
+                await this.brokerHub.sendSubOrderStatus({
+                    id: dbSubOrder.id,
+                    status: dbSubOrder.status,
+                    blockchainOrder
+                });
             }
 
-            this.webUI.sendToFrontend(dbOrder);
+            this.webUI.sendToFrontend(dbSubOrder);
         } catch (e) {
             log.error("Error during Trade callback", e);
         }

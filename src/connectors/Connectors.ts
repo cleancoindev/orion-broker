@@ -1,18 +1,7 @@
 import {Connector} from "./Connector";
-import {
-    Balances,
-    Dictionary,
-    Exchange,
-    ExchangeOperation,
-    Order,
-    OrderBook,
-    OrderType,
-    Side,
-    Ticker,
-    Trade
-} from "../Model";
+import {Balances, Dictionary, Exchange, Side, SubOrder, Trade} from "../Model";
 import BigNumber from "bignumber.js";
-import {EmulatorConnector} from "./Emulator";
+import {EmulatorConnector} from "./EmulatorConnector";
 import {CCXTConnector} from "./CCXTConnector";
 import {log} from "../log";
 
@@ -28,13 +17,13 @@ export interface ExchangeResolve<T> {
 }
 
 export class Connectors {
-    emulatorBalances: Dictionary<string>;
-    isProduction: boolean;
+    private readonly emulatorBalances: Dictionary<string>;
+    private readonly isProduction: boolean;
 
-    exchangesIds: string[] = [];
-    exchanges: Dictionary<Exchange> = {};
-    connectors: Dictionary<Connector> = {};
-    callback: (trade: Trade) => void = null;
+    private exchangesIds: string[] = [];
+    private exchanges: Dictionary<Exchange> = {};
+    private connectors: Dictionary<Connector> = {};
+    private onTrade: (trade: Trade) => void = null;
 
     constructor(emulatorBalances: Dictionary<string>, isProduction: boolean) {
         this.emulatorBalances = emulatorBalances;
@@ -71,8 +60,8 @@ export class Connectors {
         };
         this.exchanges[id] = exchange;
         this.connectors[id] = this.isProduction ? new CCXTConnector(exchange) : new EmulatorConnector(exchange);
-        if (this.callback) {
-            this.connectors[id].subscribeToOrderUpdates(this.callback);
+        if (this.onTrade) {
+            this.connectors[id].setOnTradeListener(this.onTrade);
         }
     }
 
@@ -112,66 +101,42 @@ export class Connectors {
         return result;
     }
 
-    async createOrder(subOrdId: string, ordType: OrderType, exchangeId: string, symbol: string, side: Side, subOrdQty: BigNumber, price: BigNumber): Promise<Order> {
+    async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber): Promise<SubOrder> {
         const connector = this.connectors[exchangeId];
         if (!connector) throw new Error("Cant find exchange " + exchangeId);
-        const order: ExchangeOperation = {subOrdId, ordType, symbol, side, price, qty: subOrdQty};
-        return connector.submitOrder(order);
+        return connector.submitSubOrder(subOrderId, symbol, side, amount, price);
     }
 
-    async cancelOrder(order: Order): Promise<boolean> {
+    async cancelSubOrder(order: SubOrder): Promise<boolean> {
         const connector = this.connectors[order.exchange];
         if (!connector) throw new Error("Cant find exchange " + order.exchange);
-        return connector.cancelOrder(order);
+        return connector.cancelSubOrder(order);
     }
 
     async getBalances(): Promise<Dictionary<ExchangeResolve<Balances>>> {
         return this.execute((connector: Connector) => connector.getBalances(), this.exchangesIds);
     }
 
-    async getTicker(pair: string): Promise<Dictionary<ExchangeResolve<Ticker>>> {
-        return this.execute((connector: Connector) => connector.getTicker(pair), this.exchangesIds);
-    }
-
-    async getOrderBook(pair: string): Promise<Dictionary<ExchangeResolve<OrderBook>>> {
-        return this.execute((connector: Connector) => connector.getOrderBook(pair), this.exchangesIds);
-    }
-
-    /**
-     * @param ids   {"bittrex" -> "123"}
-     */
-    async getOrderStatus(ids: Dictionary<string>): Promise<Dictionary<ExchangeResolve<Order>>> {
-        return this.execute((connector: Connector) => connector.getOrderStatus(ids[connector.exchange.id]), Object.keys(ids));
-    }
-
-    async getOrderHistory(pair: string, startTime: number, endTime: number): Promise<Dictionary<ExchangeResolve<Order[]>>> {
-        return this.execute((connector: Connector) => connector.getOrderHistory(pair, startTime, endTime), this.exchangesIds);
-    }
-
-    async getOpenOrders(pair: string): Promise<Dictionary<ExchangeResolve<Order[]>>> {
-        return this.execute((connector: Connector) => connector.getOpenOrders(pair), this.exchangesIds);
-    }
-
-    async checkUpdates(orders: Order[]): Promise<void> {
-        const exchangeToOrders = {};
-        for (let order of orders) {
-            if (!exchangeToOrders[order.exchange]) {
-                exchangeToOrders[order.exchange] = [];
+    async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
+        const exchangeToSubOrders = {};
+        for (let subOrder of subOrders) {
+            if (!exchangeToSubOrders[subOrder.exchange]) {
+                exchangeToSubOrders[subOrder.exchange] = [];
             }
-            exchangeToOrders[order.exchange].push(order);
+            exchangeToSubOrders[subOrder.exchange].push(subOrder);
         }
 
-        for (let exchange in exchangeToOrders) {
+        for (let exchange in exchangeToSubOrders) {
             const connector = this.connectors[exchange];
-            await connector.checkUpdates(exchangeToOrders[exchange]);
+            await connector.checkSubOrders(exchangeToSubOrders[exchange]);
         }
     }
 
-    orderWatcher(callback: (trade: Trade) => void): void {
-        this.callback = callback;
+    setOnTradeListener(onTrade: (trade: Trade) => void): void {
+        this.onTrade = onTrade;
         for (let exchange of this.exchangesIds) {
             const connector = this.connectors[exchange];
-            connector.subscribeToOrderUpdates(callback);
+            connector.setOnTradeListener(onTrade);
         }
     }
 }

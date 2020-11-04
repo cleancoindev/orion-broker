@@ -7,10 +7,9 @@ import {Broker} from "../src/Broker";
 import {BrokerHubEmulator} from "./BrokerHubEmulator";
 import {createTestDatabase} from "./Db.test";
 import {Db} from "../src/db/Db";
-import {v1 as uuid} from "uuid";
 import BigNumber from "bignumber.js";
 import {log} from "../src/log";
-import {parseCreateOrderRequest} from "../src/hub/BrokerHubRest";
+import {parseCreateSubOrder} from "../src/hub/BrokerHubWebsocket";
 
 async function createBroker(db: Db): Promise<Broker> {
     // mock config.json
@@ -49,7 +48,7 @@ async function createBroker(db: Db): Promise<Broker> {
 
     const broker = new Broker(settings, brokerHub, db, webUI, connector)
 
-    broker.startCheckOrders = jest.fn().mockImplementation(() => {
+    broker.startCheckSubOrders = jest.fn().mockImplementation(() => {
     })
     broker.startUpdateBalances = jest.fn().mockImplementation(() => {
     })
@@ -65,24 +64,20 @@ function mockLog() {
 }
 
 const data = {
-    "symbol": "ORN-USDT",
+    "id": 158503,
     "side": "sell",
-    "subOrdId": "158503",
-    "price": 5,
+    "symbol": "ORN-USDT",
     "exchange": "bitmax",
-    "subOrdQty": 10,
-    "ordId": "158502",
-    "ordType": "LIMIT"
+    "price": 5,
+    "amount": 10,
 }
 
-function mockTradeObject(exchangeOrdId: string, qty: number): Trade {
+function mockTradeObject(exchangeOrderId: string, amount: number): Trade {
     return {
         exchange: data.exchange,
-        exchangeOrdId: exchangeOrdId,
-        tradeId: uuid(),
+        exchangeOrderId: exchangeOrderId,
         price: new BigNumber(data.price),
-        qty: new BigNumber(qty),
-        status: Status.FILLED,
+        amount: new BigNumber(amount),
         timestamp: Date.now()
     }
 }
@@ -92,35 +87,33 @@ test("order creation", async () => {
     const broker = await createBroker(db)
     const connector = broker.connector
 
-    const qty = new BigNumber(data.subOrdQty)
+    const amount = new BigNumber(data.amount)
     const price = new BigNumber(data.price)
 
-    const order = await broker.onCreateOrder(parseCreateOrderRequest(data))
+    const order = await broker.onCreateSubOrder(parseCreateSubOrder(data))
     // duplicate testing
-    await expect(broker.onCreateOrder(parseCreateOrderRequest(data))).resolves.toStrictEqual(order)
-    await expect(db.getAllOrders()).resolves.toEqual([order])
-    await expect(db.getOpenOrders()).resolves.toEqual([order])
+    await expect(broker.onCreateSubOrder(parseCreateSubOrder(data))).resolves.toStrictEqual(order)
+    await expect(db.getAllSubOrders()).resolves.toEqual([order])
+    await expect(db.getOpenSubOrders()).resolves.toEqual([order])
 
-    const trade: Trade = mockTradeObject(order.exchangeOrdId, data.subOrdQty)
-    await broker.orderChanged(trade)
-    await expect(db.getOrder(order.exchange, order.exchangeOrdId)).resolves.toEqual({
+    const trade: Trade = mockTradeObject(order.exchangeOrderId, data.amount)
+    await broker.onTrade(trade)
+    await expect(db.getSubOrder(order.exchange, order.exchangeOrderId)).resolves.toEqual({
         ...order,
         status: Status.FILLED,
-        filledQty: qty,
-        totalCost: qty.multipliedBy(price)
+        filledAmount: amount,
     })
 
-    await broker.onOrderStatusResponse({subOrdId: order.subOrdId, status: Status.FILLED});
-    await expect(db.getOrder(order.exchange, order.exchangeOrdId)).resolves.toEqual({
+    await broker.onSubOrderStatusResponse({id: order.id, status: Status.FILLED});
+    await expect(db.getSubOrder(order.exchange, order.exchangeOrderId)).resolves.toEqual({
         ...order,
         status: Status.FILLED_AND_SENT_TO_ORION,
-        filledQty: qty,
-        totalCost: qty.multipliedBy(price)
+        filledAmount: amount,
     })
 
     // duplicate testing
-    await broker.orderChanged(trade)
-    await expect(db.getOrderTrades(order.exchange, order.exchangeOrdId)).resolves.toEqual([trade])
+    await broker.onTrade(trade)
+    await expect(db.getSubOrderTrades(order.exchange, order.exchangeOrderId)).resolves.toEqual([trade])
 
 
     // console.log(broker)
@@ -132,36 +125,32 @@ test("order partially filled", async () => {
     const broker = await createBroker(db)
     const connector = broker.connector
 
-    const order = await broker.onCreateOrder(parseCreateOrderRequest(data))
+    const order = await broker.onCreateSubOrder(parseCreateSubOrder(data))
 
-    const trade: Trade = mockTradeObject(order.exchangeOrdId, data.subOrdQty / 2)
+    const trade: Trade = mockTradeObject(order.exchangeOrderId, data.amount / 2)
 
-    const qty = new BigNumber(data.subOrdQty)
+    const amount = new BigNumber(data.amount)
     const price = new BigNumber(data.price)
 
-    await broker.orderChanged(trade)
-    await expect(db.getOrder(order.exchange, order.exchangeOrdId)).resolves.toEqual({
+    await broker.onTrade(trade)
+    await expect(db.getSubOrder(order.exchange, order.exchangeOrderId)).resolves.toEqual({
         ...order,
         status: Status.PARTIALLY_FILLED,
-        filledQty: qty.dividedBy(2),
-        totalCost: qty.dividedBy(2).multipliedBy(price)
+        filledAmount: amount.dividedBy(2),
     })
 
     const trade2: Trade = Object.assign({}, trade)
-    trade2.tradeId = uuid()
-    await broker.orderChanged(trade2)
-    await expect(db.getOrder(order.exchange, order.exchangeOrdId)).resolves.toEqual({
+    await broker.onTrade(trade2)
+    await expect(db.getSubOrder(order.exchange, order.exchangeOrderId)).resolves.toEqual({
         ...order,
         status: Status.FILLED,
-        filledQty: qty,
-        totalCost: qty.multipliedBy(price)
+        filledAmount: amount,
     })
-    await broker.onOrderStatusResponse({subOrdId: order.subOrdId, status: Status.FILLED});
-    await expect(db.getOrder(order.exchange, order.exchangeOrdId)).resolves.toEqual({
+    await broker.onSubOrderStatusResponse({id: order.id, status: Status.FILLED});
+    await expect(db.getSubOrder(order.exchange, order.exchangeOrderId)).resolves.toEqual({
         ...order,
         status: Status.FILLED_AND_SENT_TO_ORION,
-        filledQty: qty,
-        totalCost: qty.multipliedBy(price)
+        filledAmount: amount,
     })
 })
 
@@ -170,17 +159,17 @@ test("order canceled", async () => {
     const broker = await createBroker(db)
     const connector = broker.connector
 
-    await expect(broker.onCancelOrder({subOrdId: "0"})).rejects.toThrowError()
+    await expect(broker.onCancelSubOrder({id: 0})).rejects.toThrowError()
 
-    const order = await broker.onCreateOrder(parseCreateOrderRequest(data))
+    const order = await broker.onCreateSubOrder(parseCreateSubOrder(data))
 
-    await expect(broker.onCancelOrder({subOrdId: data.subOrdId})).resolves.toEqual({
+    await expect(broker.onCancelSubOrder({id: data.id})).resolves.toEqual({
         ...order,
         status: Status.CANCELED
     })
 
     // Canceling a canceled order should not emit exceptions?
-    await expect(broker.onCancelOrder({subOrdId: data.subOrdId})).resolves.toEqual({
+    await expect(broker.onCancelSubOrder({id: data.id})).resolves.toEqual({
         ...order,
         status: Status.CANCELED
     })
@@ -191,12 +180,12 @@ test("order filled but canceled", async () => {
     const broker = await createBroker(db)
     const connector = broker.connector
 
-    const order = await broker.onCreateOrder(parseCreateOrderRequest(data))
-    const trade: Trade = mockTradeObject(order.exchangeOrdId, data.subOrdQty)
+    const order = await broker.onCreateSubOrder(parseCreateSubOrder(data))
+    const trade: Trade = mockTradeObject(order.exchangeOrderId, data.amount)
 
-    await broker.orderChanged(trade)
+    await broker.onTrade(trade)
 
-    await expect(broker.onCancelOrder({subOrdId: data.subOrdId})).rejects.toThrowError()
+    await expect(broker.onCancelSubOrder({id: data.id})).rejects.toThrowError()
 })
 
 
@@ -205,10 +194,10 @@ test("order partially filled but canceled", async () => {
     const broker = await createBroker(db)
     const connector = broker.connector
 
-    const order = await broker.onCreateOrder(parseCreateOrderRequest(data))
-    const trade: Trade = mockTradeObject(order.exchangeOrdId, data.subOrdQty / 2)
+    const order = await broker.onCreateSubOrder(parseCreateSubOrder(data))
+    const trade: Trade = mockTradeObject(order.exchangeOrderId, data.amount / 2)
 
-    await broker.orderChanged(trade)
+    await broker.onTrade(trade)
 
-    await expect(broker.onCancelOrder({subOrdId: data.subOrdId})).rejects.toThrowError()
+    await expect(broker.onCancelSubOrder({id: data.id})).rejects.toThrowError()
 })

@@ -2,7 +2,6 @@ import {log} from "./log";
 import {Db} from "./db/Db";
 import {createEmulatorExchangeConfigs, Dictionary} from "./Model";
 import {Connectors, ExchangeConfig} from "./connectors/Connectors";
-import {BrokerHubRest} from "./hub/BrokerHubRest";
 import {BrokerHub} from "./hub/BrokerHub";
 import {hashPassword, SettingsManager} from "./Settings";
 import {WebUI} from "./ui/WebUI";
@@ -43,12 +42,12 @@ function initHttpServer(): void {
 const db = new Db();
 db.init();
 
-const brokerHub: BrokerHub = settings.transport === 'ws' ? new BrokerHubWebsocket(settings) : new BrokerHubRest(settings, app);
+const brokerHub: BrokerHub = new BrokerHubWebsocket(settings);
 const webUI = new WebUI(db, settings, app);
 const terminal = new Terminal(settingsManager);
 
 const broker = new Broker(settings, brokerHub, db, webUI, connector);
-connector.orderWatcher(trade => broker.orderChanged(trade));
+connector.setOnTradeListener(trade => broker.onTrade(trade));
 
 terminal.onCreatePassword = async (password: string): Promise<void> => {
     settingsManager.cryptr = new Cryptr(password);
