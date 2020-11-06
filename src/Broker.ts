@@ -1,4 +1,4 @@
-import {BrokerHub, CancelSubOrder, CreateSubOrder, SubOrderStatusAccepted,} from "./hub/BrokerHub";
+import {BrokerHub, CancelSubOrder, CreateSubOrder, SubOrderStatus, SubOrderStatusAccepted,} from "./hub/BrokerHub";
 import {Db, DbSubOrder} from "./db/Db";
 import {log} from "./log";
 import {Balances, calculateTradeStatus, Dictionary, Status, SubOrder, Trade} from "./Model";
@@ -25,6 +25,7 @@ export class Broker {
 
         brokerHub.onCreateSubOrder = this.onCreateSubOrder
         brokerHub.onCancelSubOrder = this.onCancelSubOrder
+        brokerHub.onCheckSubOrder = this.onCheckSubOrder
         brokerHub.onSubOrderStatusAccepted = this.onSubOrderStatusAccepted;
     }
 
@@ -41,6 +42,23 @@ export class Broker {
             dbSubOrder.status = Status.FILLED_AND_SENT_TO_ORION;
             await this.db.updateSubOrder(dbSubOrder);
             this.webUI.sendToFrontend(dbSubOrder);
+        }
+    }
+
+    onCheckSubOrder = async (id: number): Promise<SubOrderStatus> => {
+        const dbSubOrder: DbSubOrder = await this.db.getSubOrderById(id);
+
+        if (!dbSubOrder) {
+            return {
+                id: id,
+                status: null
+            }
+        }
+
+        return {
+            id: id,
+            status: dbSubOrder.status,
+            // todo: blockchain order
         }
     }
 

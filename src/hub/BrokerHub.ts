@@ -7,6 +7,8 @@ export interface BrokerHub {
 
     onCancelSubOrder: (data: CancelSubOrder) => Promise<DbSubOrder>;
 
+    onCheckSubOrder: (id: number) => Promise<SubOrderStatus>;
+
     onSubOrderStatusAccepted: (data: SubOrderStatusAccepted) => Promise<void>;
 
     connect(): Promise<void>;
