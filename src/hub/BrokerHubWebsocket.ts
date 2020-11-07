@@ -42,6 +42,7 @@ function subOrderToStatus(order: DbSubOrder): SubOrderStatus {
     return {
         id: order.id,
         status: order.status,
+        filledAmount: order.filledAmount.toString()
     };
 }
 

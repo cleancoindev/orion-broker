@@ -51,13 +51,17 @@ export class Broker {
         if (!dbSubOrder) {
             return {
                 id: id,
-                status: null
+                status: null,
+                filledAmount: '0'
             }
         }
+
+        const trades: Trade[] = await this.db.getSubOrderTrades(dbSubOrder.exchange, dbSubOrder.exchangeOrderId);
 
         return {
             id: id,
             status: dbSubOrder.status,
+            filledAmount: dbSubOrder.filledAmount.toString(),
             // todo: blockchain order
         }
     }
@@ -217,6 +221,7 @@ export class Broker {
                 await this.brokerHub.sendSubOrderStatus({
                     id: dbSubOrder.id,
                     status: dbSubOrder.status,
+                    filledAmount: dbSubOrder.filledAmount.toString(),
                     blockchainOrder
                 });
             }

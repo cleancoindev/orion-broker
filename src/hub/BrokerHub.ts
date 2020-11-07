@@ -46,6 +46,7 @@ export interface CancelSubOrder {
 export interface SubOrderStatus {
     id: number;
     status: Status;
+    filledAmount: string;
     blockchainOrder?: BlockchainOrder;
 }
 
