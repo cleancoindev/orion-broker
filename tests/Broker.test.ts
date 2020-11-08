@@ -15,8 +15,6 @@ async function createBroker(db: Db): Promise<Broker> {
     // mock config.json
     JSON.parse = jest.fn(JSON.parse).mockImplementationOnce(() => ({
         "orionUrl": "http://localhost:9090/backend",
-        "transport": "rest",
-        "orionBlockchainUrl": "http://localhost:3001",
         "callbackUrl": "http://localhost:4000",
         "matcherAddress": "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
         "privateKey": "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
