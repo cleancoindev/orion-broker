@@ -70,16 +70,18 @@ export function calculateTradeStatus(orderAmount: BigNumber, filledAmount: BigNu
 }
 
 export interface BlockchainOrder {
-    senderAddress: string;
-    matcherAddress: string;
-    baseAsset: string;
-    quoteAsset: string;
-    matcherFeeAsset: string;
-    amount: number;
-    price: number;
-    matcherFee: number;
-    nonce: number;
-    expiration: number;
-    buySide: number;
-    signature: string;
+    id: string; // hash of BlockchainOrder (it's not part of order structure in smart-contract)
+
+    senderAddress: string; // address
+    matcherAddress: string; // address
+    baseAsset: string; // address
+    quoteAsset: string; // address
+    matcherFeeAsset: string; // address
+    amount: number; // uint64
+    price: number; // uint64
+    matcherFee: number; // uint64
+    nonce: number; // uint64
+    expiration: number; // uint64
+    buySide: number; // uint8, 1=buy, 0=sell
+    signature: string; // bytes
 }

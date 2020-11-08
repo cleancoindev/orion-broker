@@ -1,4 +1,4 @@
-import {BlockchainOrder, SubOrder, Side, Trade} from "./Model";
+import {BlockchainOrder, Side, Trade} from "./Model";
 import {DbSubOrder} from "./db/Db";
 import BigNumber from "bignumber.js";
 import {log} from "./log";
@@ -92,6 +92,27 @@ const Assets = {
     }
 };
 
+function longToHex(long: number): string {
+    return Web3.utils.bytesToHex(Long.fromNumber(long).toBytesBE());
+}
+
+export function hashOrder(order: BlockchainOrder): string {
+    return Web3.utils.soliditySha3(
+        "0x03",
+        order.senderAddress,
+        order.matcherAddress,
+        order.baseAsset,
+        order.quoteAsset,
+        order.matcherFeeAsset,
+        longToHex(order.amount),
+        longToHex(order.price),
+        longToHex(order.matcherFee),
+        longToHex(order.nonce),
+        longToHex(order.expiration),
+        order.buySide ? '0x01' : '0x00'
+    );
+}
+
 export interface OrionBlockchainSettings {
     matcherAddress: string;
     privateKey: string;
@@ -116,29 +137,6 @@ export class OrionBlockchain {
 
         this.defaultMatcherFee = 300000;
         this.defaultExpiration = 29 * 24 * 60 * 60 * 1000;
-    }
-
-    // CONVERT LONG TO BYTES
-    private longToBytes(long: number): string {
-        return Web3.utils.bytesToHex(Long.fromNumber(long).toBytesBE());
-    }
-
-    // === GET ORDER HASH=== //
-    private hashOrder(order: BlockchainOrder): string {
-        return Web3.utils.soliditySha3(
-            "0x03",
-            order.senderAddress,
-            order.matcherAddress,
-            order.baseAsset,
-            order.quoteAsset,
-            order.matcherFeeAsset,
-            this.longToBytes(order.amount),
-            this.longToBytes(order.price),
-            this.longToBytes(order.matcherFee),
-            this.longToBytes(order.nonce),
-            this.longToBytes(order.expiration),
-            order.buySide
-        );
     }
 
     // private async validateSignature(signature: string, orderInfo: OrderInfo): Promise<string> {
@@ -174,6 +172,7 @@ export class OrionBlockchain {
         const nowTimestamp = Date.now();
         const assets = Assets.toAssets(subOrder.symbol);
         return {
+            id: '',
             senderAddress: this.address,
             matcherAddress: this.matcherAddress,
             baseAsset: assets[0],
@@ -191,7 +190,7 @@ export class OrionBlockchain {
 
     public async signTrade(subOrder: DbSubOrder, trade: Trade): Promise<BlockchainOrder> {
         const bo = this.createBlockchainOrder(subOrder, trade);
-        const id = this.hashOrder(bo);
+        bo.id = hashOrder(bo);
         bo.signature = this.signOrder(bo);
 
         /* const sender = await this.validateSignature(bo.signature, bo); */
