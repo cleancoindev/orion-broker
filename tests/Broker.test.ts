@@ -137,7 +137,7 @@ test("order partially filled", async () => {
         filledAmount: amount.dividedBy(2),
     })
 
-    const trade2: Trade = Object.assign({}, trade)
+    const trade2: Trade = mockTradeObject(order.exchangeOrderId, data.amount)
     await broker.onTrade(trade2)
     await expect(db.getSubOrder(order.exchange, order.exchangeOrderId)).resolves.toEqual({
         ...order,

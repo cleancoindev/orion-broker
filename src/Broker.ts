@@ -133,13 +133,6 @@ export class Broker {
         return subOrder;
     };
 
-    register(): void {
-        log.log('Registering in Orion Blockchain');
-        this.brokerHub.register({
-            address: this.orionBlockchain.address,
-        });
-    }
-
     sendUpdateBalance(balances: Dictionary<ExchangeResolve<Balances>>): Promise<void> {
         // log.log('Get balances and send to Orion Blockchain');
 
@@ -187,8 +180,7 @@ export class Broker {
         if (this.settings.privateKey) {
             this.orionBlockchain = new OrionBlockchain(this.settings);
             try {
-                await this.brokerHub.connect();
-                this.register();
+                await this.brokerHub.connect({address: this.orionBlockchain.address});
             } catch (e) {
                 log.error('Failed to connect to aggregator ', e);
             }

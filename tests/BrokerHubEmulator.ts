@@ -45,7 +45,7 @@ export class BrokerHubEmulator implements BrokerHub {
         }
     }
 
-    connect(): Promise<void> {
+    connect(registerRequest: BrokerHubRegisterRequest): Promise<void> {
         return Promise.resolve()
         // return new Promise((resolve, reject) => {
         //     if (this.stomp) {
@@ -97,10 +97,6 @@ export class BrokerHubEmulator implements BrokerHub {
         // } catch (e) {
         //     log.error(e);
         // }
-    }
-
-    async register(data: BrokerHubRegisterRequest): Promise<void> {
-        await this.send('register', data);
     }
 
     async sendBalances(data: any): Promise<void> {

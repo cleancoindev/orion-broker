@@ -62,7 +62,7 @@ export class BrokerHubWebsocket implements BrokerHub {
         this.settings = settings;
     }
 
-    async connect(): Promise<void> {
+    async connect(registerRequest: BrokerHubRegisterRequest): Promise<void> {
         if (this.socket) {
             await this.disconnect();
         }
@@ -75,6 +75,7 @@ export class BrokerHubWebsocket implements BrokerHub {
 
         this.socket.on('connect', () => {
             log.log('Connected to aggregator');
+            this.register(registerRequest);
         });
 
         this.socket.on('disconnect', () => {
@@ -146,7 +147,7 @@ export class BrokerHubWebsocket implements BrokerHub {
         }
     }
 
-    async register(data: BrokerHubRegisterRequest): Promise<void> {
+    private async register(data: BrokerHubRegisterRequest): Promise<void> {
         return this.send('register', data);
     }
 

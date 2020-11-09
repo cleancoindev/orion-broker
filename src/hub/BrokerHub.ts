@@ -11,11 +11,9 @@ export interface BrokerHub {
 
     onSubOrderStatusAccepted: (data: SubOrderStatusAccepted) => Promise<void>;
 
-    connect(): Promise<void>;
+    connect(data: BrokerHubRegisterRequest): Promise<void>;
 
     disconnect(): Promise<void>;
-
-    register(data: BrokerHubRegisterRequest): Promise<void>;
 
     sendBalances(exchanges: Dictionary<Dictionary<string>>): Promise<void>;
 
