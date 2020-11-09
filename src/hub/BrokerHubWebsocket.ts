@@ -67,28 +67,27 @@ export class BrokerHubWebsocket implements BrokerHub {
             await this.disconnect();
         }
 
-        log.log('Try to connect hub ws', this.settings.orionUrl);
+        log.log('Try to connect to aggregator', this.settings.orionUrl);
 
         this.socket = io(this.settings.orionUrl, {
             transports: ['websocket'],
         });
 
         this.socket.on('connect', () => {
-            log.log('Connected to hub ws');
+            log.log('Connected to aggregator');
         });
 
         this.socket.on('disconnect', () => {
-            console.log('Disconnected from hub ws');
-            this.socket = null;
+            log.log('Disconnected from aggregator');
         });
 
         this.socket.on('register_accepted', (data: any) => {
-            log.log('Register accepted', data);
+            log.log('Receive register_accepted', data);
         });
 
         this.socket.on('suborder_status_accepted', async (data: any) => {
             try {
-                log.log('Suborder status accepted', data);
+                log.log('Receive suborder_status_accepted', data);
                 await this.onSubOrderStatusAccepted(parseSubOrderStatusAccepted(data));
             } catch (error) {
                 log.error(error);
@@ -96,34 +95,51 @@ export class BrokerHubWebsocket implements BrokerHub {
         });
 
         this.socket.on('suborder', async (data: any) => {
-            log.log('Suborder from ws', data);
-            const createdSubOrder = await this.onCreateSubOrder(parseCreateSubOrder(data));
-            await this.sendSubOrderStatus(subOrderToStatus(createdSubOrder));
+            try {
+                log.log('Receive suborder', data);
+                const createdSubOrder = await this.onCreateSubOrder(parseCreateSubOrder(data));
+                await this.sendSubOrderStatus(subOrderToStatus(createdSubOrder));
+            } catch (error) {
+                log.error(error);
+            }
         });
 
         this.socket.on('cancel_suborder', async (data: any) => {
-            log.log('Cancel Suborder from ws', data);
-            const cancelledSubOrder = await this.onCancelSubOrder(parseCancelSubOrder(data));
-            await this.sendSubOrderStatus(subOrderToStatus(cancelledSubOrder));
+            try {
+                log.log('Receive cancel_suborder', data);
+                const cancelledSubOrder = await this.onCancelSubOrder(parseCancelSubOrder(data));
+                await this.sendSubOrderStatus(subOrderToStatus(cancelledSubOrder));
+            } catch (error) {
+                log.error(error);
+            }
         });
 
         this.socket.on('check_suborder', async (data: any) => {
-            log.log('Check Suborder from ws', data);
-            const subOrderStatus = await this.onCheckSubOrder(data.id);
-            await this.sendSubOrderStatus(subOrderStatus);
+            try {
+                log.log('Receive check_suborder', data);
+                const subOrderStatus = await this.onCheckSubOrder(data.id);
+                await this.sendSubOrderStatus(subOrderStatus);
+            } catch (error) {
+                log.error(error);
+            }
         });
     }
 
     async disconnect(): Promise<void> {
         if (this.socket !== null) {
-            this.socket.disconnect();
+            try {
+                this.socket.disconnect();
+            } catch (e) {
+                log.error(e);
+            }
             this.socket = null;
         }
-        log.log("Disconnected from hub ws");
+        log.log("Disconnect from aggregator");
     }
 
     private async send(method: string, data: any): Promise<void> {
         try {
+            log.log('Send ' + method);
             this.socket.emit(method, data);
         } catch (e) {
             log.error(e);
@@ -131,19 +147,18 @@ export class BrokerHubWebsocket implements BrokerHub {
     }
 
     async register(data: BrokerHubRegisterRequest): Promise<void> {
-        await this.send('register', data);
+        return this.send('register', data);
     }
 
     async sendBalances(exchanges: Dictionary<Dictionary<string>>): Promise<void> {
         const data: BalancesRequest = {
             exchanges: JSON.stringify(exchanges)
         }
-        log.log('send balances');
-        await this.send('balances', data);
+        return this.send('balances', data);
     }
 
     async sendSubOrderStatus(subOrderStatus: SubOrderStatus): Promise<void> {
-        await this.send('suborder_status', subOrderStatus);
+        return this.send('suborder_status', subOrderStatus);
     }
 }
 

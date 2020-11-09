@@ -162,12 +162,13 @@ export class Broker {
     }
 
     startUpdateBalances(): void {
-        setInterval(() => {
-            this.connector.getBalances().then(balances => {
-                this.sendUpdateBalance(balances)
-            }).catch(e => {
+        setInterval(async () => {
+            try {
+                const balances = await this.connector.getBalances()
+                await this.sendUpdateBalance(balances);
+            } catch (e) {
                 log.error('Balances', e)
-            });
+            }
         }, 10000);
     }
 
@@ -189,7 +190,7 @@ export class Broker {
                 await this.brokerHub.connect();
                 this.register();
             } catch (e) {
-                log.error('Cant register broker ', e);
+                log.error('Failed to connect to aggregator ', e);
             }
             this.startUpdateBalances();
             this.startCheckSubOrders();
@@ -206,13 +207,13 @@ export class Broker {
                 throw new Error(`Sub Order ${trade.exchangeOrderId} in ${trade.exchange} not found`);
             }
 
-            dbSubOrder.filledAmount = dbSubOrder.filledAmount.plus(trade.amount);
+            dbSubOrder.filledAmount = trade.amount;
             dbSubOrder.status = calculateTradeStatus(dbSubOrder.amount, dbSubOrder.filledAmount);
 
             await this.db.inTransaction(async () => {
                 await this.db.insertTrade(trade);
                 await this.db.updateSubOrder(dbSubOrder);
-            })
+            });
 
             log.log('Check sub order', dbSubOrder);
 
