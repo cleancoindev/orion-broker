@@ -40,7 +40,8 @@ test("connector test", async () => {
         price: price,
         amount: amount,
         timestamp: expect.anything(),
-        status: Status.NEW
+        status: Status.ACCEPTED,
+        sentToAggregator: false,
     })
 
     connector.setOnTradeListener((trade: Trade) => {

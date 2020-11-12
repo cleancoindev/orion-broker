@@ -34,11 +34,9 @@
     "@types/long": "^4.0.0",
     "@types/sqlite3": "^3.1.6",
     "@types/uuid": "8.3.0",
-    "@types/web3": "^1.2.2",
     "@types/socket.io-client": "^1.4.34",
     "bignumber.js": "9.0.0",
     "blessed": "^0.1.81",
-    "body-parser": "^1.19.0",
     "ccxt": "^1.33.21",
     "cryptr": "^6.0.2",
     "dotenv": "^8.2.0",
@@ -50,7 +48,7 @@
     "node-fetch": "^2.3.0",
     "sqlite3": "^5.0.0",
     "uuid": "8.3.0",
-    "web3": "^1.2.8",
+    "web3": "^1.3.0",
     "ws": "^6.2.1",
     "socket.io-client": "^2.3.1"
   }

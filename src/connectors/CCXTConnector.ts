@@ -22,7 +22,7 @@ function fromNumber(x: number): BigNumber {
 function fromStatus(status: string): Status {
     switch (status) {
         case 'open':
-            return Status.NEW;
+            return Status.ACCEPTED;
         case 'closed':
             return Status.FILLED;
         case 'canceled':
@@ -69,6 +69,7 @@ export class CCXTConnector implements Connector {
             exchangeOrderId: ccxtOrder.id,
             timestamp: ccxtOrder.timestamp,
             status: fromStatus(ccxtOrder.status),
+            sentToAggregator: false
         };
     }
 

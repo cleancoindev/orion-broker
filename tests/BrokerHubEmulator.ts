@@ -1,21 +1,19 @@
 import {
     BrokerHub,
     BrokerHubRegisterRequest,
-    CancelSubOrder,
     CreateSubOrder,
     SubOrderStatus,
     SubOrderStatusAccepted,
 } from "../src/hub/BrokerHub";
 import {Settings} from "../src/Settings";
-import {DbSubOrder} from "../src/db/Db";
 import {log} from "../src/log";
 
 export class BrokerHubEmulator implements BrokerHub {
     private settings: Settings;
 
-    onCreateSubOrder: (data: CreateSubOrder) => Promise<DbSubOrder>;
+    onCreateSubOrder: (data: CreateSubOrder) => Promise<SubOrderStatus>;
 
-    onCancelSubOrder: (data: CancelSubOrder) => Promise<DbSubOrder>;
+    onCancelSubOrder: (id: number) => Promise<SubOrderStatus>;
 
     onCheckSubOrder: (id: number) => Promise<SubOrderStatus>;
 

@@ -13,7 +13,6 @@ import {BrokerHubWebsocket} from "./hub/BrokerHubWebsocket";
 import Cryptr from 'cryptr';
 import fs from 'fs';
 import express from 'express';
-import bodyParser from 'body-parser';
 
 
 const settingsManager = new SettingsManager('./config.json');
@@ -25,7 +24,7 @@ const connector: Connectors = new Connectors(emulatorBalances, settings.producti
 
 const app = express();
 
-app.use(bodyParser.json());
+app.use(express.json());
 
 app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");

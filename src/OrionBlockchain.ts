@@ -169,7 +169,6 @@ export class OrionBlockchain {
     }
 
     private createBlockchainOrder(subOrder: DbSubOrder, trade: Trade): BlockchainOrder {
-        const nowTimestamp = Date.now();
         const assets = Assets.toAssets(subOrder.symbol);
         return {
             id: '',
@@ -181,8 +180,8 @@ export class OrionBlockchain {
             amount: this.toBaseUnit(trade.amount),
             price: this.toBaseUnit(trade.price),
             matcherFee: this.defaultMatcherFee,
-            nonce: nowTimestamp,
-            expiration: nowTimestamp + this.defaultExpiration,
+            nonce: trade.timestamp,
+            expiration: trade.timestamp + this.defaultExpiration,
             buySide: this.counterSide(subOrder.side),
             signature: ''
         };

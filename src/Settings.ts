@@ -15,7 +15,6 @@ export interface Settings extends OrionBlockchainSettings {
     passwordSalt: string;
     production: boolean;
     exchanges: Dictionary<ExchangeConfig>;
-    sendPartialTrades: boolean;
 }
 
 export class SettingsManager {

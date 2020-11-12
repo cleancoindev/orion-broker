@@ -7,7 +7,7 @@ export interface Dictionary<T> {
 
 export type Balances = Dictionary<BigNumber>;
 
-export const EXCHANGES = ['poloniex', 'bittrex', 'binance', 'bitmax', 'coinex', 'kucoin'];
+export const EXCHANGES = ["poloniex", "binance", "bittrex", "coinex", "bitmax", "kucoin"];
 
 export function createEmulatorExchangeConfigs() {
     const exchangeConfigs: Dictionary<ExchangeConfig> = {};
@@ -21,11 +21,9 @@ export function createEmulatorExchangeConfigs() {
 }
 
 export enum Status {
-    PREPARE = 'PREPARE',
-    NEW = 'NEW',
-    PARTIALLY_FILLED = 'PARTIALLY_FILLED',
+    PREPARE = 'PREPARE', // internal broker status
+    ACCEPTED = 'ACCEPTED',
     FILLED = 'FILLED',
-    FILLED_AND_SENT_TO_ORION = 'FILLED_AND_SENT_TO_ORION',
     CANCELED = 'CANCELED',
     REJECTED = 'REJECTED',
 }
@@ -49,6 +47,7 @@ export interface SubOrder {
     exchangeOrderId?: string;
     timestamp: number; // create time on exchange
     status: Status;
+    sentToAggregator: boolean;
 }
 
 export interface Trade {
@@ -57,16 +56,6 @@ export interface Trade {
     price: BigNumber;
     amount: BigNumber;
     timestamp: number; // lastTradeTimestamp
-}
-
-export function calculateTradeStatus(orderAmount: BigNumber, filledAmount: BigNumber): Status {
-    if (filledAmount.isZero()) {
-        return Status.NEW;
-    } else if (filledAmount.lt(orderAmount)) {
-        return Status.PARTIALLY_FILLED;
-    } else {
-        return Status.FILLED;
-    }
 }
 
 export interface BlockchainOrder {

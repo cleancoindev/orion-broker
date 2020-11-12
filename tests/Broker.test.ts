@@ -88,9 +88,10 @@ test("order creation", async () => {
     const amount = new BigNumber(data.amount)
     const price = new BigNumber(data.price)
 
-    const order = await broker.onCreateSubOrder(parseCreateSubOrder(data))
-    // duplicate testing
-    await expect(broker.onCreateSubOrder(parseCreateSubOrder(data))).resolves.toStrictEqual(order)
+    const orderStatus = await broker.onCreateSubOrder(parseCreateSubOrder(data))
+    const order = await db.getSubOrderById(data.id)
+// duplicate testing
+    await expect(broker.onCreateSubOrder(parseCreateSubOrder(data))).resolves.toStrictEqual(orderStatus)
     await expect(db.getAllSubOrders()).resolves.toEqual([order])
     await expect(db.getOpenSubOrders()).resolves.toEqual([order])
 
@@ -100,13 +101,15 @@ test("order creation", async () => {
         ...order,
         status: Status.FILLED,
         filledAmount: amount,
+        sentToAggregator: false
     })
 
     await broker.onSubOrderStatusAccepted({id: order.id, status: Status.FILLED});
     await expect(db.getSubOrder(order.exchange, order.exchangeOrderId)).resolves.toEqual({
         ...order,
-        status: Status.FILLED_AND_SENT_TO_ORION,
+        status: Status.FILLED,
         filledAmount: amount,
+        sentToAggregator: true
     })
 
     // duplicate testing
@@ -118,56 +121,23 @@ test("order creation", async () => {
 
 })
 
-test("order partially filled", async () => {
-    const db = await createTestDatabase()
-    const broker = await createBroker(db)
-    const connector = broker.connector
-
-    const order = await broker.onCreateSubOrder(parseCreateSubOrder(data))
-
-    const trade: Trade = mockTradeObject(order.exchangeOrderId, data.amount / 2)
-
-    const amount = new BigNumber(data.amount)
-    const price = new BigNumber(data.price)
-
-    await broker.onTrade(trade)
-    await expect(db.getSubOrder(order.exchange, order.exchangeOrderId)).resolves.toEqual({
-        ...order,
-        status: Status.PARTIALLY_FILLED,
-        filledAmount: amount.dividedBy(2),
-    })
-
-    const trade2: Trade = mockTradeObject(order.exchangeOrderId, data.amount)
-    await broker.onTrade(trade2)
-    await expect(db.getSubOrder(order.exchange, order.exchangeOrderId)).resolves.toEqual({
-        ...order,
-        status: Status.FILLED,
-        filledAmount: amount,
-    })
-    await broker.onSubOrderStatusAccepted({id: order.id, status: Status.FILLED});
-    await expect(db.getSubOrder(order.exchange, order.exchangeOrderId)).resolves.toEqual({
-        ...order,
-        status: Status.FILLED_AND_SENT_TO_ORION,
-        filledAmount: amount,
-    })
-})
 
 test("order canceled", async () => {
     const db = await createTestDatabase()
     const broker = await createBroker(db)
     const connector = broker.connector
 
-    await expect(broker.onCancelSubOrder({id: 0})).rejects.toThrowError()
+    await expect(broker.onCancelSubOrder(0)).rejects.toThrowError()
 
     const order = await broker.onCreateSubOrder(parseCreateSubOrder(data))
 
-    await expect(broker.onCancelSubOrder({id: data.id})).resolves.toEqual({
+    await expect(broker.onCancelSubOrder(data.id)).resolves.toEqual({
         ...order,
         status: Status.CANCELED
     })
 
     // Canceling a canceled order should not emit exceptions?
-    await expect(broker.onCancelSubOrder({id: data.id})).resolves.toEqual({
+    await expect(broker.onCancelSubOrder(data.id)).resolves.toEqual({
         ...order,
         status: Status.CANCELED
     })
@@ -178,12 +148,13 @@ test("order filled but canceled", async () => {
     const broker = await createBroker(db)
     const connector = broker.connector
 
-    const order = await broker.onCreateSubOrder(parseCreateSubOrder(data))
+    await broker.onCreateSubOrder(parseCreateSubOrder(data))
+    const order = await db.getSubOrderById(data.id)
     const trade: Trade = mockTradeObject(order.exchangeOrderId, data.amount)
 
     await broker.onTrade(trade)
 
-    await expect(broker.onCancelSubOrder({id: data.id})).rejects.toThrowError()
+    await expect(broker.onCancelSubOrder(data.id)).resolves.toBeDefined()
 })
 
 
@@ -192,10 +163,11 @@ test("order partially filled but canceled", async () => {
     const broker = await createBroker(db)
     const connector = broker.connector
 
-    const order = await broker.onCreateSubOrder(parseCreateSubOrder(data))
+    await broker.onCreateSubOrder(parseCreateSubOrder(data))
+    const order = await db.getSubOrderById(data.id)
     const trade: Trade = mockTradeObject(order.exchangeOrderId, data.amount / 2)
 
     await broker.onTrade(trade)
 
-    await expect(broker.onCancelSubOrder({id: data.id})).rejects.toThrowError()
+    await expect(broker.onCancelSubOrder(data.id)).resolves.toBeDefined()
 })

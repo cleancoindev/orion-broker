@@ -20,6 +20,7 @@ const dbOrder: DbSubOrder = {
     timestamp: Date.now(),
     status: Status.PREPARE,
     filledAmount: new BigNumber(0),
+    sentToAggregator: false
 };
 
 test("orders", async () => {
@@ -31,6 +32,7 @@ test("orders", async () => {
 
     let otherOrder = Object.assign({}, dbOrder)
     otherOrder.symbol = "BTC-ETH";
+    otherOrder.sentToAggregator = true;
 
     await expect(db.updateSubOrder(otherOrder)).resolves.toBeUndefined();
     await expect(db.getAllSubOrders()).resolves.toEqual([otherOrder]);

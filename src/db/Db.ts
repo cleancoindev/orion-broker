@@ -10,8 +10,10 @@ export interface DbSubOrder extends SubOrder {
 }
 
 function mapValue(x: any): any {
-    if (typeof x === 'number' || typeof x === 'boolean') {
+    if (typeof x === 'number') {
         return x;
+    } else if (typeof x === 'boolean') {
+        return x ? 1 : 0;
     } else {
         return x.toString();
     }
@@ -44,6 +46,7 @@ function parseSubOrder(row: any): DbSubOrder {
         timestamp: row.timestamp,
         status: Status[row.status] as Status,
         filledAmount: new BigNumber(row.filledAmount),
+        sentToAggregator: row.sentToAggregator == 1
     }
 }
 
@@ -125,16 +128,17 @@ export class Db {
                 this.db.run(
                     `CREATE TABLE "subOrders"
                      (
-                         "id"              LONG PRIMARY KEY,
-                         "symbol"          VARCHAR(255)   NOT NULL,
-                         "side"            VARCHAR(255)   NOT NULL,
-                         "price"           DECIMAL(18, 8) NOT NULL,
-                         "amount"          DECIMAL(18, 8) NOT NULL,
-                         "exchange"        VARCHAR(255)   NOT NULL,
-                         "exchangeOrderId" VARCHAR(255)   NULL,
-                         "timestamp"       DATETIME       NOT NULL,
-                         "status"          VARCHAR(255)   NOT NULL,
-                         "filledAmount"    DECIMAL(18, 8) NOT NULL,
+                         "id"               LONG PRIMARY KEY,
+                         "symbol"           VARCHAR(255)   NOT NULL,
+                         "side"             VARCHAR(255)   NOT NULL,
+                         "price"            DECIMAL(18, 8) NOT NULL,
+                         "amount"           DECIMAL(18, 8) NOT NULL,
+                         "exchange"         VARCHAR(255)   NOT NULL,
+                         "exchangeOrderId"  VARCHAR(255)   NULL,
+                         "timestamp"        DATETIME       NOT NULL,
+                         "status"           VARCHAR(255)   NOT NULL,
+                         "filledAmount"     DECIMAL(18, 8) NOT NULL,
+                         "sentToAggregator" TINYINT        NOT NULL,
                          UNIQUE ("exchange", "exchangeOrderId")
                      );`,
                     [],
@@ -279,7 +283,7 @@ export class Db {
 
     async getOpenSubOrders(): Promise<DbSubOrder[]> {
         return new Promise((resolve, reject) => {
-            this.db.all('SELECT DISTINCT * FROM subOrders WHERE status = "NEW" OR status = "PARTIALLY_FILLED" ORDER BY timestamp', [], (err, rows) => {
+            this.db.all('SELECT DISTINCT * FROM subOrders WHERE status = "ACCEPTED" ORDER BY timestamp', [], (err, rows) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -292,7 +296,7 @@ export class Db {
     async getSubOrdersToCheck(): Promise<DbSubOrder[]> {
         // todo: status != "FILLED" is temporary, to support current stage
         return new Promise((resolve, reject) => {
-            this.db.all('SELECT * FROM subOrders WHERE status != "FILLED_AND_SENT_TO_ORION" AND status != "CANCELED" AND status != "FILLED"', [], (err, rows) => {
+            this.db.all('SELECT * FROM subOrders WHERE status = "ACCEPTED"', [], (err, rows) => {
                 if (err) {
                     reject(err);
                 } else {

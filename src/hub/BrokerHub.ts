@@ -1,11 +1,10 @@
 import {BlockchainOrder, Dictionary, Side, Status} from "../Model";
 import BigNumber from "bignumber.js";
-import {DbSubOrder} from "../db/Db";
 
 export interface BrokerHub {
-    onCreateSubOrder: (data: CreateSubOrder) => Promise<DbSubOrder>;
+    onCreateSubOrder: (data: CreateSubOrder) => Promise<SubOrderStatus>;
 
-    onCancelSubOrder: (data: CancelSubOrder) => Promise<DbSubOrder>;
+    onCancelSubOrder: (id: number) => Promise<SubOrderStatus>;
 
     onCheckSubOrder: (id: number) => Promise<SubOrderStatus>;
 

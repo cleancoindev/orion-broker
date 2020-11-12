@@ -26,7 +26,8 @@ export class EmulatorConnector implements Connector {
             price: price,
             amount: amount,
             timestamp: Date.now(),
-            status: Status.NEW
+            status: Status.ACCEPTED,
+            sentToAggregator: false
         };
     }
 
