@@ -1,0 +1,29 @@
+INSTALL DOCKER
+
+Skip this step if you already have Docker installed. Run the following commands:
+
+# 1) Download Docker install script
+wget https://raw.githubusercontent.com/orionprotocol/orion-broker/master/install-docker-ubuntu.sh
+
+# 2) Enable script permissions
+chmod a+x install-docker-ubuntu.sh
+
+# 3) Run installation
+./install-docker-ubuntu.sh
+
+
+RUN
+
+docker run -it orionprotocol/orion-broker:latest
+
+
+HIDE BROKER CLI:
+
+Ctrl + P + Q
+
+
+RETURN TO BROKER CLI:
+
+docker ps
+
+docker attach <CONTAINER_ID>

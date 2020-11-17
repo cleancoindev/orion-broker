@@ -1,0 +1,15 @@
+This developer document describes how to build and deploy docker with a broker
+
+# Install Docker
+
+MacOS: https://docs.docker.com/docker-for-mac/install/
+
+Windows: https://docs.docker.com/docker-for-windows/install/
+
+# Build
+
+docker build -t orionprotocol/orion-broker .
+
+docker tag orionprotocol/orion-broker:latest orionprotocol/orion-broker:latest
+
+docker push orionprotocol/orion-broker:latest

@@ -5,6 +5,7 @@
   "main": "dist/main.js",
   "scripts": {
     "start": "tsc && node dist/main.js",
+    "build": "tsc",
     "test": "jest",
     "coverage": "jest --coverage"
   },
