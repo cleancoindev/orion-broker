@@ -321,9 +321,8 @@ export class Db {
     }
 
     async getSubOrdersToCheck(): Promise<DbSubOrder[]> {
-        // todo: status != "FILLED" is temporary, to support current stage
         return new Promise((resolve, reject) => {
-            this.db.all('SELECT * FROM subOrders WHERE status = "ACCEPTED"', [], (err, rows) => {
+            this.db.all('SELECT * FROM subOrders WHERE sentToAggregator = 0', [], (err, rows) => {
                 if (err) {
                     reject(err);
                 } else {
