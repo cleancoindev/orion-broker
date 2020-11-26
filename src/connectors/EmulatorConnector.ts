@@ -1,5 +1,5 @@
-import {Connector} from "./Connector";
-import {Balances, Exchange, Side, Status, SubOrder, Trade} from "../Model";
+import {Connector, ExchangeWithdrawStatus} from "./Connector";
+import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from "../Model";
 import {v1 as uuid} from "uuid";
 import BigNumber from "bignumber.js";
 
@@ -54,4 +54,20 @@ export class EmulatorConnector implements Connector {
             });
         }
     }
+
+    async checkWithdraws(withdraws: Withdraw[]): Promise<ExchangeWithdrawStatus[]> {
+        const result: ExchangeWithdrawStatus[] = [];
+        for (let withdraw of withdraws) {
+            result.push({
+                exchangeWithdrawId: withdraw.exchangeWithdrawId,
+                status: 'ok'
+            });
+        }
+        return result;
+    }
+
+    async withdraw(currency: string, amount: BigNumber, address: string): Promise<string | undefined> {
+        return uuid().toString();
+    }
+
 }

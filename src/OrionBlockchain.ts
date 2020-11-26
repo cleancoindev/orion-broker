@@ -38,25 +38,16 @@ const DOMAIN_DATA = {
 };
 
 const Assets = {
-    BTC: "0x335123EB7029030805864805fC95f1AB16A64D61",
-    ETH: "0x0000000000000000000000000000000000000000",
-    XRP: "0x15a3Eb660823e0a3eF4D4A86EEC0d66f405Db515",
-    USDT: "0xfC1CD13A7f126eFD823E373C4086F69beB8611C2",
-    ERD: "0x361a8c91bf9f0b3860f98308773c64f86aed632d",
-    ORN: "0x06B984C1d2c8e2C525d4db16a813e067004817a8",
+    "ETH": "0x0000000000000000000000000000000000000000",
+    "USDT": "0xfc1cd13a7f126efd823e373c4086f69beb8611c2",
+    "ORN": "0xfc25454ac2db9f6ab36bc0b0b034b41061c00982",
 
     toSymbolAsset: function (asset: string): string {
         switch (asset) {
-            case this.BTC:
-                return 'BTC';
             case this.ETH:
                 return 'ETH';
-            case this.XRP:
-                return 'XRP';
             case this.USDT:
                 return 'USDT';
-            case this.ERD:
-                return 'ERD';
             case this.ORN:
                 return 'ORN';
             default:
@@ -66,16 +57,10 @@ const Assets = {
 
     toAssetAddress: function (asset: string): string {
         switch (asset) {
-            case 'BTC':
-                return this.BTC;
             case 'ETH':
                 return this.ETH;
-            case 'XRP':
-                return this.XRP;
             case 'USDT':
                 return this.USDT;
-            case 'ERD':
-                return this.ERD;
             case 'ORN':
                 return this.ORN;
             default:
@@ -118,12 +103,12 @@ export interface OrionBlockchainSettings {
     privateKey: string;
 }
 
+const DEFAULT_EXPIRATION = 29 * 24 * 60 * 60 * 1000;
+
 export class OrionBlockchain {
     matcherAddress: string;
     bufferKey: Buffer;
     address: string;
-    defaultMatcherFee: number;
-    defaultExpiration: number;
 
     constructor(settings: OrionBlockchainSettings) {
         this.matcherAddress = settings.matcherAddress;
@@ -134,9 +119,6 @@ export class OrionBlockchain {
         } catch (e) {
             log.error('Orion blockchain init', e);
         }
-
-        this.defaultMatcherFee = 300000;
-        this.defaultExpiration = 29 * 24 * 60 * 60 * 1000;
     }
 
     // private async validateSignature(signature: string, orderInfo: OrderInfo): Promise<string> {
@@ -170,19 +152,25 @@ export class OrionBlockchain {
 
     private createBlockchainOrder(subOrder: DbSubOrder, trade: Trade): BlockchainOrder {
         const assets = Assets.toAssets(subOrder.symbol);
+        const buySide = this.counterSide(subOrder.side);
+        const matcherFeeAsset = buySide ? assets[0] : assets[1];
+
+        const MATCHER_FEE_PERCENT = new BigNumber(0.2).dividedBy(100); // 0.2%
+        const matcherFee: BigNumber = buySide ? trade.amount.multipliedBy(MATCHER_FEE_PERCENT) : trade.amount.multipliedBy(trade.price).multipliedBy(MATCHER_FEE_PERCENT);
+
         return {
             id: '',
             senderAddress: this.address,
             matcherAddress: this.matcherAddress,
             baseAsset: assets[0],
             quoteAsset: assets[1],
-            matcherFeeAsset: assets[1],
+            matcherFeeAsset:  matcherFeeAsset,
             amount: this.toBaseUnit(trade.amount),
             price: this.toBaseUnit(trade.price),
-            matcherFee: this.defaultMatcherFee,
+            matcherFee: this.toBaseUnit(matcherFee),
             nonce: trade.timestamp,
-            expiration: trade.timestamp + this.defaultExpiration,
-            buySide: this.counterSide(subOrder.side),
+            expiration: trade.timestamp + DEFAULT_EXPIRATION,
+            buySide: buySide,
             signature: ''
         };
     }

@@ -1,5 +1,5 @@
-import {Connector} from "./Connector";
-import {Balances, Dictionary, Exchange, Side, SubOrder, Trade} from "../Model";
+import {Connector, ExchangeWithdrawStatus} from "./Connector";
+import {Balances, Dictionary, Exchange, Side, SubOrder, Trade, Withdraw} from "../Model";
 import BigNumber from "bignumber.js";
 import {EmulatorConnector} from "./EmulatorConnector";
 import {CCXTConnector} from "./CCXTConnector";
@@ -118,18 +118,42 @@ export class Connectors {
     }
 
     async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
-        const exchangeToSubOrders = {};
+        const byExchanges = {};
         for (let subOrder of subOrders) {
-            if (!exchangeToSubOrders[subOrder.exchange]) {
-                exchangeToSubOrders[subOrder.exchange] = [];
+            if (!byExchanges[subOrder.exchange]) {
+                byExchanges[subOrder.exchange] = [];
             }
-            exchangeToSubOrders[subOrder.exchange].push(subOrder);
+            byExchanges[subOrder.exchange].push(subOrder);
         }
 
-        for (let exchange in exchangeToSubOrders) {
+        for (let exchange in byExchanges) {
             const connector = this.connectors[exchange];
-            await connector.checkSubOrders(exchangeToSubOrders[exchange]);
+            await connector.checkSubOrders(byExchanges[exchange]);
         }
+    }
+
+    async checkWithdraws(withdraws: Withdraw[]): Promise<ExchangeWithdrawStatus[]> {
+        const byExchanges = {};
+        for (let withdraw of withdraws) {
+            if (!byExchanges[withdraw.exchange]) {
+                byExchanges[withdraw.exchange] = [];
+            }
+            byExchanges[withdraw.exchange].push(withdraw);
+        }
+
+        let result = [];
+        for (let exchange in byExchanges) {
+            const connector = this.connectors[exchange];
+            const exchangeResult = await connector.checkWithdraws(byExchanges[exchange]);
+            result = result.concat(exchangeResult);
+        }
+        return result;
+    }
+
+    async withdraw(exchange: string, currency: string, amount: BigNumber, address: string): Promise<string | undefined> {
+        const connector = this.connectors[exchange];
+        if (!connector) throw new Error("Cant find exchange " + exchange);
+        return connector.withdraw(currency, amount, address);
     }
 
     setOnTradeListener(onTrade: (trade: Trade) => void): void {

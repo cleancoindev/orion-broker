@@ -1,7 +1,12 @@
-import {Connector} from "./Connector";
-import {Balances, Exchange, Side, Status, SubOrder, Trade} from "../Model";
+import {Connector, ExchangeWithdrawStatus} from "./Connector";
+import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from "../Model";
 import BigNumber from "bignumber.js";
 import ccxt from "ccxt";
+import {log} from "../log";
+
+function toCurrency(currency: string) {
+    return currency;
+}
 
 function toSymbol(symbol: string) {
     return symbol.split('-').join('/');
@@ -95,7 +100,7 @@ export class CCXTConnector implements Connector {
         this.onTrade = onTrade;
     }
 
-    async checkSubOrders(subOrders: SubOrder[]) {
+    async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
         for (let subOrder of subOrders) {
             const ccxtOrder: ccxt.Order = await this.ccxtExchange.fetchOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
             const newStatus = fromStatus(ccxtOrder.status);
@@ -109,5 +114,46 @@ export class CCXTConnector implements Connector {
                 });
             }
         }
+    }
+
+    /**
+     * @return exchange withdrawal id / undefined if error
+     */
+    async withdraw(currency: string, amount: BigNumber, address: string): Promise<string | undefined> {
+        try {
+            const response = await this.ccxtExchange.withdraw(toCurrency(currency), toNumber(amount), address);
+            return response.id;
+        } catch (e) {
+            return undefined;
+        }
+    }
+
+    async checkWithdraws(withdraws: Withdraw[]): Promise<ExchangeWithdrawStatus[]> {
+        const result: ExchangeWithdrawStatus[] = [];
+
+        const transactions: ccxt.Transaction[] = await this.ccxtExchange.fetchWithdrawals(); // todo: paging
+
+        for (let withdraw of withdraws) {
+            const tx = transactions.find(t => t.id === withdraw.exchangeWithdrawId);
+
+            if (!tx) {
+                log.error('No exchange transaction for withdraw ' + withdraw.exchangeWithdrawId);
+            } else {
+                const status: string = tx.status;
+
+                if (status === 'ok' || status === 'failed' || status === 'canceled') {
+                    result.push({
+                        exchangeWithdrawId: withdraw.exchangeWithdrawId,
+                        status: status,
+                    });
+                } else if (tx.status === 'pending') {
+                    // nothing to do
+                } else {
+                    log.error('Unknown exchange transaction status ' + tx.status);
+                }
+            }
+        }
+
+        return result;
     }
 }

@@ -1,4 +1,4 @@
-import {Status, SubOrder, Trade} from "../Model";
+import {Status, SubOrder, Trade, Withdraw} from "../Model";
 import BigNumber from "bignumber.js";
 import sqlite3 from "sqlite3";
 import {log} from "../log";
@@ -60,6 +60,16 @@ function parseTrade(row: any): Trade {
     }
 }
 
+function parseWithdraw(row: any): Withdraw {
+    return {
+        exchangeWithdrawId: row.exchangeWithdrawId,
+        exchange: row.exchange,
+        currency: row.currency,
+        amount: new BigNumber(row.amount),
+        status: row.status
+    }
+}
+
 export class Db {
     private db: sqlite3.Database;
 
@@ -116,6 +126,23 @@ export class Db {
                          "price"           DECIMAL(18, 8) NOT NULL,
                          "amount"          DECIMAL(18, 8) NOT NULL,
                          "timestamp"       DATETIME       NOT NULL
+                     );`,
+                    [],
+                    function (err) {
+                        if (err) {
+                            reject(err)
+                        }
+                    }
+                );
+
+                this.db.run(
+                    `CREATE TABLE "withdraws"
+                     (
+                         "exchangeWithdrawId" VARCHAR(255)   NOT NULL,
+                         "exchange"           VARCHAR(255)   NOT NULL,
+                         "currency"           VARCHAR(255)   NOT NULL,
+                         "amount"             DECIMAL(18, 8) NOT NULL,
+                         "status"             VARCHAR(255)   NOT NULL
                      );`,
                     [],
                     function (err) {
@@ -301,6 +328,18 @@ export class Db {
                     reject(err);
                 } else {
                     resolve(rows.map(parseSubOrder));
+                }
+            });
+        });
+    }
+
+    async getWithdrawsToCheck(): Promise<Withdraw[]> {
+        return new Promise((resolve, reject) => {
+            this.db.all('SELECT * FROM withdraws WHERE status = "pending"', [], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows.map(parseWithdraw));
                 }
             });
         });

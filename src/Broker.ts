@@ -38,8 +38,13 @@ export class Broker {
             throw new Error(`Suborder ${id} not found`);
         }
 
+        const rejectedByAggregator = (data.status === Status.REJECTED) && (dbSubOrder.status !== Status.REJECTED);
+        if (rejectedByAggregator) {
+            log.error(`Order ${id} rejected by aggregator`);
+        }
+
         const isStatusFinal = dbSubOrder.status !== Status.PREPARE && dbSubOrder.status !== Status.ACCEPTED;
-        if (dbSubOrder.status === data.status && isStatusFinal) {
+        if (rejectedByAggregator || (dbSubOrder.status === data.status && isStatusFinal)) {
             dbSubOrder.sentToAggregator = true;
             await this.db.updateSubOrder(dbSubOrder);
             this.webUI.sendToFrontend(dbSubOrder);
@@ -171,7 +176,18 @@ export class Broker {
                 const openSubOrders = await this.db.getSubOrdersToCheck();
                 await this.connector.checkSubOrders(openSubOrders);
             } catch (e) {
-                log.error('Sub Orders check', e)
+                log.error('Suborders check', e)
+            }
+        }, this.settings.production ? 10000 : 3000);
+    }
+
+    startCheckWithdraws(): void {
+        setInterval(async () => {
+            try {
+                const openWithdraws = await this.db.getWithdrawsToCheck();
+                await this.connector.checkWithdraws(openWithdraws);
+            } catch (e) {
+                log.error('Withdraw check', e)
             }
         }, this.settings.production ? 10000 : 3000);
     }
@@ -186,6 +202,7 @@ export class Broker {
             }
             this.startUpdateBalances();
             this.startCheckSubOrders();
+            this.startCheckWithdraws();
         }
     }
 

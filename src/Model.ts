@@ -7,7 +7,7 @@ export interface Dictionary<T> {
 
 export type Balances = Dictionary<BigNumber>;
 
-export const EXCHANGES = ["poloniex", "binance", "bittrex", "coinex", "bitmax", "kucoin"];
+export const EXCHANGES = ["binance", "bitmax", "kucoin"];
 
 export function createEmulatorExchangeConfigs() {
     const exchangeConfigs: Dictionary<ExchangeConfig> = {};
@@ -73,4 +73,12 @@ export interface BlockchainOrder {
     expiration: number; // uint64
     buySide: number; // uint8, 1=buy, 0=sell
     signature: string; // bytes
+}
+
+export interface Withdraw {
+    exchangeWithdrawId: string;
+    exchange: string;
+    currency: string;
+    amount: BigNumber;
+    status: 'pending' | 'ok' | 'failed' | 'canceled';
 }

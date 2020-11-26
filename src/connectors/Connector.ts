@@ -1,4 +1,4 @@
-import {Balances, Exchange, Side, SubOrder, Trade} from "../Model";
+import {Balances, Exchange, Side, SubOrder, Trade, Withdraw} from "../Model";
 import BigNumber from "bignumber.js";
 
 export interface Connector {
@@ -14,5 +14,14 @@ export interface Connector {
 
     checkSubOrders(subOrders: SubOrder[]): Promise<void>;
 
+    withdraw(currency: string, amount: BigNumber, address: string): Promise<string | undefined>;
+
+    checkWithdraws(withdraws: Withdraw[]): Promise<ExchangeWithdrawStatus[]>;
+
     destroy(): void;
+}
+
+export interface ExchangeWithdrawStatus {
+    exchangeWithdrawId: string;
+    status: 'ok' | 'failed' | 'canceled';
 }
