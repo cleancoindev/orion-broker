@@ -82,7 +82,7 @@ export class Terminal {
                 ],
                 asks: [],
                 after: (state: any) => {
-                    settings.callbackUrl = 'http://' + state.ip + ':' + settings.httpPort;
+                    settings.brokerWebServerUrl = 'http://' + state.ip + ':' + settings.httpPort;
                     settingsManger.save();
                     return 'url saved, changes will take effect after restarting the app';
                 }

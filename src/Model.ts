@@ -75,10 +75,35 @@ export interface BlockchainOrder {
     signature: string; // bytes
 }
 
+export interface Transaction {
+    transactionHash: string;
+    method: 'deposit' | 'depositAsset' | 'approve' | 'lockStake';
+    asset: string;
+    amount: BigNumber;
+    createTime: number;
+    status: 'PENDING' | 'OK' | 'FAIL';
+}
+
 export interface Withdraw {
     exchangeWithdrawId: string;
     exchange: string;
     currency: string;
     amount: BigNumber;
     status: 'pending' | 'ok' | 'failed' | 'canceled';
+}
+
+export interface Liability {
+    assetName: string;
+    assetAddress: string; // address
+    timestamp: number; // uint64
+    outstandingAmount: BigNumber; // uint192
+}
+
+export function parseLiability(data: any): Liability {
+    return {
+        assetName: data.assetName,
+        assetAddress: data.assetAddress,
+        timestamp: data.timestamp,
+        outstandingAmount: new BigNumber(data.outstandingAmount),
+    }
 }

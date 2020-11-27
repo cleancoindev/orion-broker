@@ -5,8 +5,9 @@ import crypto from 'crypto';
 import fs from 'fs';
 
 export interface Settings extends OrionBlockchainSettings {
-    orionUrl: string;
-    callbackUrl: string;
+    orionAggregatorUrl: string;
+    orionBlockchainUrl: string;
+    brokerWebServerUrl: string;
     matcherAddress: string;
     privateKey: string;
     httpPort: number;

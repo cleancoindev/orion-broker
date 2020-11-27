@@ -17,7 +17,7 @@ export class WebUI {
         // STATIC
 
         app.use('/host.js', (req, res) => {
-            const fileContent = `var BROKER_URL = "${settings.callbackUrl}"; // GENERATED `;
+            const fileContent = `var BROKER_URL = "${settings.brokerWebServerUrl}"; // GENERATED `;
             res.setHeader('Content-Type', 'application/javascript');
             res.setHeader('Content-Length', fileContent.length);
             res.send(fileContent);

@@ -1,4 +1,4 @@
-import {Status, SubOrder, Trade, Withdraw} from "../Model";
+import {Status, SubOrder, Trade, Transaction, Withdraw} from "../Model";
 import BigNumber from "bignumber.js";
 import sqlite3 from "sqlite3";
 import {log} from "../log";
@@ -342,5 +342,15 @@ export class Db {
                 }
             });
         });
+    }
+
+    async insetTransaction(transaction: Transaction): Promise<void> {
+    }
+
+    async updateTransactionStatus(hash: string, status: string): Promise<void> {
+    }
+
+    async getPendingTransactions(): Promise<Transaction[]> {
+        return [];
     }
 }

@@ -1,7 +1,7 @@
 import {BrokerHub, CreateSubOrder, SubOrderStatus, SubOrderStatusAccepted,} from "./hub/BrokerHub";
 import {Db, DbSubOrder} from "./db/Db";
 import {log} from "./log";
-import {Balances, BlockchainOrder, Dictionary, Status, SubOrder, Trade} from "./Model";
+import {Balances, BlockchainOrder, Dictionary, Liability, Status, SubOrder, Trade, Transaction} from "./Model";
 import BigNumber from "bignumber.js";
 import {WebUI} from "./ui/WebUI";
 import {Connectors, ExchangeResolve} from "./connectors/Connectors";
@@ -189,12 +189,43 @@ export class Broker {
             } catch (e) {
                 log.error('Withdraw check', e)
             }
-        }, this.settings.production ? 10000 : 3000);
+        }, 3000);
+    }
+
+    startCheckLiabilities(): void {
+        setInterval(async () => {
+            try {
+                const liabilities: Liability[] = await this.orionBlockchain.getLiabilities();
+                log.log('liabilities', liabilities)
+            } catch (e) {
+                log.error('Liabilities check', e)
+            }
+        }, 3000);
+    }
+
+    startCheckTransactions(): void {
+        setInterval(async () => {
+            try {
+                const pendingTransactions: Transaction[] = await this.db.getPendingTransactions();
+                for (let tx of pendingTransactions) {
+                    const status = await this.orionBlockchain.getTransactionStatus(tx.transactionHash);
+                    if (status !== tx.status) {
+                        await this.db.updateTransactionStatus(tx.transactionHash, status);
+                        if (status === 'OK' || status === 'FAIL') {
+                            log.log('Transaction ' + tx.method + ' ' + tx.amount.toString() + ' ' + tx.asset + ' ' + status);
+                        }
+                    }
+                }
+            } catch (e) {
+                log.error('Transactions check', e)
+            }
+        }, 3000);
     }
 
     async connectToOrion(): Promise<void> {
         if (this.settings.privateKey) {
             this.orionBlockchain = new OrionBlockchain(this.settings);
+            await this.orionBlockchain.initContracts();
             try {
                 await this.brokerHub.connect({address: this.orionBlockchain.address});
             } catch (e) {
@@ -203,6 +234,8 @@ export class Broker {
             this.startUpdateBalances();
             this.startCheckSubOrders();
             this.startCheckWithdraws();
+            this.startCheckLiabilities();
+            this.startCheckTransactions();
         }
     }
 
