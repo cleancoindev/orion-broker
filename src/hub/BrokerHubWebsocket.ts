@@ -57,6 +57,26 @@ export class BrokerHubWebsocket implements BrokerHub {
             transports: ['websocket'],
         });
 
+        this.socket.on('error', (error: any) => { // Fired upon a connection error.
+            log.error('Ws error', error);
+        });
+
+        this.socket.on('reconnect', (attempt: number) => { // Fired upon an attempt to reconnect.
+            log.log('Ws reconnect', attempt);
+        });
+
+        this.socket.on('reconnect_attempt', (attempt: number) => { // Fired upon an attempt to reconnect.
+            log.log('Ws reconnect attempt', attempt);
+        });
+
+        this.socket.on('reconnect_error', (error: any) => { // Fired upon a reconnection attempt error.
+            log.error('Ws reconnect error', error);
+        });
+
+        this.socket.on('reconnect_failed', (error: any) => { // Fired when couldn’t reconnect within reconnectionAttempts.
+            log.error('Ws reconnect failed', error);
+        });
+
         this.socket.on('connect', () => {
             log.log('Connected to aggregator');
             this.register(registerRequest);
