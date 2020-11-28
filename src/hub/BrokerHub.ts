@@ -21,6 +21,8 @@ export interface BrokerHub {
 
 export interface BrokerHubRegisterRequest {
     address: string;
+    time: number;
+    signature: string;
 }
 
 export interface BalancesRequest {

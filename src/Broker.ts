@@ -8,6 +8,7 @@ import {Connectors, ExchangeResolve} from "./connectors/Connectors";
 import {OrionBlockchain} from "./OrionBlockchain";
 import {Settings} from "./Settings";
 import {ExchangeWithdrawStatus} from "./connectors/Connector";
+import Web3 from "web3";
 
 export class Broker {
     settings: Settings;
@@ -178,6 +179,11 @@ export class Broker {
     startCheckSubOrders(): void {
         setInterval(async () => {
             try {
+                const subOrdersToResend = await this.db.getSubOrdersToResend();
+                for (let subOrder of subOrdersToResend) {
+                    await this.brokerHub.sendSubOrderStatus(await this.onCheckSubOrder(subOrder.id));
+                }
+
                 const openSubOrders = await this.db.getSubOrdersToCheck();
                 await this.connector.checkSubOrders(openSubOrders);
             } catch (e) {
@@ -266,7 +272,9 @@ export class Broker {
             this.orionBlockchain = new OrionBlockchain(this.settings);
             await this.orionBlockchain.initContracts();
             try {
-                await this.brokerHub.connect({address: this.orionBlockchain.address});
+                const time = Date.now();
+                const signature = await this.orionBlockchain.sign(time.toString());
+                await this.brokerHub.connect({address: this.orionBlockchain.address, time, signature});
             } catch (e) {
                 log.error('Failed to connect to aggregator ', e);
             }

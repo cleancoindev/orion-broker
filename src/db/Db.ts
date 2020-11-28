@@ -349,9 +349,21 @@ export class Db {
         });
     }
 
+    async getSubOrdersToResend(): Promise<DbSubOrder[]> {
+        return new Promise((resolve, reject) => {
+            this.db.all('SELECT * FROM subOrders WHERE sentToAggregator = 0 AND (status = "FILLED" OR status = "CANCELED" OR status = "REJECTED")', [], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows.map(parseSubOrder));
+                }
+            });
+        });
+    }
+
     async getSubOrdersToCheck(): Promise<DbSubOrder[]> {
         return new Promise((resolve, reject) => {
-            this.db.all('SELECT * FROM subOrders WHERE sentToAggregator = 0', [], (err, rows) => {
+            this.db.all('SELECT * FROM subOrders WHERE status = "ACCEPTED"', [], (err, rows) => {
                 if (err) {
                     reject(err);
                 } else {

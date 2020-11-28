@@ -13,6 +13,7 @@ import {ethers} from "ethers";
 import exchangeArtifact from "./abi/Exchange.json";
 import erc20Artifact from "./abi/ERC20.json";
 import stakingArtifact from "./abi/Staking.json";
+import {Account, Sign} from "web3-core";
 
 const DOMAIN_TYPE = [
     {name: "name", type: "string"},
@@ -219,6 +220,17 @@ export class OrionBlockchain {
         bo.id = hashOrder(bo);
         bo.signature = this.signOrder(bo);
         return bo;
+    }
+
+    public async sign(payload: string): Promise<string> {
+        // const w = new Web3();
+        // const account: Account = w.eth.accounts.privateKeyToAccount(this.privateKey);
+        // const sign: Sign = account.sign(payload);
+        // log.log('web3 sign', sign.signature);
+        // log.log('web3 verify', w.eth.accounts.recover(payload, sign.signature));
+
+        const signature = await this.wallet.signMessage(payload);
+        return signature;
     }
 
     private send(url: string, method: string = 'GET', data?: any): Promise<any> {
