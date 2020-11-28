@@ -116,6 +116,10 @@ const DEPOSIT_ERC20_GAS_LIMIT = 150000;
 const APPROVE_ERC20_GAS_LIMIT = 70000;
 const LOCK_STAKE_GAS_LIMIT = 200000;
 
+function toWei8(amount: BigNumber, decimals: number = 8): string {
+    return amount.multipliedBy(10 ** decimals).toFixed(0)
+}
+
 export class OrionBlockchain {
     private readonly orionBlockchainUrl: string;
     private readonly matcherAddress: string;
@@ -152,12 +156,14 @@ export class OrionBlockchain {
             this.wallet
         );
 
-        const stakingContractAddress = contractsInfo.staking;
+        const stakingContractAddress = contractsInfo.stake;
         this.stakingContract = new ethers.Contract(
             stakingContractAddress,
             stakingArtifact.abi as any,
             this.wallet
         );
+        log.log('exchangeContractAddress=' + this.exchangeContractAddress);
+        log.log('stakingContractAddress=' + stakingContractAddress);
     }
 
     private signOrder(order: BlockchainOrder): string {
@@ -234,11 +240,13 @@ export class OrionBlockchain {
     }
 
     private async getNonce(): Promise<number> {
-        return await this.send(this.orionBlockchainUrl + '/broker/getNonce/' + this.address);
+        const data: any = await this.send(this.orionBlockchainUrl + '/broker/getNonce/' + this.address);
+        return data.nonce;
     }
 
     public async getTransactionStatus(transactionHash: string): Promise<'PENDING' | 'OK' | 'FAIL' | 'NONE'> {
-        return await this.send(this.orionBlockchainUrl + '/broker/getTransactionStatus/' + transactionHash);
+        const data: any = await this.send(this.orionBlockchainUrl + '/broker/getTransactionStatus/' + transactionHash);
+        return data.status;
     }
 
     private async getGasPrice(): Promise<ethers.BigNumber> { // in gwei
@@ -262,21 +270,24 @@ export class OrionBlockchain {
     }
 
     private async sendTransaction(unsignedTx: ethers.PopulatedTransaction, gasLimit: number): Promise<string> {
+        unsignedTx.chainId = 3;
+        unsignedTx.from = this.address;
+        if (!unsignedTx.to) throw new Error('no unsignedTx.to');
         unsignedTx.nonce = await this.getNonce();
         unsignedTx.gasPrice = await this.getGasPrice();
         unsignedTx.gasLimit = ethers.BigNumber.from(gasLimit);
-        const unsignedRequest: ethers.providers.TransactionRequest = await this.wallet.populateTransaction(unsignedTx);
-        const signedTxRaw: string = await this.wallet.signTransaction(unsignedRequest);
-        const transactionHash: string = await this.send(this.orionBlockchainUrl + '/broker/execute', 'POST', signedTxRaw);
-        return transactionHash;
+        const signedTxRaw: string = await this.wallet.signTransaction(unsignedTx);
+        const resultRaw: any = await this.send(this.orionBlockchainUrl + '/broker/execute', 'POST', {signedTxRaw: signedTxRaw});
+        return resultRaw.hash;
     }
 
     /**
-     * @param amount    in wei
+     * @param amount    '0.123'
      */
     public async depositETH(amount: BigNumber): Promise<Transaction> {
+        const value: string = Web3.utils.toWei(amount.toString());
         const unsignedTx: ethers.PopulatedTransaction = await this.exchangeContract.populateTransaction.deposit();
-        unsignedTx.value = ethers.BigNumber.from(amount.toString());
+        unsignedTx.value = ethers.BigNumber.from(value);
         const transactionHash: string = await this.sendTransaction(unsignedTx, DEPOSIT_ETH_GAS_LIMIT);
         return {
             transactionHash,
@@ -289,12 +300,13 @@ export class OrionBlockchain {
     }
 
     /**
-     * @param amount    in wei8
+     * @param amount    '0.123'
      * @param assetName "ETH"
      */
     public async depositERC20(amount: BigNumber, assetName: string): Promise<Transaction> {
+        const value: string = toWei8(amount);
         const assetAddress: string = Assets.toAssetAddress(assetName);
-        const amountBN = ethers.BigNumber.from(amount.toString());
+        const amountBN = ethers.BigNumber.from(value);
         const unsignedTx: ethers.PopulatedTransaction = await this.exchangeContract.populateTransaction.depositAsset(assetAddress, amountBN);
         const transactionHash: string = await this.sendTransaction(unsignedTx, DEPOSIT_ERC20_GAS_LIMIT);
         return {
@@ -308,17 +320,18 @@ export class OrionBlockchain {
     }
 
     /**
-     * @param amount    in wei
+     * @param amount    '0.123'
      * @param assetName "ETH"
      */
     public async approveERC20(amount: BigNumber, assetName: string): Promise<Transaction> {
+        const value: string = toWei8(amount, 8); // todo: get real decimals
         const assetAddress: string = Assets.toAssetAddress(assetName);
         const tokenContract: ethers.Contract = new ethers.Contract(
             assetAddress,
             erc20Artifact.abi as any,
             this.wallet
         )
-        const amountBN = ethers.BigNumber.from(amount.toString());
+        const amountBN = ethers.BigNumber.from(value);
         const unsignedTx: ethers.PopulatedTransaction = await tokenContract.populateTransaction.approve(this.exchangeContractAddress, amountBN);
         const transactionHash: string = await this.sendTransaction(unsignedTx, APPROVE_ERC20_GAS_LIMIT);
         return {
@@ -332,10 +345,11 @@ export class OrionBlockchain {
     }
 
     /**
-     * @param amount    in wei8
+     * @param amount    '0.123'
      */
     public async lockStake(amount: BigNumber): Promise<Transaction> {
-        const amountBN = ethers.BigNumber.from(amount.toString());
+        const value: string = toWei8(amount);
+        const amountBN = ethers.BigNumber.from(value);
         const unsignedTx: ethers.PopulatedTransaction = await this.stakingContract.populateTransaction.lockStake(amountBN);
         const transactionHash: string = await this.sendTransaction(unsignedTx, LOCK_STAKE_GAS_LIMIT);
         return {

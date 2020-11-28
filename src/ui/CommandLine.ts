@@ -1,8 +1,12 @@
 import {EXCHANGES} from "../Model";
+import BigNumber from "bignumber.js";
 
 export enum DataType {
     EXCHANGE,
     BLOCKCHAIN_PRIVATE_KEY,
+    TOKEN_NAME,
+    ASSET_NAME,
+    AMOUNT,
     EXCHANGE_API_KEY,
     EXCHANGE_PRIVATE_KEY,
     URL,
@@ -48,6 +52,22 @@ function validateInput(input: string, type: DataType): string {
         case DataType.EXCHANGE:
             if (EXCHANGES.indexOf(input) === -1) {
                 return 'Invalid exchange. Available exchanges: ' + EXCHANGES.join(', ');
+            }
+            return '';
+        case DataType.ASSET_NAME:
+            if (input !== 'ETH' && input !== 'USDT' && input !== 'ORN') {
+                return 'Invalid asset';
+            }
+            return '';
+        case DataType.TOKEN_NAME:
+            if (input !== 'USDT' && input !== 'ORN') {
+                return 'Invalid token';
+            }
+            return '';
+        case DataType.AMOUNT:
+            const n = new BigNumber(input)
+            if (n.isNaN() || n.lte(0)) {
+                return 'Invalid amount';
             }
             return '';
         case DataType.BLOCKCHAIN_PRIVATE_KEY: // todo: private key format

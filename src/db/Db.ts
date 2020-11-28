@@ -70,6 +70,17 @@ function parseWithdraw(row: any): Withdraw {
     }
 }
 
+function parseTransaction(row: any): Transaction {
+    return {
+        transactionHash: row.transactionHash,
+        method: row.method,
+        asset: row.asset,
+        amount: new BigNumber(row.amount),
+        createTime: row.createTime,
+        status: row.status
+    }
+}
+
 export class Db {
     private db: sqlite3.Database;
 
@@ -126,6 +137,24 @@ export class Db {
                          "price"           DECIMAL(18, 8) NOT NULL,
                          "amount"          DECIMAL(18, 8) NOT NULL,
                          "timestamp"       DATETIME       NOT NULL
+                     );`,
+                    [],
+                    function (err) {
+                        if (err) {
+                            reject(err)
+                        }
+                    }
+                );
+
+                this.db.run(
+                    `CREATE TABLE "transactions"
+                     (
+                         "transactionHash" VARCHAR(255)   NOT NULL,
+                         "method"          VARCHAR(255)   NOT NULL,
+                         "asset"           VARCHAR(255)   NOT NULL,
+                         "amount"          DECIMAL(18, 8) NOT NULL,
+                         "createTime"       DATETIME       NOT NULL,
+                         "status"          VARCHAR(255)   NOT NULL
                      );`,
                     [],
                     function (err) {
@@ -345,12 +374,43 @@ export class Db {
     }
 
     async insetTransaction(transaction: Transaction): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const t = mapObject(transaction);
+
+            this.db.run(`INSERT INTO transactions (${t.fields})
+                         VALUES (${t.quests})`, t.values, function (err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
     }
 
     async updateTransactionStatus(hash: string, status: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.db.run(`UPDATE transactions
+                         SET status = ?
+                         WHERE transactionhash = ?`, [status, hash], function (err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
     }
 
     async getPendingTransactions(): Promise<Transaction[]> {
-        return [];
+        return new Promise((resolve, reject) => {
+            this.db.all('SELECT * FROM transactions WHERE status = "PENDING" ORDER BY createTime', [], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows.map(parseTransaction));
+                }
+            });
+        });
     }
 }

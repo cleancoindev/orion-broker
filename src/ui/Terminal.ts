@@ -2,12 +2,16 @@ import {log} from "../log";
 import {SettingsManager} from "../Settings";
 import {TerminalUI} from "./TerminalUI";
 import {CommandConfig, DataType, printHelp, processLine} from "./CommandLine";
+import BigNumber from "bignumber.js";
 
 export class Terminal {
     onCreatePassword: (password: string) => Promise<void>;
     onLoginPassword: (password: string) => boolean;
     onConnectExchange: (exchange: string, apiKey: string, privateKey: string) => void;
     onSetPrivateKey: (privateKey: string) => void;
+    onApprove: (amount: BigNumber, tokenName: string) => void;
+    onDeposit: (amount: BigNumber, assetName: string) => void;
+    onLockStake: (amount: BigNumber) => void;
     ui: any; // TerminalUI
 
     constructor(settingsManger: SettingsManager) {
@@ -68,6 +72,64 @@ export class Terminal {
                 after: (state: any) => {
                     this.onSetPrivateKey(state.privateKey);
                     return 'private key saved';
+                }
+            },
+            {
+                name: 'approve',
+                help: 'Approve token',
+                params: [
+                    {
+                        name: 'amount',
+                        fieldName: 'amount',
+                        type: DataType.AMOUNT
+                    },
+                    {
+                        name: 'tokenName',
+                        fieldName: 'tokenName',
+                        type: DataType.TOKEN_NAME
+                    },
+                ],
+                asks: [],
+                after: (state: any) => {
+                    this.onApprove(new BigNumber(state.amount), state.tokenName);
+                    return '';
+                }
+            },
+            {
+                name: 'deposit',
+                help: 'Deposit asset to exchange smart contract',
+                params: [
+                    {
+                        name: 'amount',
+                        fieldName: 'amount',
+                        type: DataType.AMOUNT
+                    },
+                    {
+                        name: 'assetName',
+                        fieldName: 'assetName',
+                        type: DataType.ASSET_NAME
+                    },
+                ],
+                asks: [],
+                after: (state: any) => {
+                    this.onDeposit(new BigNumber(state.amount), state.assetName);
+                    return '';
+                }
+            },
+            {
+                name: 'stake',
+                help: 'Stake ORN',
+                params: [
+                    {
+                        name: 'amount',
+                        fieldName: 'amount',
+                        type: DataType.AMOUNT
+                    },
+                ],
+                asks: [],
+                after: (state: any) => {
+                    this.onLockStake(new BigNumber(state.amount));
+                    return '';
                 }
             },
             {

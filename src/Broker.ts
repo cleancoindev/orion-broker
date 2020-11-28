@@ -196,7 +196,7 @@ export class Broker {
         setInterval(async () => {
             try {
                 const liabilities: Liability[] = await this.orionBlockchain.getLiabilities();
-                log.log('liabilities', liabilities)
+                // log.log('liabilities', liabilities)
             } catch (e) {
                 log.error('Liabilities check', e)
             }
@@ -210,9 +210,9 @@ export class Broker {
                 for (let tx of pendingTransactions) {
                     const status = await this.orionBlockchain.getTransactionStatus(tx.transactionHash);
                     if (status !== tx.status) {
-                        await this.db.updateTransactionStatus(tx.transactionHash, status);
                         if (status === 'OK' || status === 'FAIL') {
-                            log.log('Transaction ' + tx.method + ' ' + tx.amount.toString() + ' ' + tx.asset + ' ' + status);
+                            await this.db.updateTransactionStatus(tx.transactionHash, status);
+                            log.log('Tx ' + tx.method + ' ' + tx.amount.toString() + ' ' + tx.asset + ' ' + status);
                         }
                     }
                 }
@@ -266,5 +266,30 @@ export class Broker {
         } catch (e) {
             log.error("Error during Trade callback", e);
         }
+    }
+
+    // DEPOSIT
+
+    async approve(amount: BigNumber, tokenName: string): Promise<void> {
+        log.log('Approving ' + amount.toString() + ' ' + tokenName);
+        const transaction: Transaction = await this.orionBlockchain.approveERC20(amount, tokenName);
+        await this.db.insetTransaction(transaction);
+    }
+
+    async deposit(amount: BigNumber, assetName: string): Promise<void> {
+        log.log('Depositing ' + amount.toString() + ' ' + assetName);
+        let transaction: Transaction;
+        if (assetName === 'ETH') {
+            transaction = await this.orionBlockchain.depositETH(amount);
+        } else {
+            transaction = await this.orionBlockchain.depositERC20(amount, assetName);
+        }
+        await this.db.insetTransaction(transaction);
+    }
+
+    async lockStake(amount: BigNumber): Promise<void> {
+        log.log('Staking ' + amount.toString() + ' ORN');
+        const transaction: Transaction = await this.orionBlockchain.lockStake(amount);
+        await this.db.insetTransaction(transaction);
     }
 }

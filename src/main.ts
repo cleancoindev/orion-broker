@@ -82,6 +82,12 @@ terminal.onSetPrivateKey = (privateKey: string): void => {
     broker.connectToOrion();
 }
 
+terminal.onApprove = (amount, tokenName) => broker.approve(amount, tokenName);
+
+terminal.onDeposit = (amount, assetName, ) => broker.deposit(amount, assetName);
+
+terminal.onLockStake = amount => broker.lockStake(amount);
+
 function start(): void {
     const exchangeConfigs: Dictionary<ExchangeConfig> = settings.production ? settings.exchanges : createEmulatorExchangeConfigs();
     connector.updateExchanges(exchangeConfigs);
