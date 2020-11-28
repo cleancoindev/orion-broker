@@ -7,6 +7,7 @@ import {WebUI} from "./ui/WebUI";
 import {Connectors, ExchangeResolve} from "./connectors/Connectors";
 import {OrionBlockchain} from "./OrionBlockchain";
 import {Settings} from "./Settings";
+import {ExchangeWithdrawStatus} from "./connectors/Connector";
 
 export class Broker {
     settings: Settings;
@@ -15,6 +16,7 @@ export class Broker {
     webUI: WebUI;
     connector: Connectors;
     orionBlockchain: OrionBlockchain;
+    lastBalances: Dictionary<Dictionary<BigNumber>> = {};
 
     constructor(settings: Settings, brokerHub: BrokerHub, db: Db, webUI: WebUI, connector: Connectors) {
         this.settings = settings;
@@ -142,16 +144,19 @@ export class Broker {
 
     sendUpdateBalance(balances: Dictionary<ExchangeResolve<Balances>>): Promise<void> {
         const exchanges: Dictionary<Dictionary<string>> = {};
+        this.lastBalances = {};
 
         for (let exchange in balances) {
             const exchangeBalances: ExchangeResolve<Balances> = balances[exchange];
             if (exchangeBalances.error) {
                 log.error(exchange + ' balances', exchangeBalances.error);
             } else {
+                this.lastBalances[exchange] = {};
                 exchanges[exchange] = {};
                 for (let currency in exchangeBalances.result) {
                     const v = exchangeBalances.result[currency];
                     exchanges[exchange][currency] = v.toString();
+                    this.lastBalances[exchange][currency] = v;
                 }
             }
         }
@@ -185,18 +190,52 @@ export class Broker {
         setInterval(async () => {
             try {
                 const openWithdraws = await this.db.getWithdrawsToCheck();
-                await this.connector.checkWithdraws(openWithdraws);
+                const withdrawsStatuses: ExchangeWithdrawStatus[] = await this.connector.checkWithdraws(openWithdraws);
+                for (let status of withdrawsStatuses) {
+                    await this.db.updateWithdrawStatus(status.exchangeWithdrawId, status.status);
+                }
             } catch (e) {
                 log.error('Withdraw check', e)
             }
         }, 3000);
     }
 
+    async manageLiability(liability: Liability): Promise<void> {
+        const now = Date.now() / 1000;
+        if (liability.outstandingAmount.isNegative() && (now - liability.timestamp > this.settings.duePeriodSeconds)) {
+            const assetName = liability.assetName;
+            const amount = liability.outstandingAmount.abs();
+
+            if ((await this.db.getPendingTransactions(assetName)).length) {
+                return
+            }
+            if ((await this.db.getWithdrawsToCheck(assetName)).length) {
+                return
+            }
+
+            const balance = await this.orionBlockchain.getBalance();
+            const assetBalance = balance[assetName];
+            if (assetBalance.gte(amount)) {
+                await this.deposit(amount, assetName);
+            } else {
+                const remaining = assetBalance.minus(amount);
+                const exchange = this.getExchangeForWithdraw(remaining, assetName);
+                if (exchange) {
+                    await this.withdraw(exchange, remaining, assetName);
+                } else {
+                    log.log(`Need to make a ${assetName} deposit but there is not enough amount on the wallet and exchanges`)
+                }
+            }
+        }
+    }
+
     startCheckLiabilities(): void {
         setInterval(async () => {
             try {
                 const liabilities: Liability[] = await this.orionBlockchain.getLiabilities();
-                // log.log('liabilities', liabilities)
+                for (let l of liabilities) {
+                    await this.manageLiability(l);
+                }
             } catch (e) {
                 log.error('Liabilities check', e)
             }
@@ -268,7 +307,31 @@ export class Broker {
         }
     }
 
-    // DEPOSIT
+    // DEPOSIT/WITHDRAW
+
+    getExchangeForWithdraw(amount: BigNumber, assetName: string): string | undefined {
+        for (let exchange in this.lastBalances) {
+            if (this.lastBalances.hasOwnProperty(exchange)) {
+                if (this.lastBalances[exchange][assetName].gte(amount)) {
+                    return exchange;
+                }
+            }
+        }
+        return undefined;
+    }
+
+    async withdraw(exchange: string, amount: BigNumber, assetName: string): Promise<void> {
+        const exchangeWithdrawId: string = await this.connector.withdraw(exchange, assetName, amount, this.orionBlockchain.address);
+        if (exchangeWithdrawId) {
+            await this.db.insertWithdraw({
+                exchangeWithdrawId,
+                exchange,
+                currency: assetName,
+                amount,
+                status: 'pending'
+            })
+        }
+    }
 
     async approve(amount: BigNumber, tokenName: string): Promise<void> {
         log.log('Approving ' + amount.toString() + ' ' + tokenName);
@@ -282,7 +345,9 @@ export class Broker {
         if (assetName === 'ETH') {
             transaction = await this.orionBlockchain.depositETH(amount);
         } else {
-            transaction = await this.orionBlockchain.depositERC20(amount, assetName);
+            const nonce = await this.orionBlockchain.getNonce();
+            await this.orionBlockchain.approveERC20(amount, assetName, nonce);
+            transaction = await this.orionBlockchain.depositERC20(amount, assetName, nonce + 1);
         }
         await this.db.insetTransaction(transaction);
     }

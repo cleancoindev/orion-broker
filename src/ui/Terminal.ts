@@ -75,27 +75,6 @@ export class Terminal {
                 }
             },
             {
-                name: 'approve',
-                help: 'Approve token',
-                params: [
-                    {
-                        name: 'amount',
-                        fieldName: 'amount',
-                        type: DataType.AMOUNT
-                    },
-                    {
-                        name: 'tokenName',
-                        fieldName: 'tokenName',
-                        type: DataType.TOKEN_NAME
-                    },
-                ],
-                asks: [],
-                after: (state: any) => {
-                    this.onApprove(new BigNumber(state.amount), state.tokenName);
-                    return '';
-                }
-            },
-            {
                 name: 'deposit',
                 help: 'Deposit asset to exchange smart contract',
                 params: [

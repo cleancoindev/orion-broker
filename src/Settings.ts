@@ -15,6 +15,7 @@ export interface Settings extends OrionBlockchainSettings {
     passwordHash: string;
     passwordSalt: string;
     production: boolean;
+    duePeriodSeconds: number;
     exchanges: Dictionary<ExchangeConfig>;
 }
 

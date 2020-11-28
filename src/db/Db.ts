@@ -153,7 +153,7 @@ export class Db {
                          "method"          VARCHAR(255)   NOT NULL,
                          "asset"           VARCHAR(255)   NOT NULL,
                          "amount"          DECIMAL(18, 8) NOT NULL,
-                         "createTime"       DATETIME       NOT NULL,
+                         "createTime"      DATETIME       NOT NULL,
                          "status"          VARCHAR(255)   NOT NULL
                      );`,
                     [],
@@ -361,13 +361,54 @@ export class Db {
         });
     }
 
-    async getWithdrawsToCheck(): Promise<Withdraw[]> {
+    async getWithdrawsToCheck(assetName?: string): Promise<Withdraw[]> {
+        if (assetName) {
+            return new Promise((resolve, reject) => {
+                this.db.all('SELECT * FROM withdraws WHERE status = "pending" AND currency=?', [assetName], (err, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(rows.map(parseWithdraw));
+                    }
+                });
+            });
+        } else {
+            return new Promise((resolve, reject) => {
+                this.db.all('SELECT * FROM withdraws WHERE status = "pending"', [], (err, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(rows.map(parseWithdraw));
+                    }
+                });
+            });
+        }
+    }
+
+    async insertWithdraw(withdraw: Withdraw): Promise<void> {
         return new Promise((resolve, reject) => {
-            this.db.all('SELECT * FROM withdraws WHERE status = "pending"', [], (err, rows) => {
+            const t = mapObject(withdraw);
+
+            this.db.run(`INSERT INTO withdraws (${t.fields})
+                         VALUES (${t.quests})`, t.values, function (err) {
                 if (err) {
                     reject(err);
                 } else {
-                    resolve(rows.map(parseWithdraw));
+                    resolve();
+                }
+            });
+        });
+    }
+
+    async updateWithdrawStatus(exchangeWithdrawId: string, status: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.db.run(`UPDATE withdraws
+                         SET status = ?
+                         WHERE exchangeWithdrawId = ?`, [status, exchangeWithdrawId], function (err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
                 }
             });
         });
@@ -402,15 +443,27 @@ export class Db {
         });
     }
 
-    async getPendingTransactions(): Promise<Transaction[]> {
-        return new Promise((resolve, reject) => {
-            this.db.all('SELECT * FROM transactions WHERE status = "PENDING" ORDER BY createTime', [], (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(rows.map(parseTransaction));
-                }
+    async getPendingTransactions(assetName?: string): Promise<Transaction[]> {
+        if (assetName) {
+            return new Promise((resolve, reject) => {
+                this.db.all('SELECT * FROM transactions WHERE status = "PENDING" AND asset=? ORDER BY createTime', [assetName], (err, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(rows.map(parseTransaction));
+                    }
+                });
             });
-        });
+        } else {
+            return new Promise((resolve, reject) => {
+                this.db.all('SELECT * FROM transactions WHERE status = "PENDING" ORDER BY createTime', [], (err, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(rows.map(parseTransaction));
+                    }
+                });
+            });
+        }
     }
 }
