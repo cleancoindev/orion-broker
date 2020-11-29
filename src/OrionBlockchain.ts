@@ -121,6 +121,13 @@ function toWei8(amount: BigNumber, decimals: number = 8): string {
     return amount.multipliedBy(10 ** decimals).toFixed(0)
 }
 
+export function fromWei(wei: BigNumber.Value, decimals: number): BigNumber {
+    return new BigNumber(wei).dividedBy(10 ** decimals);
+}
+export function fromWei8(wei: BigNumber.Value): BigNumber {
+    return fromWei(wei, 8);
+}
+
 export class OrionBlockchain {
     private readonly orionBlockchainUrl: string;
     private readonly matcherAddress: string;

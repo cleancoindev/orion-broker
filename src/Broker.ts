@@ -5,7 +5,7 @@ import {Balances, BlockchainOrder, Dictionary, Liability, Status, SubOrder, Trad
 import BigNumber from "bignumber.js";
 import {WebUI} from "./ui/WebUI";
 import {Connectors, ExchangeResolve} from "./connectors/Connectors";
-import {OrionBlockchain} from "./OrionBlockchain";
+import {fromWei8, OrionBlockchain} from "./OrionBlockchain";
 import {Settings} from "./Settings";
 import {ExchangeWithdrawStatus} from "./connectors/Connector";
 import Web3 from "web3";
@@ -209,9 +209,9 @@ export class Broker {
 
     async manageLiability(liability: Liability): Promise<void> {
         const now = Date.now() / 1000;
-        if (liability.outstandingAmount.isNegative() && (now - liability.timestamp > this.settings.duePeriodSeconds)) {
+        if (liability.outstandingAmount.gte(0) && (now - liability.timestamp > this.settings.duePeriodSeconds)) {
             const assetName = liability.assetName;
-            const amount = liability.outstandingAmount.abs();
+            const amount: BigNumber = fromWei8(liability.outstandingAmount);
 
             if ((await this.db.getPendingTransactions(assetName)).length) {
                 return
@@ -219,6 +219,8 @@ export class Broker {
             if ((await this.db.getWithdrawsToCheck(assetName)).length) {
                 return
             }
+
+            log.log('Detected outstanding ' + amount.toString() + ' ' + assetName);
 
             const balance = await this.orionBlockchain.getBalance();
             const assetBalance = balance[assetName];
@@ -285,9 +287,9 @@ export class Broker {
             await this.connectToAggregator();
             this.startUpdateBalances();
             this.startCheckSubOrders();
-            // this.startCheckWithdraws();
-            // this.startCheckLiabilities();
-            // this.startCheckTransactions();
+            this.startCheckWithdraws();
+            this.startCheckLiabilities();
+            this.startCheckTransactions();
         }
     }
 
@@ -334,6 +336,7 @@ export class Broker {
     }
 
     async withdraw(exchange: string, amount: BigNumber, assetName: string): Promise<void> {
+        log.log('Withdrawing ' + amount.toString() + ' ' + assetName + ' from ' + exchange);
         const exchangeWithdrawId: string = await this.connector.withdraw(exchange, assetName, amount, this.orionBlockchain.address);
         if (exchangeWithdrawId) {
             await this.db.insertWithdraw({
