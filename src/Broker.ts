@@ -30,6 +30,7 @@ export class Broker {
         brokerHub.onCancelSubOrder = this.onCancelSubOrder.bind(this);
         brokerHub.onCheckSubOrder = this.onCheckSubOrder.bind(this);
         brokerHub.onSubOrderStatusAccepted = this.onSubOrderStatusAccepted.bind(this);
+        brokerHub.onReconnect = this.connectToAggregator.bind(this);
     }
 
     onSubOrderStatusAccepted = async (data: SubOrderStatusAccepted): Promise<void> => {
@@ -267,22 +268,26 @@ export class Broker {
         }, 3000);
     }
 
+    async connectToAggregator(): Promise<void> {
+        try {
+            const time = Date.now();
+            const signature = await this.orionBlockchain.sign(time.toString());
+            await this.brokerHub.connect({address: this.orionBlockchain.address, time, signature});
+        } catch (e) {
+            log.error('Failed to connect to aggregator ', e);
+        }
+    }
+
     async connectToOrion(): Promise<void> {
         if (this.settings.privateKey) {
             this.orionBlockchain = new OrionBlockchain(this.settings);
             await this.orionBlockchain.initContracts();
-            try {
-                const time = Date.now();
-                const signature = await this.orionBlockchain.sign(time.toString());
-                await this.brokerHub.connect({address: this.orionBlockchain.address, time, signature});
-            } catch (e) {
-                log.error('Failed to connect to aggregator ', e);
-            }
+            await this.connectToAggregator();
             this.startUpdateBalances();
             this.startCheckSubOrders();
-            this.startCheckWithdraws();
-            this.startCheckLiabilities();
-            this.startCheckTransactions();
+            // this.startCheckWithdraws();
+            // this.startCheckLiabilities();
+            // this.startCheckTransactions();
         }
     }
 

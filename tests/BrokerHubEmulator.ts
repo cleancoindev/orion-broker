@@ -19,6 +19,8 @@ export class BrokerHubEmulator implements BrokerHub {
 
     onSubOrderStatusAccepted: (data: SubOrderStatusAccepted) => Promise<void>;
 
+    onReconnect: () => void;
+
     constructor(settings: Settings) {
         this.settings = settings;
     }

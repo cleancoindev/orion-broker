@@ -33,6 +33,7 @@ function parseSubOrderStatusAccepted(data: any): SubOrderStatusAccepted {
 export class BrokerHubWebsocket implements BrokerHub {
     private settings: Settings;
     private socket: SocketIOClient.Socket;
+    private globalReconnectTimeoutId: NodeJS.Timeout;
 
     onCreateSubOrder: (data: CreateSubOrder) => Promise<SubOrderStatus>;
 
@@ -41,6 +42,8 @@ export class BrokerHubWebsocket implements BrokerHub {
     onCheckSubOrder: (id: number) => Promise<SubOrderStatus>;
 
     onSubOrderStatusAccepted: (data: SubOrderStatusAccepted) => Promise<void>;
+
+    onReconnect: () => void;
 
     constructor(settings: Settings) {
         this.settings = settings;
@@ -82,8 +85,15 @@ export class BrokerHubWebsocket implements BrokerHub {
             this.register(registerRequest);
         });
 
-        this.socket.on('disconnect', () => {
-            log.log('Disconnected from aggregator');
+        this.socket.on('disconnect', (reason: string) => {
+            log.log('Disconnected from aggregator, reason "' + reason + '"');
+            if (reason === 'io server disconnect') { // The server has forcefully disconnected the socket with socket.disconnect()
+                clearTimeout(this.globalReconnectTimeoutId);
+
+                this.globalReconnectTimeoutId = setTimeout(() => {
+                    this.onReconnect();
+                }, 1000);
+            }
         });
 
         this.socket.on('register_accepted', (data: any) => {

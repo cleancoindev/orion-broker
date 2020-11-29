@@ -2,6 +2,8 @@ import {BlockchainOrder, Dictionary, Side, Status} from "../Model";
 import BigNumber from "bignumber.js";
 
 export interface BrokerHub {
+    onReconnect: () => void;
+
     onCreateSubOrder: (data: CreateSubOrder) => Promise<SubOrderStatus>;
 
     onCancelSubOrder: (id: number) => Promise<SubOrderStatus>;
