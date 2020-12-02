@@ -1,6 +1,6 @@
-import {log} from "../log";
-import {Db, DbSubOrder} from "../db/Db";
-import {Settings} from "../Settings";
+import {log} from '../log';
+import {Db, DbSubOrder} from '../db/Db';
+import {Settings} from '../Settings';
 
 import express, {Express} from 'express';
 
@@ -63,10 +63,10 @@ export class WebUI {
 
     initWs() {
         const wss = new WebSocket.Server({port: this.settings.wsPort});
-        log.log("Broker websocket on ws://localhost:" + this.settings.wsPort);
+        log.log('Broker websocket on ws://localhost:' + this.settings.wsPort);
 
         wss.on('connection', ws => {
-            log.log("Receive websocket connection");
+            log.log('Receive websocket connection');
             this.frontendWs = ws;
 
             ws.on('message', (message: string) => {

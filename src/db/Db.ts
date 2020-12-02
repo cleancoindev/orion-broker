@@ -1,7 +1,7 @@
-import {Status, SubOrder, Trade, Transaction, Withdraw} from "../Model";
-import BigNumber from "bignumber.js";
-import sqlite3 from "sqlite3";
-import {log} from "../log";
+import {Status, SubOrder, Trade, Transaction, Withdraw} from '../Model';
+import BigNumber from 'bignumber.js';
+import sqlite3 from 'sqlite3';
+import {log} from '../log';
 
 import fs from 'fs';
 
@@ -22,7 +22,7 @@ function mapValue(x: any): any {
 function mapObject(object: any) {
     const fields: string[] = [];
     const values: any[] = [];
-    for (let field in object) {
+    for (const field in object) {
         if (object.hasOwnProperty(field)) {
             fields.push(field);
             const value = mapValue(object[field]);
@@ -47,7 +47,7 @@ function parseSubOrder(row: any): DbSubOrder {
         status: Status[row.status] as Status,
         filledAmount: new BigNumber(row.filledAmount),
         sentToAggregator: row.sentToAggregator == 1
-    }
+    };
 }
 
 function parseTrade(row: any): Trade {
@@ -57,7 +57,7 @@ function parseTrade(row: any): Trade {
         price: new BigNumber(row.price),
         amount: new BigNumber(row.amount),
         timestamp: row.timestamp,
-    }
+    };
 }
 
 function parseWithdraw(row: any): Withdraw {
@@ -67,7 +67,7 @@ function parseWithdraw(row: any): Withdraw {
         currency: row.currency,
         amount: new BigNumber(row.amount),
         status: row.status
-    }
+    };
 }
 
 function parseTransaction(row: any): Transaction {
@@ -78,7 +78,7 @@ function parseTransaction(row: any): Transaction {
         amount: new BigNumber(row.amount),
         createTime: row.createTime,
         status: row.status
-    }
+    };
 }
 
 export class Db {
@@ -88,7 +88,7 @@ export class Db {
     }
 
     async init() {
-        let databaseExists = false
+        let databaseExists = false;
         if (!this.isInMemory) {
             databaseExists = fs.existsSync('./broker.db');
         }
@@ -102,12 +102,12 @@ export class Db {
 
     async connectToDatabase(): Promise<void> {
         return new Promise((resolve, reject) => {
-            const filename = this.isInMemory ? ':memory:' : './broker.db'
+            const filename = this.isInMemory ? ':memory:' : './broker.db';
             this.db = new sqlite3.Database(filename, (err) => {
                 if (err) {
                     reject(err);
                 } else {
-                    resolve()
+                    resolve();
                 }
             });
         });
@@ -117,7 +117,7 @@ export class Db {
         return new Promise((resolve, reject) => {
             this.db.close((err) => {
                 if (err) {
-                    reject(err)
+                    reject(err);
                 } else {
                     resolve();
                 }
@@ -141,7 +141,7 @@ export class Db {
                     [],
                     function (err) {
                         if (err) {
-                            reject(err)
+                            reject(err);
                         }
                     }
                 );
@@ -159,7 +159,7 @@ export class Db {
                     [],
                     function (err) {
                         if (err) {
-                            reject(err)
+                            reject(err);
                         }
                     }
                 );
@@ -176,7 +176,7 @@ export class Db {
                     [],
                     function (err) {
                         if (err) {
-                            reject(err)
+                            reject(err);
                         }
                     }
                 );
@@ -205,9 +205,9 @@ export class Db {
                             resolve();
                         }
                     }
-                )
-            })
-        })
+                );
+            });
+        });
     }
 
     async insertTrade(trade: Trade): Promise<number> {
@@ -232,7 +232,7 @@ export class Db {
                 this.db.run('BEGIN TRANSACTION', [], (err) => {
                     if (err) {
                         log.error(err);
-                        reject(err)
+                        reject(err);
                     }
                 });
 
@@ -241,7 +241,7 @@ export class Db {
                 } catch (e) {
                     log.error(e);
                     this.db.run('ROLLBACK', [], () => {
-                        reject(e)
+                        reject(e);
                     });
                     return;
                 }
@@ -249,9 +249,9 @@ export class Db {
                 this.db.run('COMMIT', [], (err) => {
                     if (err) {
                         log.error(err);
-                        reject(err)
+                        reject(err);
                     } else {
-                        resolve()
+                        resolve();
                     }
                 });
             });

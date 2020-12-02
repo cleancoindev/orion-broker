@@ -1,14 +1,14 @@
-import {BrokerHub, CreateSubOrder, SubOrderStatus, SubOrderStatusAccepted,} from "./hub/BrokerHub";
-import {Db, DbSubOrder} from "./db/Db";
-import {log} from "./log";
-import {Balances, BlockchainOrder, Dictionary, Liability, Status, SubOrder, Trade, Transaction} from "./Model";
-import BigNumber from "bignumber.js";
-import {WebUI} from "./ui/WebUI";
-import {Connectors, ExchangeResolve} from "./connectors/Connectors";
-import {fromWei8, OrionBlockchain} from "./OrionBlockchain";
-import {Settings} from "./Settings";
-import {ExchangeWithdrawStatus} from "./connectors/Connector";
-import Web3 from "web3";
+import {BrokerHub, CreateSubOrder, SubOrderStatus, SubOrderStatusAccepted,} from './hub/BrokerHub';
+import {Db, DbSubOrder} from './db/Db';
+import {log} from './log';
+import {Balances, BlockchainOrder, Dictionary, Liability, Status, SubOrder, Trade, Transaction} from './Model';
+import BigNumber from 'bignumber.js';
+import {WebUI} from './ui/WebUI';
+import {Connectors, ExchangeResolve} from './connectors/Connectors';
+import {fromWei8, OrionBlockchain} from './OrionBlockchain';
+import {Settings} from './Settings';
+import {ExchangeWithdrawStatus} from './connectors/Connector';
+import Web3 from 'web3';
 
 export class Broker {
     settings: Settings;
@@ -53,7 +53,7 @@ export class Broker {
             await this.db.updateSubOrder(dbSubOrder);
             this.webUI.sendToFrontend(dbSubOrder);
         }
-    }
+    };
 
     async onCheckSubOrder(id: number): Promise<SubOrderStatus> {
         const dbSubOrder: DbSubOrder = await this.db.getSubOrderById(id);
@@ -63,7 +63,7 @@ export class Broker {
                 id: id,
                 status: null,
                 filledAmount: '0'
-            }
+            };
         }
 
         const trades: Trade[] = dbSubOrder.exchangeOrderId ? (await this.db.getSubOrderTrades(dbSubOrder.exchange, dbSubOrder.exchangeOrderId)) : [];
@@ -79,7 +79,7 @@ export class Broker {
             status: dbSubOrder.status,
             filledAmount: dbSubOrder.filledAmount.toString(),
             blockchainOrder: blockchainOrder
-        }
+        };
     }
 
     async onCreateSubOrder(request: CreateSubOrder): Promise<SubOrderStatus> {
@@ -101,7 +101,7 @@ export class Broker {
             status: Status.PREPARE,
             filledAmount: new BigNumber(0),
             sentToAggregator: false
-        }
+        };
         await this.db.insertSubOrder(dbSubOrder);
 
         log.log('Suborder inserted');
@@ -148,14 +148,14 @@ export class Broker {
         const exchanges: Dictionary<Dictionary<string>> = {};
         this.lastBalances = {};
 
-        for (let exchange in balances) {
+        for (const exchange in balances) {
             const exchangeBalances: ExchangeResolve<Balances> = balances[exchange];
             if (exchangeBalances.error) {
                 log.error(exchange + ' balances', exchangeBalances.error);
             } else {
                 this.lastBalances[exchange] = {};
                 exchanges[exchange] = {};
-                for (let currency in exchangeBalances.result) {
+                for (const currency in exchangeBalances.result) {
                     const v = exchangeBalances.result[currency];
                     exchanges[exchange][currency] = v.toString();
                     this.lastBalances[exchange][currency] = v;
@@ -169,10 +169,10 @@ export class Broker {
     startUpdateBalances(): void {
         setInterval(async () => {
             try {
-                const balances = await this.connector.getBalances()
+                const balances = await this.connector.getBalances();
                 await this.sendUpdateBalance(balances);
             } catch (e) {
-                log.error('Balances', e)
+                log.error('Balances', e);
             }
         }, 10000);
     }
@@ -181,14 +181,14 @@ export class Broker {
         setInterval(async () => {
             try {
                 const subOrdersToResend = await this.db.getSubOrdersToResend();
-                for (let subOrder of subOrdersToResend) {
+                for (const subOrder of subOrdersToResend) {
                     await this.brokerHub.sendSubOrderStatus(await this.onCheckSubOrder(subOrder.id));
                 }
 
                 const openSubOrders = await this.db.getSubOrdersToCheck();
                 await this.connector.checkSubOrders(openSubOrders);
             } catch (e) {
-                log.error('Suborders check', e)
+                log.error('Suborders check', e);
             }
         }, this.settings.production ? 10000 : 3000);
     }
@@ -198,11 +198,11 @@ export class Broker {
             try {
                 const openWithdraws = await this.db.getWithdrawsToCheck();
                 const withdrawsStatuses: ExchangeWithdrawStatus[] = await this.connector.checkWithdraws(openWithdraws);
-                for (let status of withdrawsStatuses) {
+                for (const status of withdrawsStatuses) {
                     await this.db.updateWithdrawStatus(status.exchangeWithdrawId, status.status);
                 }
             } catch (e) {
-                log.error('Withdraw check', e)
+                log.error('Withdraw check', e);
             }
         }, 3000);
     }
@@ -214,10 +214,10 @@ export class Broker {
             const amount: BigNumber = fromWei8(liability.outstandingAmount);
 
             if ((await this.db.getPendingTransactions(assetName)).length) {
-                return
+                return;
             }
             if ((await this.db.getWithdrawsToCheck(assetName)).length) {
-                return
+                return;
             }
 
             log.log('Detected outstanding ' + amount.toString() + ' ' + assetName);
@@ -232,7 +232,7 @@ export class Broker {
                 if (exchange) {
                     await this.withdraw(exchange, remaining, assetName);
                 } else {
-                    log.log(`Need to make a ${assetName} deposit but there is not enough amount on the wallet and exchanges`)
+                    log.log(`Need to make a ${assetName} deposit but there is not enough amount on the wallet and exchanges`);
                 }
             }
         }
@@ -242,11 +242,11 @@ export class Broker {
         setInterval(async () => {
             try {
                 const liabilities: Liability[] = await this.orionBlockchain.getLiabilities();
-                for (let l of liabilities) {
+                for (const l of liabilities) {
                     await this.manageLiability(l);
                 }
             } catch (e) {
-                log.error('Liabilities check', e)
+                log.error('Liabilities check', e);
             }
         }, 3000);
     }
@@ -255,7 +255,7 @@ export class Broker {
         setInterval(async () => {
             try {
                 const pendingTransactions: Transaction[] = await this.db.getPendingTransactions();
-                for (let tx of pendingTransactions) {
+                for (const tx of pendingTransactions) {
                     const status = await this.orionBlockchain.getTransactionStatus(tx.transactionHash);
                     if (status !== tx.status) {
                         if (status === 'OK' || status === 'FAIL') {
@@ -265,7 +265,7 @@ export class Broker {
                     }
                 }
             } catch (e) {
-                log.error('Transactions check', e)
+                log.error('Transactions check', e);
             }
         }, 3000);
     }
@@ -318,14 +318,14 @@ export class Broker {
             await this.brokerHub.sendSubOrderStatus(await this.onCheckSubOrder(dbSubOrder.id));
             this.webUI.sendToFrontend(dbSubOrder);
         } catch (e) {
-            log.error("Error during Trade callback", e);
+            log.error('Error during Trade callback', e);
         }
     }
 
     // DEPOSIT/WITHDRAW
 
     getExchangeForWithdraw(amount: BigNumber, assetName: string): string | undefined {
-        for (let exchange in this.lastBalances) {
+        for (const exchange in this.lastBalances) {
             if (this.lastBalances.hasOwnProperty(exchange)) {
                 if (this.lastBalances[exchange][assetName].gte(amount)) {
                     return exchange;
@@ -345,7 +345,7 @@ export class Broker {
                 currency: assetName,
                 amount,
                 status: 'pending'
-            })
+            });
         }
     }
 

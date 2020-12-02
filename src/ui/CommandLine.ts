@@ -1,5 +1,5 @@
-import {EXCHANGES} from "../Model";
-import BigNumber from "bignumber.js";
+import {EXCHANGES} from '../Model';
+import BigNumber from 'bignumber.js';
 
 export enum DataType {
     EXCHANGE,
@@ -65,7 +65,7 @@ function validateInput(input: string, type: DataType): string {
             }
             return '';
         case DataType.AMOUNT:
-            const n = new BigNumber(input)
+            const n = new BigNumber(input);
             if (n.isNaN() || n.lte(0)) {
                 return 'Invalid amount';
             }
@@ -99,10 +99,10 @@ function nextAsk(): string {
         return state.currentCommand.asks[state.step].askText(state);
     } else {
         const result = state.currentCommand.after(state);
-        for (let param of state.currentCommand.params) {
+        for (const param of state.currentCommand.params) {
             state[param.fieldName] = undefined;
         }
-        for (let ask of state.currentCommand.asks) {
+        for (const ask of state.currentCommand.asks) {
             state[ask.fieldName] = undefined;
         }
         state.currentCommand = undefined;
@@ -129,7 +129,7 @@ export function processLine(line: string, configs: CommandConfig[]): string {
         }
         for (let i = 0; i < commandConfig.params.length; i++) {
             const param = commandConfig.params[i];
-            const validateError = validateInput(arr[i + 1], param.type)
+            const validateError = validateInput(arr[i + 1], param.type);
             if (validateError) {
                 return validateError;
             }

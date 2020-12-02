@@ -1,5 +1,5 @@
-import {BlockchainOrder, Dictionary, Side, Status} from "../Model";
-import BigNumber from "bignumber.js";
+import {BlockchainOrder, Dictionary, Side, Status} from '../Model';
+import BigNumber from 'bignumber.js';
 
 export interface BrokerHub {
     onReconnect: () => void;

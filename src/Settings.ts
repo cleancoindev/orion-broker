@@ -1,6 +1,6 @@
-import {OrionBlockchainSettings} from "./OrionBlockchain";
-import {Dictionary} from "./Model";
-import {ExchangeConfig} from "./connectors/Connectors";
+import {OrionBlockchainSettings} from './OrionBlockchain';
+import {Dictionary} from './Model';
+import {ExchangeConfig} from './connectors/Connectors';
 import crypto from 'crypto';
 import fs from 'fs';
 
@@ -31,24 +31,24 @@ export class SettingsManager {
 
     async save(): Promise<void> {
         const exchanges: Dictionary<ExchangeConfig> = {};
-        for (let exchangeId in this.settings.exchanges) {
+        for (const exchangeId in this.settings.exchanges) {
             const exchange = this.settings.exchanges[exchangeId];
             exchanges[exchangeId] = {
                 key: exchange.key,
                 secret: this.cryptr.encrypt(exchange.secret),
-            }
+            };
         }
         const privateKey = this.settings.privateKey ? this.cryptr.encrypt(this.settings.privateKey) : '';
         const data = {
             ...this.settings,
             privateKey,
             exchanges
-        }
+        };
         fs.writeFileSync(this.configPath, JSON.stringify(data, null, 2));
     }
 
     decrypt(): void {
-        for (let exchangeId in this.settings.exchanges) {
+        for (const exchangeId in this.settings.exchanges) {
             const exchange = this.settings.exchanges[exchangeId];
             exchange.secret = this.cryptr.decrypt(exchange.secret);
         }
@@ -57,6 +57,6 @@ export class SettingsManager {
 }
 
 export function hashPassword(password: string): string {
-    return crypto.createHash('sha256').update(password).digest('hex')
+    return crypto.createHash('sha256').update(password).digest('hex');
 }
 

@@ -1,7 +1,7 @@
-import {Connector, ExchangeWithdrawStatus} from "./Connector";
-import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from "../Model";
-import {v1 as uuid} from "uuid";
-import BigNumber from "bignumber.js";
+import {Connector, ExchangeWithdrawStatus} from './Connector';
+import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from '../Model';
+import {v1 as uuid} from 'uuid';
+import BigNumber from 'bignumber.js';
 
 export class EmulatorConnector implements Connector {
     readonly exchange: Exchange;
@@ -44,7 +44,7 @@ export class EmulatorConnector implements Connector {
     }
 
     async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
-        for (let subOrder of subOrders) {
+        for (const subOrder of subOrders) {
             this.onTrade({
                 exchange: this.exchange.id,
                 exchangeOrderId: subOrder.exchangeOrderId,
@@ -57,7 +57,7 @@ export class EmulatorConnector implements Connector {
 
     async checkWithdraws(withdraws: Withdraw[]): Promise<ExchangeWithdrawStatus[]> {
         const result: ExchangeWithdrawStatus[] = [];
-        for (let withdraw of withdraws) {
+        for (const withdraw of withdraws) {
             result.push({
                 exchangeWithdrawId: withdraw.exchangeWithdrawId,
                 status: 'ok'

@@ -1,53 +1,52 @@
-import {BlockchainOrder, Dictionary, Liability, parseLiability, Side, Trade, Transaction} from "./Model";
-import {DbSubOrder} from "./db/Db";
-import BigNumber from "bignumber.js";
-import {log} from "./log";
-import fetch from "node-fetch";
+import {BlockchainOrder, Dictionary, Liability, parseLiability, Side, Trade, Transaction} from './Model';
+import {DbSubOrder} from './db/Db';
+import BigNumber from 'bignumber.js';
+import {log} from './log';
+import fetch from 'node-fetch';
 
-import Web3 from "web3";
+import Web3 from 'web3';
 import Long from 'long';
-import {signTypedMessage} from "eth-sig-util";
+import {signTypedMessage} from 'eth-sig-util';
 import {privateToAddress} from 'ethereumjs-util';
-import {ethers} from "ethers";
+import {ethers} from 'ethers';
 
-import exchangeArtifact from "./abi/Exchange.json";
-import erc20Artifact from "./abi/ERC20.json";
-import stakingArtifact from "./abi/Staking.json";
-import {Account, Sign} from "web3-core";
+import exchangeArtifact from './abi/Exchange.json';
+import erc20Artifact from './abi/ERC20.json';
+import {Account, Sign} from 'web3-core';
 
 const DOMAIN_TYPE = [
-    {name: "name", type: "string"},
-    {name: "version", type: "string"},
-    {name: "chainId", type: "uint256"},
-    {name: "salt", type: "bytes32"},
+    {name: 'name', type: 'string'},
+    {name: 'version', type: 'string'},
+    {name: 'chainId', type: 'uint256'},
+    {name: 'salt', type: 'bytes32'},
 ];
 
 const ORDER_TYPE = [
-    {name: "senderAddress", type: "address"},
-    {name: "matcherAddress", type: "address"},
-    {name: "baseAsset", type: "address"},
-    {name: "quoteAsset", type: "address"},
-    {name: "matcherFeeAsset", type: "address"},
-    {name: "amount", type: "uint64"},
-    {name: "price", type: "uint64"},
-    {name: "matcherFee", type: "uint64"},
-    {name: "nonce", type: "uint64"},
-    {name: "expiration", type: "uint64"},
-    {name: "buySide", type: "uint8"},
+    {name: 'senderAddress', type: 'address'},
+    {name: 'matcherAddress', type: 'address'},
+    {name: 'baseAsset', type: 'address'},
+    {name: 'quoteAsset', type: 'address'},
+    {name: 'matcherFeeAsset', type: 'address'},
+    {name: 'amount', type: 'uint64'},
+    {name: 'price', type: 'uint64'},
+    {name: 'matcherFee', type: 'uint64'},
+    {name: 'nonce', type: 'uint64'},
+    {name: 'expiration', type: 'uint64'},
+    {name: 'buySide', type: 'uint8'},
 ];
 
 const DOMAIN_DATA = {
-    name: "Orion Exchange",
-    version: "1",
+    name: 'Orion Exchange',
+    version: '1',
     chainId: 3,
     salt:
-        "0xf2d857f4a3edcb9b78b4d503bfe733db1e3f6cdc2b7971ee739626c97e86a557",
+        '0xf2d857f4a3edcb9b78b4d503bfe733db1e3f6cdc2b7971ee739626c97e86a557',
 };
 
 const Assets = {
-    "ETH": "0x0000000000000000000000000000000000000000",
-    "USDT": "0xfc1cd13a7f126efd823e373c4086f69beb8611c2",
-    "ORN": "0xfc25454ac2db9f6ab36bc0b0b034b41061c00982",
+    'ETH': '0x0000000000000000000000000000000000000000',
+    'USDT': '0xfc1cd13a7f126efd823e373c4086f69beb8611c2',
+    'ORN': '0xfc25454ac2db9f6ab36bc0b0b034b41061c00982',
 
     toSymbolAsset: function (asset: string): string {
         switch (asset) {
@@ -76,7 +75,7 @@ const Assets = {
     },
 
     toSymbol: function (baseAsset: string, quoteAsset: string): string {
-        return this.toSymbolAsset(baseAsset) + '-' + this.toSymbolAsset(quoteAsset)
+        return this.toSymbolAsset(baseAsset) + '-' + this.toSymbolAsset(quoteAsset);
     },
     toAssets: function (symbol: string): string[] {
         const symbols = symbol.split('-');
@@ -90,7 +89,7 @@ function longToHex(long: number): string {
 
 export function hashOrder(order: BlockchainOrder): string {
     return Web3.utils.soliditySha3(
-        "0x03",
+        '0x03',
         order.senderAddress,
         order.matcherAddress,
         order.baseAsset,
@@ -118,12 +117,13 @@ const APPROVE_ERC20_GAS_LIMIT = 70000;
 const LOCK_STAKE_GAS_LIMIT = 200000;
 
 function toWei8(amount: BigNumber, decimals: number = 8): string {
-    return amount.multipliedBy(10 ** decimals).toFixed(0)
+    return amount.multipliedBy(10 ** decimals).toFixed(0);
 }
 
 export function fromWei(wei: BigNumber.Value, decimals: number): BigNumber {
     return new BigNumber(wei).dividedBy(10 ** decimals);
 }
+
 export function fromWei8(wei: BigNumber.Value): BigNumber {
     return fromWei(wei, 8);
 }
@@ -138,14 +138,13 @@ export class OrionBlockchain {
     private exchangeContractAddress: string;
     private wallet: ethers.Wallet;
     private exchangeContract: ethers.Contract;
-    private stakingContract: ethers.Contract;
 
     constructor(settings: OrionBlockchainSettings) {
         this.orionBlockchainUrl = settings.orionBlockchainUrl;
         this.matcherAddress = settings.matcherAddress;
         this.privateKey = settings.privateKey;
         try {
-            this.bufferKey = Buffer.from(settings.privateKey.substr(2), "hex");
+            this.bufferKey = Buffer.from(settings.privateKey.substr(2), 'hex');
             this.address = '0x' + privateToAddress(this.bufferKey).toString('hex');
             log.log('My address=' + this.address);
         } catch (e) {
@@ -163,15 +162,7 @@ export class OrionBlockchain {
             exchangeArtifact.abi as any,
             this.wallet
         );
-
-        const stakingContractAddress = contractsInfo.stake;
-        this.stakingContract = new ethers.Contract(
-            stakingContractAddress,
-            stakingArtifact.abi as any,
-            this.wallet
-        );
         log.log('exchangeContractAddress=' + this.exchangeContractAddress);
-        log.log('stakingContractAddress=' + stakingContractAddress);
     }
 
     private signOrder(order: BlockchainOrder): string {
@@ -181,12 +172,12 @@ export class OrionBlockchain {
                 Order: ORDER_TYPE,
             },
             domain: DOMAIN_DATA,
-            primaryType: "Order",
+            primaryType: 'Order',
             message: order,
         };
 
         const msgParams = {data};
-        return signTypedMessage(this.bufferKey, msgParams as any, "V4");
+        return signTypedMessage(this.bufferKey, msgParams as any, 'V4');
     }
 
     private toBaseUnit(amount: BigNumber, decimals: number = 8): number {
@@ -230,14 +221,7 @@ export class OrionBlockchain {
     }
 
     public async sign(payload: string): Promise<string> {
-        // const w = new Web3();
-        // const account: Account = w.eth.accounts.privateKeyToAccount(this.privateKey);
-        // const sign: Sign = account.sign(payload);
-        // log.log('web3 sign', sign.signature);
-        // log.log('web3 verify', w.eth.accounts.recover(payload, sign.signature));
-
-        const signature = await this.wallet.signMessage(payload);
-        return signature;
+        return this.wallet.signMessage(payload);
     }
 
     private send(url: string, method: string = 'GET', data?: any): Promise<any> {
@@ -251,7 +235,7 @@ export class OrionBlockchain {
             method,
             headers,
             body
-        }).then(result => result.json())
+        }).then(result => result.json());
     }
 
     private async getContracts(): Promise<any> {
@@ -282,7 +266,7 @@ export class OrionBlockchain {
     public async getBalance(): Promise<Dictionary<BigNumber>> {
         const data: Dictionary<string> = await this.send(this.orionBlockchainUrl + '/broker/getBalance/' + this.address);
         const result = {};
-        for (let key in data) {
+        for (const key in data) {
             result[key] = new BigNumber(data[key]);
         }
         return result;
@@ -315,7 +299,7 @@ export class OrionBlockchain {
             amount: amount,
             createTime: Date.now(),
             status: 'PENDING'
-        }
+        };
     }
 
     /**
@@ -335,7 +319,7 @@ export class OrionBlockchain {
             amount: amount,
             createTime: Date.now(),
             status: 'PENDING'
-        }
+        };
     }
 
     /**
@@ -349,7 +333,7 @@ export class OrionBlockchain {
             assetAddress,
             erc20Artifact.abi as any,
             this.wallet
-        )
+        );
         const amountBN = ethers.BigNumber.from(value);
         const unsignedTx: ethers.PopulatedTransaction = await tokenContract.populateTransaction.approve(this.exchangeContractAddress, amountBN);
         const transactionHash: string = await this.sendTransaction(unsignedTx, APPROVE_ERC20_GAS_LIMIT, nonce);
@@ -360,7 +344,7 @@ export class OrionBlockchain {
             amount: amount,
             createTime: Date.now(),
             status: 'PENDING'
-        }
+        };
     }
 
     /**
@@ -369,7 +353,7 @@ export class OrionBlockchain {
     public async lockStake(amount: BigNumber): Promise<Transaction> {
         const value: string = toWei8(amount);
         const amountBN = ethers.BigNumber.from(value);
-        const unsignedTx: ethers.PopulatedTransaction = await this.stakingContract.populateTransaction.lockStake(amountBN);
+        const unsignedTx: ethers.PopulatedTransaction = await this.exchangeContract.populateTransaction.lockStake(amountBN);
         const transactionHash: string = await this.sendTransaction(unsignedTx, LOCK_STAKE_GAS_LIMIT);
         return {
             transactionHash,
@@ -378,6 +362,6 @@ export class OrionBlockchain {
             amount: amount,
             createTime: Date.now(),
             status: 'PENDING'
-        }
+        };
     }
 }

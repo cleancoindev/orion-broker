@@ -1,4 +1,4 @@
-import {log} from "../log";
+import {log} from '../log';
 import {
     BalancesRequest,
     BrokerHub,
@@ -6,11 +6,11 @@ import {
     CreateSubOrder,
     SubOrderStatus,
     SubOrderStatusAccepted
-} from "./BrokerHub";
-import {Settings} from "../Settings";
-import {Dictionary, Status} from "../Model";
-import BigNumber from "bignumber.js";
-import io from "socket.io-client";
+} from './BrokerHub';
+import {Settings} from '../Settings';
+import {Dictionary, Status} from '../Model';
+import BigNumber from 'bignumber.js';
+import io from 'socket.io-client';
 
 export function parseCreateSubOrder(request: any): CreateSubOrder {
     return {
@@ -20,14 +20,14 @@ export function parseCreateSubOrder(request: any): CreateSubOrder {
         exchange: request.exchange.toLowerCase(),
         price: new BigNumber(request.price),
         amount: new BigNumber(request.amount),
-    }
+    };
 }
 
 function parseSubOrderStatusAccepted(data: any): SubOrderStatusAccepted {
     return {
         id: data.id,
         status: Status[data.status]
-    }
+    };
 }
 
 export class BrokerHubWebsocket implements BrokerHub {
@@ -157,7 +157,7 @@ export class BrokerHubWebsocket implements BrokerHub {
             }
             this.socket = null;
         }
-        log.log("Disconnect from aggregator");
+        log.log('Disconnect from aggregator');
     }
 
     private async send(method: string, data: any): Promise<void> {
@@ -176,7 +176,7 @@ export class BrokerHubWebsocket implements BrokerHub {
     async sendBalances(exchanges: Dictionary<Dictionary<string>>): Promise<void> {
         const data: BalancesRequest = {
             exchanges: JSON.stringify(exchanges)
-        }
+        };
         return this.send('balances', data);
     }
 

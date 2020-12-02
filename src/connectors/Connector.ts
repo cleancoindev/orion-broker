@@ -1,5 +1,5 @@
-import {Balances, Exchange, Side, SubOrder, Trade, Withdraw} from "../Model";
-import BigNumber from "bignumber.js";
+import {Balances, Exchange, Side, SubOrder, Trade, Withdraw} from '../Model';
+import BigNumber from 'bignumber.js';
 
 export interface Connector {
     exchange: Exchange;

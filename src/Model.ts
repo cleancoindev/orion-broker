@@ -1,5 +1,5 @@
-import BigNumber from "bignumber.js";
-import {ExchangeConfig} from "./connectors/Connectors";
+import BigNumber from 'bignumber.js';
+import {ExchangeConfig} from './connectors/Connectors';
 
 export interface Dictionary<T> {
     [key: string]: T;
@@ -7,15 +7,15 @@ export interface Dictionary<T> {
 
 export type Balances = Dictionary<BigNumber>;
 
-export const EXCHANGES = ["binance", "bitmax", "kucoin"];
+export const EXCHANGES = ['binance', 'bitmax', 'kucoin'];
 
 export function createEmulatorExchangeConfigs() {
     const exchangeConfigs: Dictionary<ExchangeConfig> = {};
-    for (let exchange of EXCHANGES) {
+    for (const exchange of EXCHANGES) {
         exchangeConfigs[exchange] = {
             secret: '',
             key: 'emulator',
-        }
+        };
     }
     return exchangeConfigs;
 }
@@ -105,5 +105,5 @@ export function parseLiability(data: any): Liability {
         assetAddress: data.assetAddress,
         timestamp: data.timestamp,
         outstandingAmount: new BigNumber(data.outstandingAmount),
-    }
+    };
 }

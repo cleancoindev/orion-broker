@@ -1,8 +1,8 @@
-import {Connector, ExchangeWithdrawStatus} from "./Connector";
-import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from "../Model";
-import BigNumber from "bignumber.js";
-import ccxt from "ccxt";
-import {log} from "../log";
+import {Connector, ExchangeWithdrawStatus} from './Connector';
+import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from '../Model';
+import BigNumber from 'bignumber.js';
+import ccxt from 'ccxt';
+import {log} from '../log';
 
 function toCurrency(currency: string) {
     return currency;
@@ -51,6 +51,7 @@ export class CCXTConnector implements Connector {
         });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     destroy(): void {
     }
 
@@ -90,7 +91,7 @@ export class CCXTConnector implements Connector {
     async getBalances(): Promise<Balances> {
         const balances: ccxt.Balances = await this.ccxtExchange.fetchBalance();
         const result: Balances = {};
-        for (let currency in balances.free) {
+        for (const currency in balances.free) {
             result[currency] = new BigNumber(balances.free[currency]);
         }
         return result;
@@ -101,7 +102,7 @@ export class CCXTConnector implements Connector {
     }
 
     async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
-        for (let subOrder of subOrders) {
+        for (const subOrder of subOrders) {
             const ccxtOrder: ccxt.Order = await this.ccxtExchange.fetchOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
             const newStatus = fromStatus(ccxtOrder.status);
             if (newStatus === Status.FILLED) {
@@ -133,7 +134,7 @@ export class CCXTConnector implements Connector {
 
         const transactions: ccxt.Transaction[] = await this.ccxtExchange.fetchWithdrawals(); // todo: paging
 
-        for (let withdraw of withdraws) {
+        for (const withdraw of withdraws) {
             const tx = transactions.find(t => t.id === withdraw.exchangeWithdrawId);
 
             if (!tx) {

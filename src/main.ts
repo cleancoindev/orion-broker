@@ -1,14 +1,14 @@
-import {log} from "./log";
-import {Db} from "./db/Db";
-import {createEmulatorExchangeConfigs, Dictionary} from "./Model";
-import {Connectors, ExchangeConfig} from "./connectors/Connectors";
-import {BrokerHub} from "./hub/BrokerHub";
-import {hashPassword, SettingsManager} from "./Settings";
-import {WebUI} from "./ui/WebUI";
-import {Terminal} from "./ui/Terminal";
-import {v1 as uuid} from "uuid";
-import {Broker} from "./Broker";
-import {BrokerHubWebsocket} from "./hub/BrokerHubWebsocket";
+import {log} from './log';
+import {Db} from './db/Db';
+import {createEmulatorExchangeConfigs, Dictionary} from './Model';
+import {Connectors, ExchangeConfig} from './connectors/Connectors';
+import {BrokerHub} from './hub/BrokerHub';
+import {hashPassword, SettingsManager} from './Settings';
+import {WebUI} from './ui/WebUI';
+import {Terminal} from './ui/Terminal';
+import {v1 as uuid} from 'uuid';
+import {Broker} from './Broker';
+import {BrokerHubWebsocket} from './hub/BrokerHubWebsocket';
 
 import Cryptr from 'cryptr';
 import fs from 'fs';
@@ -27,8 +27,8 @@ const app = express();
 app.use(express.json());
 
 app.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type,x-compress");
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,x-compress');
     next();
 });
 
@@ -54,7 +54,7 @@ terminal.onCreatePassword = async (password: string): Promise<void> => {
     settings.passwordHash = hashPassword(password + settings.passwordSalt);
     await settingsManager.save();
     start();
-}
+};
 
 terminal.onLoginPassword = (password: string): boolean => {
     const hash = hashPassword(password + settings.passwordSalt);
@@ -65,26 +65,26 @@ terminal.onLoginPassword = (password: string): boolean => {
         return true;
     }
     return false;
-}
+};
 
 terminal.onConnectExchange = (exchange: string, apiKey: string, privateKey: string): void => {
     settings.exchanges[exchange] = {
         key: apiKey,
         secret: privateKey,
-    }
+    };
     settingsManager.save();
     connector.updateExchange(exchange, settings.exchanges[exchange]);
-}
+};
 
 terminal.onSetPrivateKey = (privateKey: string): void => {
     settings.privateKey = privateKey;
     settingsManager.save();
     broker.connectToOrion();
-}
+};
 
 terminal.onApprove = (amount, tokenName) => broker.approve(amount, tokenName);
 
-terminal.onDeposit = (amount, assetName, ) => broker.deposit(amount, assetName);
+terminal.onDeposit = (amount, assetName,) => broker.deposit(amount, assetName);
 
 terminal.onLockStake = amount => broker.lockStake(amount);
 
@@ -94,7 +94,7 @@ function start(): void {
 
     terminal.ui.showMain();
     webUI.initWs();
-    initHttpServer()
+    initHttpServer();
     broker.connectToOrion();
 }
 

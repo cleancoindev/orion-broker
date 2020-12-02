@@ -1,8 +1,8 @@
-import {log} from "../log";
-import {SettingsManager} from "../Settings";
-import {TerminalUI} from "./TerminalUI";
-import {CommandConfig, DataType, printHelp, processLine} from "./CommandLine";
-import BigNumber from "bignumber.js";
+import {log} from '../log';
+import {SettingsManager} from '../Settings';
+import {TerminalUI} from './TerminalUI';
+import {CommandConfig, DataType, printHelp, processLine} from './CommandLine';
+import BigNumber from 'bignumber.js';
 
 export class Terminal {
     onCreatePassword: (password: string) => Promise<void>;
@@ -25,7 +25,7 @@ export class Terminal {
             if (ui.history) {
                 ui.history.add(s);
             }
-        }
+        };
 
         ui.onCreatePassword = password => this.onCreatePassword(password);
         ui.onLoginPassword = password => this.onLoginPassword(password);

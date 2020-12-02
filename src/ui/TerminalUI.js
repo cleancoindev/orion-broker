@@ -226,15 +226,15 @@ data. Please store this password safely since there is no way to reset it.
 
         screen.render();
     }
-    
+
     showConfirmPasswordForm(password, err = null) {
         const form = blessed.box({
             parent: screen,
             keys: true,
             top: 'center',
             left: 'center',
-            width: "50%",
-            height: "shrink",
+            width: '50%',
+            height: 'shrink',
             tags: true,
             border: {
                 type: 'line'
@@ -254,7 +254,6 @@ data. Please store this password safely since there is no way to reset it.
             hidden: true,
             border: 'line'
         });
-        
 
 
         const passwordPrompt = blessed.textbox({
@@ -265,11 +264,11 @@ data. Please store this password safely since there is no way to reset it.
             focusable: true,
             inputOnFocus: true,
             mouse: true,
-        })
-        
-        
-        if(err) {
-            msg.focus()
+        });
+
+
+        if (err) {
+            msg.focus();
             msg.error(err, () => passwordPrompt.focus() || screen.render());
         }
 
@@ -293,7 +292,7 @@ data. Please store this password safely since there is no way to reset it.
                     bg: '#FF6F00'
                 }
             }
-        })
+        });
 
         const cancel = blessed.button({
             parent: form,
@@ -314,61 +313,61 @@ data. Please store this password safely since there is no way to reset it.
                     bg: '#FF6F00'
                 }
             }
-        })
+        });
 
-        passwordPrompt.on("submit", (value) => {
+        passwordPrompt.on('submit', (value) => {
             if (value == null || !value.length) {
-                msg.focus()
+                msg.focus();
                 msg.error('Please enter password', () => passwordPrompt.focus() || screen.render());
             } else if (value !== password) {
-                msg.focus()
+                msg.focus();
                 msg.error('Try again', () => passwordPrompt.focus() || screen.render());
             } else {
                 this.onCreatePassword(password);
             }
-        })
+        });
 
-        passwordPrompt.on("cancel", () => {
-            form.hide()
-            form.destroy()
-            screen.render()
-        })
+        passwordPrompt.on('cancel', () => {
+            form.hide();
+            form.destroy();
+            screen.render();
+        });
 
         submit.on('press', () => {
-            const value = passwordPrompt.getValue()
+            const value = passwordPrompt.getValue();
             if (value == null || !value.length) {
-                this.showConfirmPasswordForm(password, 'Please enter password')
+                this.showConfirmPasswordForm(password, 'Please enter password');
             } else if (value !== password) {
-                this.showConfirmPasswordForm(password, 'Try again')
+                this.showConfirmPasswordForm(password, 'Try again');
             } else {
-                form.hide()
-                form.destroy()
-                screen.render()
-                
+                form.hide();
+                form.destroy();
+                screen.render();
+
                 this.onCreatePassword(password);
             }
         });
 
         cancel.on('press', function () {
-            passwordPrompt.cancel()
+            passwordPrompt.cancel();
         });
 
 
         screen.render();
 
-        passwordPrompt.focus()
-        
+        passwordPrompt.focus();
+
         screen.render();
     }
-    
+
     showSetPasswordForm(err = null) {
         const form = blessed.box({
             parent: screen,
             keys: true,
             top: 'center',
             left: 'center',
-            width: "50%",
-            height: "shrink",
+            width: '50%',
+            height: 'shrink',
             tags: true,
             border: {
                 type: 'line'
@@ -388,7 +387,6 @@ data. Please store this password safely since there is no way to reset it.
             hidden: !err,
             border: 'line'
         });
-        
 
 
         const passwordPrompt = blessed.textbox({
@@ -399,11 +397,11 @@ data. Please store this password safely since there is no way to reset it.
             focusable: true,
             inputOnFocus: true,
             mouse: true,
-        })
-        
-        
-        if(err) {
-            msg.focus()
+        });
+
+
+        if (err) {
+            msg.focus();
             msg.error(err, () => passwordPrompt.focus() || screen.render());
         }
 
@@ -427,7 +425,7 @@ data. Please store this password safely since there is no way to reset it.
                     bg: '#FF6F00'
                 }
             }
-        })
+        });
 
         const cancel = blessed.button({
             parent: form,
@@ -448,52 +446,51 @@ data. Please store this password safely since there is no way to reset it.
                     bg: '#FF6F00'
                 }
             }
-        })
+        });
 
-        passwordPrompt.on("submit", (value) => {
+        passwordPrompt.on('submit', (value) => {
             if (value == null || !value.length) {
-                msg.focus()
+                msg.focus();
                 msg.error('Please enter password', () => passwordPrompt.focus() || screen.render());
             } else {
                 const password = value;
 
-                form.hide()
-                form.destroy()
-                screen.render()
-                
-                this.showConfirmPasswordForm(password)
-                
-                
-               
-            }
-        })
+                form.hide();
+                form.destroy();
+                screen.render();
 
-        passwordPrompt.on("cancel", () => {
-            form.hide()
-            form.destroy()
-            screen.render()
-        })
+                this.showConfirmPasswordForm(password);
+
+
+            }
+        });
+
+        passwordPrompt.on('cancel', () => {
+            form.hide();
+            form.destroy();
+            screen.render();
+        });
 
         submit.on('press', () => {
-            const value = passwordPrompt.getValue()
+            const value = passwordPrompt.getValue();
             if (value == null || !value.length) {
-                this.showSetPasswordForm('Please enter password')
+                this.showSetPasswordForm('Please enter password');
             } else {
                 const password = value;
 
-                this.showConfirmPasswordForm(password)
+                this.showConfirmPasswordForm(password);
             }
         });
 
         cancel.on('press', function () {
-            passwordPrompt.cancel()
+            passwordPrompt.cancel();
         });
 
 
         screen.render();
 
-        passwordPrompt.focus()
-        
+        passwordPrompt.focus();
+
         screen.render();
     }
 
@@ -503,8 +500,8 @@ data. Please store this password safely since there is no way to reset it.
             keys: true,
             top: 'center',
             left: 'center',
-            width: "50%",
-            height: "shrink",
+            width: '50%',
+            height: 'shrink',
             tags: true,
             border: {
                 type: 'line'
@@ -533,7 +530,7 @@ data. Please store this password safely since there is no way to reset it.
             focusable: true,
             inputOnFocus: true,
             mouse: true,
-        })
+        });
 
         const submit = blessed.button({
             parent: form,
@@ -554,7 +551,7 @@ data. Please store this password safely since there is no way to reset it.
                     bg: '#FF6F00'
                 }
             }
-        })
+        });
 
         const cancel = blessed.button({
             parent: form,
@@ -575,14 +572,14 @@ data. Please store this password safely since there is no way to reset it.
                     bg: '#FF6F00'
                 }
             }
-        })
+        });
 
         const restoreFocus = () => {
-            passwordPrompt.focus()
-            screen.render()
-        }
+            passwordPrompt.focus();
+            screen.render();
+        };
 
-        passwordPrompt.on("submit", (value) => {
+        passwordPrompt.on('submit', (value) => {
             if (value == null || !value.length) {
                 msg.error('Please enter password', restoreFocus);
             } else if (!this.onLoginPassword(value)) {
@@ -591,10 +588,10 @@ data. Please store this password safely since there is no way to reset it.
                 form.destroy();
                 screen.render();
             }
-        })
+        });
 
         submit.on('press', () => {
-            const value = passwordPrompt.getValue()
+            const value = passwordPrompt.getValue();
             if (value == null || !value.length) {
                 msg.error('Please enter password', restoreFocus);
             } else if (!this.onLoginPassword(value)) {
@@ -608,13 +605,13 @@ data. Please store this password safely since there is no way to reset it.
 
         screen.render();
 
-        passwordPrompt.focus()
-        
+        passwordPrompt.focus();
+
         screen.render();
     }
 
     showMain() {
-        if(this.loginForm) {
+        if (this.loginForm) {
             this.loginForm.hide();
             this.loginForm.destroy();
             screen.render();
@@ -717,12 +714,12 @@ data. Please store this password safely since there is no way to reset it.
         });
         this.log = log;
 
-        log.add('Welcome to Orion Broker!')
-        log.add('')
-        log.add('Helpful Links:')
-        log.add('Learn how to use Orion Broker: https://broker.orionprotocol.io')
-        log.add('')
-        log.add('Useful Commands:')
+        log.add('Welcome to Orion Broker!');
+        log.add('');
+        log.add('Helpful Links:');
+        log.add('Learn how to use Orion Broker: https://broker.orionprotocol.io');
+        log.add('');
+        log.add('Useful Commands:');
         this.onMain();
 
         const textbox = blessed.textbox({
@@ -737,7 +734,7 @@ data. Please store this password safely since there is no way to reset it.
         });
 
         textbox.on('submit', (data) => {
-            log.add(data)
+            log.add(data);
             log.add(this.onCmd(data));
             textbox.setValue('');
             screen.render();

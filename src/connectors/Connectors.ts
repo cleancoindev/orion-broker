@@ -1,9 +1,9 @@
-import {Connector, ExchangeWithdrawStatus} from "./Connector";
-import {Balances, Dictionary, Exchange, Side, SubOrder, Trade, Withdraw} from "../Model";
-import BigNumber from "bignumber.js";
-import {EmulatorConnector} from "./EmulatorConnector";
-import {CCXTConnector} from "./CCXTConnector";
-import {log} from "../log";
+import {Connector, ExchangeWithdrawStatus} from './Connector';
+import {Balances, Dictionary, Exchange, Side, SubOrder, Trade, Withdraw} from '../Model';
+import BigNumber from 'bignumber.js';
+import {EmulatorConnector} from './EmulatorConnector';
+import {CCXTConnector} from './CCXTConnector';
+import {log} from '../log';
 
 export interface ExchangeConfig {
     secret: string;
@@ -31,9 +31,9 @@ export class Connectors {
     }
 
     private createBalances(): Dictionary<BigNumber> {
-        const balances: Balances = {}
+        const balances: Balances = {};
         if (!this.isProduction) {
-            for (let currency in this.emulatorBalances) {
+            for (const currency in this.emulatorBalances) {
                 balances[currency] = new BigNumber(this.emulatorBalances[currency]);
             }
         }
@@ -41,7 +41,7 @@ export class Connectors {
     }
 
     updateExchanges(exchangeConfigs: Dictionary<ExchangeConfig>) {
-        for (let id in exchangeConfigs) {
+        for (const id in exchangeConfigs) {
             this.updateExchange(id, exchangeConfigs[id]);
         }
     }
@@ -69,30 +69,30 @@ export class Connectors {
         return {
             exchangeId: exchange,
             result: data
-        }
+        };
     }
 
     private static reject<T>(data: any, exchange: string): ExchangeResolve<T> {
         return {
             exchangeId: exchange,
             error: data
-        }
+        };
     }
 
     private async execute<T>(fn: (Connector) => Promise<T>, exchanges: string[]): Promise<Dictionary<ExchangeResolve<T>>> {
         const promises: Promise<ExchangeResolve<T>>[] = [];
 
-        for (let exchange of exchanges) {
+        for (const exchange of exchanges) {
             const connector = this.connectors[exchange];
 
             if (!connector) {
-                log.error('No connector for ' + exchange)
+                log.error('No connector for ' + exchange);
             } else {
                 promises.push(
                     fn(connector)
                         .then(data => Connectors.resolve(data, exchange))
                         .catch(error => Connectors.reject(error, exchange))
-                )
+                );
             }
         }
 
@@ -103,13 +103,13 @@ export class Connectors {
 
     async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber): Promise<SubOrder> {
         const connector = this.connectors[exchangeId];
-        if (!connector) throw new Error("Cant find exchange " + exchangeId);
+        if (!connector) throw new Error('Cant find exchange ' + exchangeId);
         return connector.submitSubOrder(subOrderId, symbol, side, amount, price);
     }
 
     async cancelSubOrder(order: SubOrder): Promise<boolean> {
         const connector = this.connectors[order.exchange];
-        if (!connector) throw new Error("Cant find exchange " + order.exchange);
+        if (!connector) throw new Error('Cant find exchange ' + order.exchange);
         return connector.cancelSubOrder(order);
     }
 
@@ -119,14 +119,14 @@ export class Connectors {
 
     async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
         const byExchanges = {};
-        for (let subOrder of subOrders) {
+        for (const subOrder of subOrders) {
             if (!byExchanges[subOrder.exchange]) {
                 byExchanges[subOrder.exchange] = [];
             }
             byExchanges[subOrder.exchange].push(subOrder);
         }
 
-        for (let exchange in byExchanges) {
+        for (const exchange in byExchanges) {
             const connector = this.connectors[exchange];
             await connector.checkSubOrders(byExchanges[exchange]);
         }
@@ -134,7 +134,7 @@ export class Connectors {
 
     async checkWithdraws(withdraws: Withdraw[]): Promise<ExchangeWithdrawStatus[]> {
         const byExchanges = {};
-        for (let withdraw of withdraws) {
+        for (const withdraw of withdraws) {
             if (!byExchanges[withdraw.exchange]) {
                 byExchanges[withdraw.exchange] = [];
             }
@@ -142,7 +142,7 @@ export class Connectors {
         }
 
         let result = [];
-        for (let exchange in byExchanges) {
+        for (const exchange in byExchanges) {
             const connector = this.connectors[exchange];
             const exchangeResult = await connector.checkWithdraws(byExchanges[exchange]);
             result = result.concat(exchangeResult);
@@ -152,13 +152,13 @@ export class Connectors {
 
     async withdraw(exchange: string, currency: string, amount: BigNumber, address: string): Promise<string | undefined> {
         const connector = this.connectors[exchange];
-        if (!connector) throw new Error("Cant find exchange " + exchange);
+        if (!connector) throw new Error('Cant find exchange ' + exchange);
         return connector.withdraw(currency, amount, address);
     }
 
     setOnTradeListener(onTrade: (trade: Trade) => void): void {
         this.onTrade = onTrade;
-        for (let exchange of this.exchangesIds) {
+        for (const exchange of this.exchangesIds) {
             const connector = this.connectors[exchange];
             connector.setOnTradeListener(onTrade);
         }
