@@ -13,6 +13,7 @@ import {BrokerHubWebsocket} from './hub/BrokerHubWebsocket';
 import Cryptr from 'cryptr';
 import fs from 'fs';
 import express from 'express';
+import BigNumber from 'bignumber.js';
 
 
 const settingsManager = new SettingsManager('./config.json');
@@ -82,11 +83,21 @@ terminal.onSetPrivateKey = (privateKey: string): void => {
     broker.connectToOrion();
 };
 
-terminal.onApprove = (amount, tokenName) => broker.approve(amount, tokenName);
+terminal.onDeposit = async (amount: BigNumber, assetName: string): Promise<void> => {
+    try {
+        await broker.deposit(amount, assetName);
+    } catch (e) {
+        log.error('Deposit error', e);
+    }
+};
 
-terminal.onDeposit = (amount, assetName,) => broker.deposit(amount, assetName);
-
-terminal.onLockStake = amount => broker.lockStake(amount);
+terminal.onLockStake = async (amount: BigNumber): Promise<void> => {
+    try {
+        await broker.lockStake(amount);
+    } catch (e) {
+        log.error('Stake error', e);
+    }
+};
 
 function start(): void {
     const exchangeConfigs: Dictionary<ExchangeConfig> = settings.production ? settings.exchanges : createEmulatorExchangeConfigs();

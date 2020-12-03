@@ -349,12 +349,6 @@ export class Broker {
         }
     }
 
-    async approve(amount: BigNumber, tokenName: string): Promise<void> {
-        log.log('Approving ' + amount.toString() + ' ' + tokenName);
-        const transaction: Transaction = await this.orionBlockchain.approveERC20(amount, tokenName);
-        await this.db.insetTransaction(transaction);
-    }
-
     async deposit(amount: BigNumber, assetName: string): Promise<void> {
         log.log('Depositing ' + amount.toString() + ' ' + assetName);
         let transaction: Transaction;

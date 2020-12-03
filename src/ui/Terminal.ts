@@ -9,7 +9,6 @@ export class Terminal {
     onLoginPassword: (password: string) => boolean;
     onConnectExchange: (exchange: string, apiKey: string, privateKey: string) => void;
     onSetPrivateKey: (privateKey: string) => void;
-    onApprove: (amount: BigNumber, tokenName: string) => void;
     onDeposit: (amount: BigNumber, assetName: string) => void;
     onLockStake: (amount: BigNumber) => void;
     ui: any; // TerminalUI
@@ -76,7 +75,7 @@ export class Terminal {
             },
             {
                 name: 'deposit',
-                help: 'Deposit asset to exchange smart contract',
+                help: 'Deposit asset to Orion smart contract',
                 params: [
                     {
                         name: 'amount',
@@ -97,7 +96,7 @@ export class Terminal {
             },
             {
                 name: 'stake',
-                help: 'Stake ORN',
+                help: 'Add ORN to your stake',
                 params: [
                     {
                         name: 'amount',
