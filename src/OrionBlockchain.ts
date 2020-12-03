@@ -111,10 +111,10 @@ export interface OrionBlockchainSettings {
 }
 
 const DEFAULT_EXPIRATION = 29 * 24 * 60 * 60 * 1000;
-const DEPOSIT_ETH_GAS_LIMIT = 56000;
+const DEPOSIT_ETH_GAS_LIMIT = 70000;
 const DEPOSIT_ERC20_GAS_LIMIT = 150000;
 const APPROVE_ERC20_GAS_LIMIT = 70000;
-const LOCK_STAKE_GAS_LIMIT = 200000;
+const LOCK_STAKE_GAS_LIMIT = 70000;
 
 function toWei8(amount: BigNumber, decimals: number = 8): string {
     return amount.multipliedBy(10 ** decimals).toFixed(0);
