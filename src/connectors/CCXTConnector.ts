@@ -3,6 +3,7 @@ import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from '../Mo
 import BigNumber from 'bignumber.js';
 import ccxt from 'ccxt';
 import {log} from '../log';
+import {tokens} from '../main';
 
 function toCurrency(currency: string) {
     return currency;
@@ -45,16 +46,25 @@ export class CCXTConnector implements Connector {
     constructor(exchange: Exchange) {
         this.exchange = exchange;
         const exchangeClass = ccxt[exchange.id];
-        this.ccxtExchange = new exchangeClass({
+        const options: any = {
             'apiKey': exchange.apiKey,
             'secret': exchange.secretKey,
-        });
+        };
+        if (exchange.id === 'kucoin') {
+            options.password = ''; // todo: exchange password
+        }
+        this.ccxtExchange = new exchangeClass(options);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     destroy(): void {
     }
 
+    /**
+     * https://github.com/ccxt/ccxt/wiki/Manual#placing-orders
+     * https://github.com/ccxt/ccxt/wiki/Manual#limit-orders
+     * @throws if error
+     */
     async submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber): Promise<SubOrder> {
         const ccxtOrder: ccxt.Order = await this.ccxtExchange.createOrder(
             toSymbol(symbol),
@@ -64,6 +74,7 @@ export class CCXTConnector implements Connector {
             toNumber(price),
             {'clientOrderId': subOrderId}
         );
+        log.log(this.exchange.id + ' submit order response: ', ccxtOrder);
 
         return {
             id: subOrderId,
@@ -73,26 +84,39 @@ export class CCXTConnector implements Connector {
             amount: amount,
             exchange: this.exchange.id,
             exchangeOrderId: ccxtOrder.id,
-            timestamp: ccxtOrder.timestamp,
-            status: fromStatus(ccxtOrder.status),
+            timestamp: ccxtOrder.timestamp || Date.now(),
+            status: fromStatus(ccxtOrder.status || 'open'),
             sentToAggregator: false
         };
     }
 
+    /**
+     * https://github.com/ccxt/ccxt/wiki/Manual#canceling-orders
+     */
     async cancelSubOrder(subOrder: SubOrder): Promise<boolean> {
         try {
-            await this.ccxtExchange.cancelOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
+            const ccxtOrder: ccxt.Order = await this.ccxtExchange.cancelOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
+            log.log(this.exchange.id + ' cancel order response: ', ccxtOrder);
+            // todo: manage partially canceled order
             return true;
         } catch (e) {
+            // todo: retry if error no final
+            log.error(this.exchange.id + ' cancel order error: ', e);
             return false;
         }
     }
 
+    /**
+     * https://github.com/ccxt/ccxt/wiki/Manual#querying-account-balance
+     * @throws if error
+     */
     async getBalances(): Promise<Balances> {
         const balances: ccxt.Balances = await this.ccxtExchange.fetchBalance();
         const result: Balances = {};
-        for (const currency in balances.free) {
-            result[currency] = new BigNumber(balances.free[currency]);
+        for (const currency in tokens.nameToAddress) {
+            if (balances.free.hasOwnProperty(currency)) {
+                result[currency] = new BigNumber(balances.free[currency]);
+            }
         }
         return result;
     }
@@ -101,9 +125,15 @@ export class CCXTConnector implements Connector {
         this.onTrade = onTrade;
     }
 
+    /**
+     * https://github.com/ccxt/ccxt/wiki/Manual#querying-orders
+     * https://github.com/ccxt/ccxt/wiki/Manual#personal-trades
+     * @throws if error
+     */
     async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
         for (const subOrder of subOrders) {
             const ccxtOrder: ccxt.Order = await this.ccxtExchange.fetchOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
+            log.log(this.exchange.id + ' check order response: ', ccxtOrder);
             const newStatus = fromStatus(ccxtOrder.status);
             if (newStatus === Status.FILLED) {
                 this.onTrade({
@@ -111,13 +141,14 @@ export class CCXTConnector implements Connector {
                     exchangeOrderId: subOrder.exchangeOrderId,
                     price: subOrder.price,
                     amount: subOrder.amount,
-                    timestamp: ccxtOrder.lastTradeTimestamp,
+                    timestamp: ccxtOrder.lastTradeTimestamp || Date.now(),
                 });
             }
         }
     }
 
     /**
+     * https://github.com/ccxt/ccxt/wiki/Manual#withdraw
      * @return exchange withdrawal id / undefined if error
      */
     async withdraw(currency: string, amount: BigNumber, address: string): Promise<string | undefined> {
@@ -129,6 +160,10 @@ export class CCXTConnector implements Connector {
         }
     }
 
+    /**
+     * https://github.com/ccxt/ccxt/wiki/Manual#withdrawals
+     * @throws if error
+     */
     async checkWithdraws(withdraws: Withdraw[]): Promise<ExchangeWithdrawStatus[]> {
         const result: ExchangeWithdrawStatus[] = [];
 

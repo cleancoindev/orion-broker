@@ -1,14 +1,13 @@
 import {BrokerHub, CreateSubOrder, SubOrderStatus, SubOrderStatusAccepted,} from './hub/BrokerHub';
 import {Db, DbSubOrder} from './db/Db';
 import {log} from './log';
-import {Balances, BlockchainOrder, Dictionary, Liability, Status, SubOrder, Trade, Transaction} from './Model';
+import {Balances, BlockchainOrder, Dictionary, Liability, Side, Status, SubOrder, Trade, Transaction} from './Model';
 import BigNumber from 'bignumber.js';
 import {WebUI} from './ui/WebUI';
 import {Connectors, ExchangeResolve} from './connectors/Connectors';
 import {fromWei8, OrionBlockchain} from './OrionBlockchain';
 import {Settings} from './Settings';
 import {ExchangeWithdrawStatus} from './connectors/Connector';
-import Web3 from 'web3';
 
 export class Broker {
     settings: Settings;
@@ -103,20 +102,28 @@ export class Broker {
             sentToAggregator: false
         };
         await this.db.insertSubOrder(dbSubOrder);
-
         log.log('Suborder inserted');
 
-        const subOrder: SubOrder = await this.connector.submitSubOrder(request.exchange, dbSubOrder.id, dbSubOrder.symbol, dbSubOrder.side, dbSubOrder.amount, dbSubOrder.price);
+        let subOrder: SubOrder = null;
 
-        dbSubOrder.exchangeOrderId = subOrder.exchangeOrderId;
-        dbSubOrder.timestamp = subOrder.timestamp;
-        dbSubOrder.status = subOrder.status;
+        try {
+            subOrder = await this.connector.submitSubOrder(request.exchange, dbSubOrder.id, dbSubOrder.symbol, dbSubOrder.side, dbSubOrder.amount, dbSubOrder.price);
+        } catch (e) {
+            log.error(e);
+        }
+
+        if (subOrder === null) {
+            dbSubOrder.status = Status.REJECTED;
+        } else {
+            dbSubOrder.exchangeOrderId = subOrder.exchangeOrderId;
+            dbSubOrder.timestamp = subOrder.timestamp;
+            dbSubOrder.status = subOrder.status;
+        }
+
         await this.db.updateSubOrder(dbSubOrder);
-
         log.log('Suborder updated ', JSON.stringify(dbSubOrder));
 
         this.webUI.sendToFrontend(dbSubOrder);
-
         return this.onCheckSubOrder(dbSubOrder.id);
     };
 

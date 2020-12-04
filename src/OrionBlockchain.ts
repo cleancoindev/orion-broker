@@ -13,6 +13,7 @@ import {ethers} from 'ethers';
 import exchangeArtifact from './abi/Exchange.json';
 import erc20Artifact from './abi/ERC20.json';
 import {Account, Sign} from 'web3-core';
+import {tokens} from './main';
 
 const DOMAIN_TYPE = [
     {name: 'name', type: 'string'},
@@ -41,46 +42,6 @@ const DOMAIN_DATA = {
     chainId: 3,
     salt:
         '0xf2d857f4a3edcb9b78b4d503bfe733db1e3f6cdc2b7971ee739626c97e86a557',
-};
-
-const Assets = {
-    'ETH': '0x0000000000000000000000000000000000000000',
-    'USDT': '0xfc1cd13a7f126efd823e373c4086f69beb8611c2',
-    'ORN': '0xfc25454ac2db9f6ab36bc0b0b034b41061c00982',
-
-    toSymbolAsset: function (asset: string): string {
-        switch (asset) {
-            case this.ETH:
-                return 'ETH';
-            case this.USDT:
-                return 'USDT';
-            case this.ORN:
-                return 'ORN';
-            default:
-                throw new Error('Unknown assets ' + asset);
-        }
-    },
-
-    toAssetAddress: function (asset: string): string {
-        switch (asset) {
-            case 'ETH':
-                return this.ETH;
-            case 'USDT':
-                return this.USDT;
-            case 'ORN':
-                return this.ORN;
-            default:
-                throw new Error('Unknown assets ' + asset);
-        }
-    },
-
-    toSymbol: function (baseAsset: string, quoteAsset: string): string {
-        return this.toSymbolAsset(baseAsset) + '-' + this.toSymbolAsset(quoteAsset);
-    },
-    toAssets: function (symbol: string): string[] {
-        const symbols = symbol.split('-');
-        return [this.toAssetAddress(symbols[0]), this.toAssetAddress(symbols[1])];
-    }
 };
 
 function longToHex(long: number): string {
@@ -189,7 +150,7 @@ export class OrionBlockchain {
     }
 
     private createBlockchainOrder(subOrder: DbSubOrder, trade: Trade): BlockchainOrder {
-        const assets = Assets.toAssets(subOrder.symbol);
+        const assets = tokens.symbolToAddresses(subOrder.symbol);
         const buySide = this.counterSide(subOrder.side);
         const matcherFeeAsset = buySide ? assets[0] : assets[1];
 
@@ -308,7 +269,7 @@ export class OrionBlockchain {
      */
     public async depositERC20(amount: BigNumber, assetName: string, nonce: number = 0): Promise<Transaction> {
         const value: string = toWei8(amount);
-        const assetAddress: string = Assets.toAssetAddress(assetName);
+        const assetAddress: string = tokens.nameToAddress[assetName];
         const amountBN = ethers.BigNumber.from(value);
         const unsignedTx: ethers.PopulatedTransaction = await this.exchangeContract.populateTransaction.depositAsset(assetAddress, amountBN);
         const transactionHash: string = await this.sendTransaction(unsignedTx, DEPOSIT_ERC20_GAS_LIMIT, nonce);
@@ -328,7 +289,7 @@ export class OrionBlockchain {
      */
     public async approveERC20(amount: BigNumber, assetName: string, nonce: number = 0): Promise<Transaction> {
         const value: string = toWei8(amount, 8); // todo: get real decimals
-        const assetAddress: string = Assets.toAssetAddress(assetName);
+        const assetAddress: string = tokens.nameToAddress[assetName];
         const tokenContract: ethers.Contract = new ethers.Contract(
             assetAddress,
             erc20Artifact.abi as any,
