@@ -204,9 +204,11 @@ export class Broker {
         setInterval(async () => {
             try {
                 const openWithdraws = await this.db.getWithdrawsToCheck();
-                const withdrawsStatuses: ExchangeWithdrawStatus[] = await this.connector.checkWithdraws(openWithdraws);
-                for (const status of withdrawsStatuses) {
-                    await this.db.updateWithdrawStatus(status.exchangeWithdrawId, status.status);
+                if (openWithdraws.length) {
+                    const withdrawsStatuses: ExchangeWithdrawStatus[] = await this.connector.checkWithdraws(openWithdraws);
+                    for (const status of withdrawsStatuses) {
+                        await this.db.updateWithdrawStatus(status.exchangeWithdrawId, status.status);
+                    }
                 }
             } catch (e) {
                 log.error('Withdraw check', e);
