@@ -1,7 +1,7 @@
 import {BrokerHub, CreateSubOrder, SubOrderStatus, SubOrderStatusAccepted,} from './hub/BrokerHub';
 import {Db, DbSubOrder} from './db/Db';
 import {log} from './log';
-import {Balances, BlockchainOrder, Dictionary, Liability, Side, Status, SubOrder, Trade, Transaction} from './Model';
+import {Balances, BlockchainOrder, Dictionary, Liability, Status, SubOrder, Trade, Transaction} from './Model';
 import BigNumber from 'bignumber.js';
 import {WebUI} from './ui/WebUI';
 import {Connectors, ExchangeResolve} from './connectors/Connectors';

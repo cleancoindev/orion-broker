@@ -45,7 +45,7 @@ export interface SubOrder {
     amount: BigNumber;
     exchange: string;
     exchangeOrderId?: string;
-    timestamp: number; // create time on exchange
+    timestamp: number; // create time on exchange in millis
     status: Status;
     sentToAggregator: boolean;
 }
@@ -55,7 +55,7 @@ export interface Trade {
     exchangeOrderId: string;
     price: BigNumber;
     amount: BigNumber;
-    timestamp: number; // lastTradeTimestamp
+    timestamp: number; // lastTradeTimestamp in millis
 }
 
 export interface BlockchainOrder {

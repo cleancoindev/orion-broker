@@ -85,7 +85,7 @@ export class CCXTConnector implements Connector {
             exchange: this.exchange.id,
             exchangeOrderId: ccxtOrder.id,
             timestamp: ccxtOrder.timestamp || Date.now(),
-            status: fromStatus(ccxtOrder.status || 'open'),
+            status: Status.ACCEPTED, // todo: OPTIMIZATION some exchanges can return Status.FILLED right here - we need to be able to handle it
             sentToAggregator: false
         };
     }
@@ -97,6 +97,7 @@ export class CCXTConnector implements Connector {
         try {
             const ccxtOrder: ccxt.Order = await this.ccxtExchange.cancelOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
             log.log(this.exchange.id + ' cancel order response: ', ccxtOrder);
+            // todo: KUCOIN return success result for cancel closed (filled) order
             // todo: manage partially canceled order
             return true;
         } catch (e) {
@@ -156,6 +157,7 @@ export class CCXTConnector implements Connector {
             const response = await this.ccxtExchange.withdraw(toCurrency(currency), toNumber(amount), address);
             return response.id;
         } catch (e) {
+            log.error(this.exchange.id + ' withdraw error', e);
             return undefined;
         }
     }
