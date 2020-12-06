@@ -194,7 +194,14 @@ export class CCXTConnector implements Connector {
             if (!tx) {
                 log.error('No exchange transaction for withdraw ' + withdraw.exchangeWithdrawId);
             } else {
-                const status: string = tx.status;
+                let status: string = tx.status;
+
+                // NOTE: kucoin workaround: cctx set tx.status = 'ok' when kucoin internal status is 'PROCESSING'
+                if (this.exchange.id === 'kucoin' && tx.info) {
+                    if (tx.info.status === 'PROCESSING') {
+                        status = 'pending';
+                    }
+                }
 
                 if (status === 'ok' || status === 'failed' || status === 'canceled') {
                     result.push({
