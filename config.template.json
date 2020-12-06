@@ -9,7 +9,7 @@
   "passwordHash": "",
   "passwordSalt": "",
   "production": false,
-  "duePeriodSeconds": 60,
+  "duePeriodSeconds": 10800,
   "exchanges": {
   }
 }
