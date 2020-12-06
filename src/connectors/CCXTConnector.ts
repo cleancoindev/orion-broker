@@ -4,6 +4,7 @@ import BigNumber from 'bignumber.js';
 import ccxt from 'ccxt';
 import {log} from '../log';
 import {tokens} from '../main';
+import {v1 as uuid} from 'uuid';
 
 function toCurrency(currency: string) {
     return currency;
@@ -154,6 +155,20 @@ export class CCXTConnector implements Connector {
      */
     async withdraw(currency: string, amount: BigNumber, address: string): Promise<string | undefined> {
         try {
+            if (this.exchange.id === 'kucoin') {
+                // NOTE: in kucoin withdrawing is allowed only from the main account,
+                // need to inner transfer from trade account to main account
+                // https://docs.kucoin.com/#inner-transfer
+                const transferResponse = await this.ccxtExchange.privatePostAccountsInnerTransfer({
+                    clientOid: uuid().toString(),
+                    currency: toCurrency(currency),
+                    from: 'trade',
+                    to: 'main',
+                    amount: amount.toString()
+                });
+                log.log(this.exchange.id + ' inner transfer response: ', transferResponse);
+            }
+
             const response = await this.ccxtExchange.withdraw(toCurrency(currency), toNumber(amount), address);
             log.log(this.exchange.id + ' withdraw response: ', response);
             return response.id;
