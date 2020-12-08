@@ -36,14 +36,6 @@ const ORDER_TYPE = [
     {name: 'buySide', type: 'uint8'},
 ];
 
-const DOMAIN_DATA = {
-    name: 'Orion Exchange',
-    version: '1',
-    chainId: 3,
-    salt:
-        '0xf2d857f4a3edcb9b78b4d503bfe733db1e3f6cdc2b7971ee739626c97e86a557',
-};
-
 function longToHex(long: number): string {
     return Web3.utils.bytesToHex(Long.fromNumber(long).toBytesBE());
 }
@@ -66,6 +58,7 @@ export function hashOrder(order: BlockchainOrder): string {
 }
 
 export interface OrionBlockchainSettings {
+    production: boolean;
     orionBlockchainUrl: string;
     matcherAddress: string;
     privateKey: string;
@@ -90,6 +83,7 @@ export function fromWei8(wei: BigNumber.Value): BigNumber {
 }
 
 export class OrionBlockchain {
+    private readonly chainId: number;
     private readonly orionBlockchainUrl: string;
     private readonly matcherAddress: string;
     private readonly privateKey: string;
@@ -101,6 +95,7 @@ export class OrionBlockchain {
     private exchangeContract: ethers.Contract;
 
     constructor(settings: OrionBlockchainSettings) {
+        this.chainId = settings.production ? 1 : 3;
         this.orionBlockchainUrl = settings.orionBlockchainUrl;
         this.matcherAddress = settings.matcherAddress;
         this.privateKey = settings.privateKey;
@@ -127,6 +122,14 @@ export class OrionBlockchain {
     }
 
     private signOrder(order: BlockchainOrder): string {
+        const DOMAIN_DATA = {
+            name: 'Orion Exchange',
+            version: '1',
+            chainId: this.chainId,
+            salt:
+                '0xf2d857f4a3edcb9b78b4d503bfe733db1e3f6cdc2b7971ee739626c97e86a557',
+        };
+
         const data = {
             types: {
                 EIP712Domain: DOMAIN_TYPE,
@@ -234,7 +237,7 @@ export class OrionBlockchain {
     }
 
     private async sendTransaction(unsignedTx: ethers.PopulatedTransaction, gasLimit: number, nonce: number = 0): Promise<string> {
-        unsignedTx.chainId = 3;
+        unsignedTx.chainId = this.chainId;
         unsignedTx.from = this.address;
         if (!unsignedTx.to) throw new Error('no unsignedTx.to');
         unsignedTx.nonce = nonce || (await this.getNonce());

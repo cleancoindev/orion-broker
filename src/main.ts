@@ -19,11 +19,16 @@ import {Tokens} from './Tokens';
 const settingsManager = new SettingsManager('./config.json');
 const settings = settingsManager.settings;
 
-const tokensDict: Dictionary<string> = {
-    "ETH": "0x0000000000000000000000000000000000000000",
-    "USDT": "0xfc1cd13a7f126efd823e373c4086f69beb8611c2",
-    "ORN": "0xfc25454ac2db9f6ab36bc0b0b034b41061c00982"
-};
+const tokensDict: Dictionary<string> = settings.production ?
+    {
+        'ETH': '0x0000000000000000000000000000000000000000',
+        // todo: mainnet token addresses
+    } :
+    {
+        'ETH': '0x0000000000000000000000000000000000000000',
+        'USDT': '0xfc1cd13a7f126efd823e373c4086f69beb8611c2',
+        'ORN': '0xfc25454ac2db9f6ab36bc0b0b034b41061c00982'
+    };
 export const tokens = new Tokens(tokensDict);
 
 const emulatorBalances: Dictionary<string> = JSON.parse(fs.readFileSync('./emulator_balances.json').toString());
