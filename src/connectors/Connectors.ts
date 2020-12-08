@@ -8,6 +8,7 @@ import {log} from '../log';
 export interface ExchangeConfig {
     secret: string;
     key: string;
+    password: string;
 }
 
 export interface ExchangeResolve<T> {
@@ -56,6 +57,7 @@ export class Connectors {
             id: id,
             apiKey: exchangeConfig.key,
             secretKey: exchangeConfig.secret,
+            password: exchangeConfig.password,
             balances: this.createBalances()
         };
         this.exchanges[id] = exchange;

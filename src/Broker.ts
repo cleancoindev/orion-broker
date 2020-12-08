@@ -297,7 +297,7 @@ export class Broker {
             this.startUpdateBalances();
             this.startCheckSubOrders();
             this.startCheckWithdraws();
-            this.startCheckLiabilities();
+            // this.startCheckLiabilities(); // todo: temporary disable
             this.startCheckTransactions();
         }
     }

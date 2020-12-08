@@ -52,7 +52,7 @@ export class CCXTConnector implements Connector {
             'secret': exchange.secretKey,
         };
         if (exchange.id === 'kucoin') {
-            options.password = ''; // todo: exchange password
+            options.password = exchange.password;
         }
         this.ccxtExchange = new exchangeClass(options);
     }

@@ -3,6 +3,8 @@ import {Dictionary} from './Model';
 import {ExchangeConfig} from './connectors/Connectors';
 import crypto from 'crypto';
 import fs from 'fs';
+import {exchanges} from 'ccxt';
+import {log} from './log';
 
 export interface Settings extends OrionBlockchainSettings {
     orionAggregatorUrl: string;
@@ -36,6 +38,7 @@ export class SettingsManager {
             exchanges[exchangeId] = {
                 key: exchange.key,
                 secret: this.cryptr.encrypt(exchange.secret),
+                password: this.cryptr.encrypt(exchange.password),
             };
         }
         const privateKey = this.settings.privateKey ? this.cryptr.encrypt(this.settings.privateKey) : '';
@@ -51,6 +54,7 @@ export class SettingsManager {
         for (const exchangeId in this.settings.exchanges) {
             const exchange = this.settings.exchanges[exchangeId];
             exchange.secret = this.cryptr.decrypt(exchange.secret);
+            exchange.password = this.cryptr.decrypt(exchange.password);
         }
         this.settings.privateKey = this.settings.privateKey ? this.cryptr.decrypt(this.settings.privateKey) : '';
     }

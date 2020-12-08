@@ -9,6 +9,7 @@ export enum DataType {
     AMOUNT,
     EXCHANGE_API_KEY,
     EXCHANGE_PRIVATE_KEY,
+    EXCHANGE_PASSWORD,
     URL,
     BOOL,
 }
@@ -75,6 +76,8 @@ function validateInput(input: string, type: DataType): string {
             if (!input.length) {
                 return 'Invalid private key';
             }
+            return '';
+        case DataType.EXCHANGE_PASSWORD:
             return '';
         case DataType.EXCHANGE_API_KEY: // todo: api key format
             if (!input.length) {

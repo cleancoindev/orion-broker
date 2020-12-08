@@ -7,7 +7,7 @@ import BigNumber from 'bignumber.js';
 export class Terminal {
     onCreatePassword: (password: string) => Promise<void>;
     onLoginPassword: (password: string) => boolean;
-    onConnectExchange: (exchange: string, apiKey: string, privateKey: string) => void;
+    onConnectExchange: (exchange: string, apiKey: string, privateKey: string, password: string) => void;
     onSetPrivateKey: (privateKey: string) => void;
     onDeposit: (amount: BigNumber, assetName: string) => void;
     onLockStake: (amount: BigNumber) => void;
@@ -50,10 +50,15 @@ export class Terminal {
                         askText: (state: any) => 'Please enter private key for ' + state.exchange,
                         fieldName: 'privateKey',
                         type: DataType.EXCHANGE_PRIVATE_KEY
+                    },
+                    {
+                        askText: (state: any) => 'Please enter passphrase for ' + state.exchange + ' (empty if no passphrase)',
+                        fieldName: 'password',
+                        type: DataType.EXCHANGE_PASSWORD
                     }
                 ],
                 after: (state: any) => {
-                    this.onConnectExchange(state.exchange, state.apiKey, state.privateKey);
+                    this.onConnectExchange(state.exchange, state.apiKey, state.privateKey, state.password);
                     return state.exchange + ' connected';
                 }
             },

@@ -15,6 +15,7 @@ export function createEmulatorExchangeConfigs() {
         exchangeConfigs[exchange] = {
             secret: '',
             key: 'emulator',
+            password: ''
         };
     }
     return exchangeConfigs;
@@ -34,6 +35,7 @@ export interface Exchange {
     id: string;
     apiKey: string;
     secretKey: string;
+    password: string;
     balances: Balances;
 }
 

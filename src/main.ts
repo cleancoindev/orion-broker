@@ -22,7 +22,8 @@ const settings = settingsManager.settings;
 const tokensDict: Dictionary<string> = settings.production ?
     {
         'ETH': '0x0000000000000000000000000000000000000000',
-        // todo: mainnet token addresses
+        'USDT': '0xdac17f958d2ee523a2206206994597c13d831ec7',
+        'ORN': '0x0258f474786ddfd37abce6df6bbb1dd5dfc4434a'
     } :
     {
         'ETH': '0x0000000000000000000000000000000000000000',
@@ -80,10 +81,11 @@ terminal.onLoginPassword = (password: string): boolean => {
     return false;
 };
 
-terminal.onConnectExchange = (exchange: string, apiKey: string, privateKey: string): void => {
+terminal.onConnectExchange = (exchange: string, apiKey: string, privateKey: string, password: string): void => {
     settings.exchanges[exchange] = {
         key: apiKey,
         secret: privateKey,
+        password: password
     };
     settingsManager.save();
     connector.updateExchange(exchange, settings.exchanges[exchange]);
