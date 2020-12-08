@@ -3,8 +3,6 @@ import {Dictionary} from './Model';
 import {ExchangeConfig} from './connectors/Connectors';
 import crypto from 'crypto';
 import fs from 'fs';
-import {exchanges} from 'ccxt';
-import {log} from './log';
 
 export interface Settings extends OrionBlockchainSettings {
     orionAggregatorUrl: string;
