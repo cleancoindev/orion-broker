@@ -57,6 +57,7 @@ export class BrokerHubWebsocket implements BrokerHub {
         log.log('Try to connect to aggregator', this.settings.orionAggregatorUrl);
 
         this.socket = io(this.settings.orionAggregatorUrl, {
+            path: '/broker',
             transports: ['websocket'],
         });
 
