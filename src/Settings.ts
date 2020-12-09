@@ -6,6 +6,7 @@ import fs from 'fs';
 
 export interface Settings extends OrionBlockchainSettings {
     orionAggregatorUrl: string;
+    orionAggregatorPath: string;
     orionBlockchainUrl: string;
     brokerWebServerUrl: string;
     matcherAddress: string;
