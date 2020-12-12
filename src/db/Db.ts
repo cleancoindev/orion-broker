@@ -136,7 +136,8 @@ export class Db {
                          "exchangeOrderId" VARCHAR(255)   NOT NULL,
                          "price"           DECIMAL(18, 8) NOT NULL,
                          "amount"          DECIMAL(18, 8) NOT NULL,
-                         "timestamp"       DATETIME       NOT NULL
+                         "timestamp"       DATETIME       NOT NULL,
+                         UNIQUE ("exchange", "exchangeOrderId")
                      );`,
                     [],
                     function (err) {

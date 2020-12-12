@@ -32,7 +32,7 @@ export class Broker {
         brokerHub.onReconnect = this.connectToAggregator.bind(this);
     }
 
-    onSubOrderStatusAccepted = async (data: SubOrderStatusAccepted): Promise<void> => {
+    async onSubOrderStatusAccepted(data: SubOrderStatusAccepted): Promise<void> {
         const id = data.id;
 
         const dbSubOrder: DbSubOrder = await this.db.getSubOrderById(id);
@@ -43,6 +43,7 @@ export class Broker {
 
         const rejectedByAggregator = (data.status === Status.REJECTED) && (dbSubOrder.status !== Status.REJECTED);
         if (rejectedByAggregator) {
+            dbSubOrder.status = Status.REJECTED;
             log.error(`Order ${id} rejected by aggregator`);
         }
 
@@ -116,8 +117,7 @@ export class Broker {
             dbSubOrder.status = Status.REJECTED;
         } else {
             dbSubOrder.exchangeOrderId = subOrder.exchangeOrderId;
-            dbSubOrder.timestamp = subOrder.timestamp;
-            dbSubOrder.status = subOrder.status;
+            dbSubOrder.status = Status.ACCEPTED;
         }
 
         await this.db.updateSubOrder(dbSubOrder);
@@ -319,7 +319,7 @@ export class Broker {
             dbSubOrder.filledAmount = trade.amount;
             dbSubOrder.status = Status.FILLED;
 
-            await this.db.insertTrade(trade);
+            await this.db.insertTrade(trade); // todo: insertTrade & updateSubOrder in transaction
             await this.db.updateSubOrder(dbSubOrder);
 
             log.log('Check suborder', dbSubOrder);

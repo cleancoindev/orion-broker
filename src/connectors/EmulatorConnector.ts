@@ -50,7 +50,7 @@ export class EmulatorConnector implements Connector {
                 exchangeOrderId: subOrder.exchangeOrderId,
                 price: subOrder.price,
                 amount: subOrder.amount,
-                timestamp: Date.now(),
+                timestamp: subOrder.timestamp,
             });
         }
     }
