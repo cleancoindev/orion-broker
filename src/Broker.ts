@@ -69,7 +69,7 @@ export class Broker {
         const trades: Trade[] = dbSubOrder.exchangeOrderId ? (await this.db.getSubOrderTrades(dbSubOrder.exchange, dbSubOrder.exchangeOrderId)) : [];
 
         if (trades.length > 1) {
-            throw new Error('Cant support multiple trades yet');
+            throw new Error('Cant support multiple trades yet ' + dbSubOrder.id);
         }
 
         const blockchainOrder: BlockchainOrder = trades.length === 0 ? undefined : (await this.orionBlockchain.signTrade(dbSubOrder, trades[0]));
@@ -103,7 +103,7 @@ export class Broker {
             sentToAggregator: false
         };
         await this.db.insertSubOrder(dbSubOrder);
-        log.log('Suborder inserted');
+        log.log(`Suborder ${request.id} inserted`);
 
         let subOrder: SubOrder = null;
 
@@ -313,7 +313,7 @@ export class Broker {
             }
 
             if (!dbSubOrder.amount.eq(trade.amount)) {
-                throw new Error('Partially trade not supported yet');
+                throw new Error('Partially trade not supported yet '  + dbSubOrder.id);
             }
 
             dbSubOrder.filledAmount = trade.amount;
