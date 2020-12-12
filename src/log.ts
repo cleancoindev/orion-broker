@@ -13,7 +13,8 @@ function formatArguments(a: IArguments): string {
     for (let i = 0; i < a.length; i++) {
         result.push(util.format(a[i]));
     }
-    return result.join(', ') + '\n';
+    const now = new Date();
+    return '[' + now.toLocaleDateString() + ' ' + now.toLocaleTimeString() + '] ' + result.join(', ') + '\n';
 }
 
 class Log {
@@ -26,6 +27,12 @@ class Log {
         if (this.writer) {
             this.writer(args.join(', '));
         }
+        if (logFile) {
+            logFile.write(formatArguments(arguments));
+        }
+    }
+
+    debug(...args) {
         if (logFile) {
             logFile.write(formatArguments(arguments));
         }

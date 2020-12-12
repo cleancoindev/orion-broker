@@ -103,9 +103,9 @@ export class BrokerHubWebsocket implements BrokerHub {
 
         this.socket.on('suborder_status_accepted', async (data: any) => {
             try {
-                log.log('Receive suborder_status_accepted', data);
+                log.debug('Receive suborder_status_accepted', data);
                 const request = parseSubOrderStatusAccepted(data);
-                log.log('Received suborder_status_accepted after parse', request);
+                log.debug('Received suborder_status_accepted after parse', request);
                 await this.onSubOrderStatusAccepted(request);
             } catch (error) {
                 log.error(error);
@@ -114,9 +114,10 @@ export class BrokerHubWebsocket implements BrokerHub {
 
         this.socket.on('suborder', async (data: any) => {
             try {
-                log.log('Receive suborder', data);
+                log.debug('Receive suborder', data);
                 const request = parseCreateSubOrder(data);
-                log.log('Received suborder after parse', request);
+                log.debug('Received suborder after parse', request);
+                log.log('Receive suborder ' + request.id + ' ' + request.side + ' ' + request.amount + ' ' + request.symbol + ' on ' + request.exchange);
                 const subOrderStatus = await this.onCreateSubOrder(request);
                 await this.sendSubOrderStatus(subOrderStatus);
             } catch (error) {
@@ -126,9 +127,10 @@ export class BrokerHubWebsocket implements BrokerHub {
 
         this.socket.on('cancel_suborder', async (data: any) => {
             try {
-                log.log('Receive cancel_suborder', data);
+                log.debug('Receive cancel_suborder', data);
                 const subOrderId = data.id;
-                log.log('Received cancel_suborder after parse', subOrderId);
+                log.debug('Received cancel_suborder after parse', subOrderId);
+                log.log('Receive cancel suborder ' + subOrderId);
                 const subOrderStatus = await this.onCancelSubOrder(subOrderId);
                 await this.sendSubOrderStatus(subOrderStatus);
             } catch (error) {
@@ -138,9 +140,9 @@ export class BrokerHubWebsocket implements BrokerHub {
 
         this.socket.on('check_suborder', async (data: any) => {
             try {
-                log.log('Receive check_suborder', data);
+                log.debug('Receive check_suborder', data);
                 const subOrderId = data.id;
-                log.log('Received check_suborder after parse', subOrderId);
+                log.debug('Received check_suborder after parse', subOrderId);
                 const subOrderStatus = await this.onCheckSubOrder(data.id);
                 await this.sendSubOrderStatus(subOrderStatus);
             } catch (error) {
@@ -163,7 +165,7 @@ export class BrokerHubWebsocket implements BrokerHub {
 
     private async send(method: string, data: any): Promise<void> {
         try {
-            log.log('Send ' + method, data);
+            log.debug('Send ' + method, data);
             this.socket.emit(method, data);
         } catch (e) {
             log.error(e);
