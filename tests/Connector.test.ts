@@ -7,10 +7,12 @@ test("connector test", async () => {
         poloniex: {
             secret: "",
             key: "",
+            password: ""
         },
         bittrex: {
             secret: "",
             key: "",
+            password: ""
         },
     };
 
