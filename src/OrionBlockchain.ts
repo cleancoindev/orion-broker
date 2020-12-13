@@ -156,8 +156,9 @@ export class OrionBlockchain {
     private createBlockchainOrder(subOrder: DbSubOrder, trade: Trade): BlockchainOrder {
         const assets = tokens.symbolToAddresses(subOrder.symbol);
         const buySide = this.counterSide(subOrder.side);
-        const matcherFeeAsset = tokens.nameToAddress['ORN']; // buySide ? assets[0] : assets[1];
+        const matcherFeeAsset = tokens.nameToAddress['ORN'];
 
+        // const matcherFeeAsset = buySide ? assets[0] : assets[1];
         // const MATCHER_FEE_PERCENT = new BigNumber(0.2).dividedBy(100); // 0.2%
         // const matcherFee: BigNumber = buySide ? trade.amount.multipliedBy(MATCHER_FEE_PERCENT) : trade.amount.multipliedBy(trade.price).multipliedBy(MATCHER_FEE_PERCENT);
 
@@ -170,7 +171,7 @@ export class OrionBlockchain {
             matcherFeeAsset: matcherFeeAsset,
             amount: this.toBaseUnit(trade.amount),
             price: this.toBaseUnit(trade.price),
-            matcherFee: this.toBaseUnit(this.ornFee),
+            matcherFee: 0,
             nonce: trade.timestamp,
             expiration: trade.timestamp + DEFAULT_EXPIRATION,
             buySide: buySide,
