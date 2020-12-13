@@ -93,6 +93,7 @@ export class OrionBlockchain {
     private exchangeContractAddress: string;
     private wallet: ethers.Wallet;
     private exchangeContract: ethers.Contract;
+    private ornFee: BigNumber;
 
     constructor(settings: OrionBlockchainSettings) {
         this.chainId = settings.production ? 1 : 3;
@@ -109,9 +110,9 @@ export class OrionBlockchain {
     }
 
     public async initContracts(): Promise<void> {
-        const contractsInfo: any = await this.getContracts();
-
-        this.exchangeContractAddress = contractsInfo.exchange;
+        const info: any = await this.getInfo();
+        this.exchangeContractAddress = info.exchange;
+        this.ornFee = new BigNumber(info.ornFee);
         this.wallet = new ethers.Wallet(this.privateKey);
         this.exchangeContract = new ethers.Contract(
             this.exchangeContractAddress,
@@ -155,10 +156,10 @@ export class OrionBlockchain {
     private createBlockchainOrder(subOrder: DbSubOrder, trade: Trade): BlockchainOrder {
         const assets = tokens.symbolToAddresses(subOrder.symbol);
         const buySide = this.counterSide(subOrder.side);
-        const matcherFeeAsset = buySide ? assets[0] : assets[1];
+        const matcherFeeAsset = tokens.nameToAddress['ORN']; // buySide ? assets[0] : assets[1];
 
-        const MATCHER_FEE_PERCENT = new BigNumber(0.2).dividedBy(100); // 0.2%
-        const matcherFee: BigNumber = buySide ? trade.amount.multipliedBy(MATCHER_FEE_PERCENT) : trade.amount.multipliedBy(trade.price).multipliedBy(MATCHER_FEE_PERCENT);
+        // const MATCHER_FEE_PERCENT = new BigNumber(0.2).dividedBy(100); // 0.2%
+        // const matcherFee: BigNumber = buySide ? trade.amount.multipliedBy(MATCHER_FEE_PERCENT) : trade.amount.multipliedBy(trade.price).multipliedBy(MATCHER_FEE_PERCENT);
 
         return {
             id: '',
@@ -169,7 +170,7 @@ export class OrionBlockchain {
             matcherFeeAsset: matcherFeeAsset,
             amount: this.toBaseUnit(trade.amount),
             price: this.toBaseUnit(trade.price),
-            matcherFee: this.toBaseUnit(matcherFee),
+            matcherFee: this.toBaseUnit(this.ornFee),
             nonce: trade.timestamp,
             expiration: trade.timestamp + DEFAULT_EXPIRATION,
             buySide: buySide,
@@ -202,8 +203,8 @@ export class OrionBlockchain {
         }).then(result => result.json());
     }
 
-    private async getContracts(): Promise<any> {
-        return await this.send(this.orionBlockchainUrl + '/contracts');
+    private async getInfo(): Promise<any> {
+        return await this.send(this.orionBlockchainUrl + '/info');
     }
 
     public async getNonce(): Promise<number> {
