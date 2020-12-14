@@ -65,6 +65,10 @@ export class EmulatorConnector implements Connector {
         return result;
     }
 
+    hasWithdraw(): boolean {
+        return true;
+    }
+
     async withdraw(currency: string, amount: BigNumber, address: string): Promise<string | undefined> {
         return uuid().toString();
     }

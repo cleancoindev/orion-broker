@@ -14,6 +14,8 @@ export interface Connector {
 
     checkSubOrders(subOrders: SubOrder[]): Promise<void>;
 
+    hasWithdraw(): boolean;
+
     withdraw(currency: string, amount: BigNumber, address: string): Promise<string | undefined>;
 
     checkWithdraws(withdraws: Withdraw[]): Promise<ExchangeWithdrawStatus[]>;

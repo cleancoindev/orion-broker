@@ -76,7 +76,7 @@ export class Broker {
 
         return {
             id: id,
-            status: dbSubOrder.status,
+            status: dbSubOrder.status === Status.PREPARE ? Status.ACCEPTED : dbSubOrder.status,
             filledAmount: dbSubOrder.filledAmount.toString(),
             blockchainOrder: blockchainOrder
         };
@@ -103,7 +103,7 @@ export class Broker {
             sentToAggregator: false
         };
         await this.db.insertSubOrder(dbSubOrder);
-        log.log(`Suborder ${request.id} inserted`);
+        log.debug(`Suborder ${request.id} inserted`);
 
         let subOrder: SubOrder = null;
 
@@ -121,7 +121,7 @@ export class Broker {
         }
 
         await this.db.updateSubOrder(dbSubOrder);
-        log.log('Suborder updated ', JSON.stringify(dbSubOrder));
+        log.debug('Suborder updated ', JSON.stringify(dbSubOrder));
 
         this.webUI.sendToFrontend(dbSubOrder);
         return this.onCheckSubOrder(dbSubOrder.id);
@@ -133,7 +133,7 @@ export class Broker {
         if (!dbSubOrder) throw new Error('Cant find suborder ' + dbSubOrder.id);
 
         if (dbSubOrder.status === Status.PREPARE) {
-            // todo
+            // todo: implement cancel order in prepare status
         } else if (dbSubOrder.status === Status.ACCEPTED) {
             const cancelResult = await this.connector.cancelSubOrder(dbSubOrder);
 
@@ -193,7 +193,9 @@ export class Broker {
                 }
 
                 const openSubOrders = await this.db.getSubOrdersToCheck();
-                await this.connector.checkSubOrders(openSubOrders);
+                if (openSubOrders.length) {
+                    await this.connector.checkSubOrders(openSubOrders);
+                }
             } catch (e) {
                 log.error('Suborders check', e);
             }
@@ -313,7 +315,7 @@ export class Broker {
             }
 
             if (!dbSubOrder.amount.eq(trade.amount)) {
-                throw new Error('Partially trade not supported yet '  + dbSubOrder.id);
+                throw new Error('Partially trade not supported yet ' + dbSubOrder.id);
             }
 
             dbSubOrder.filledAmount = trade.amount;
@@ -345,6 +347,12 @@ export class Broker {
     }
 
     async withdraw(exchange: string, amount: BigNumber, assetName: string): Promise<void> {
+        if (!this.connector.hasWithdraw(exchange)) {
+            log.log(exchange + ' does not support withdrawals');
+            log.log('Please make a manual deposit ' + amount.toString() + ' ' + assetName + ' to the contract');
+            return;
+        }
+
         log.log('Withdrawing ' + amount.toString() + ' ' + assetName + ' from ' + exchange);
         const exchangeWithdrawId: string = await this.connector.withdraw(exchange, assetName, amount, this.orionBlockchain.address);
         if (exchangeWithdrawId) {
@@ -366,7 +374,7 @@ export class Broker {
         } else {
             const nonce = await this.orionBlockchain.getNonce();
             await this.orionBlockchain.approveERC20(amount, assetName, nonce);
-            transaction = await this.orionBlockchain.depositERC20(amount, assetName, nonce + 1);
+            transaction = await this.orionBlockchain.depositERC20(amount, assetName, nonce + 1); // todo
         }
         await this.db.insetTransaction(transaction);
     }

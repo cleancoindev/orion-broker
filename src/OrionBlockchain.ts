@@ -96,7 +96,7 @@ export class OrionBlockchain {
 
     constructor(settings: OrionBlockchainSettings) {
         this.chainId = settings.production ? 1 : 3;
-        log.log('chainId=' + this.address);
+        log.log('chainId=' + this.chainId);
         this.orionBlockchainUrl = settings.orionBlockchainUrl;
         this.matcherAddress = settings.matcherAddress;
         this.privateKey = settings.privateKey;
@@ -105,7 +105,7 @@ export class OrionBlockchain {
             this.address = '0x' + privateToAddress(this.bufferKey).toString('hex');
             log.log('My address=' + this.address);
         } catch (e) {
-            log.error('Orion blockchain init error', e);
+            log.error('Orion blockchain init', e);
         }
     }
 

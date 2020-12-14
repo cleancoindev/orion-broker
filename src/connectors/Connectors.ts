@@ -152,6 +152,12 @@ export class Connectors {
         return result;
     }
 
+    hasWithdraw(exchange: string): boolean {
+        const connector = this.connectors[exchange];
+        if (!connector) throw new Error('Cant find exchange ' + exchange);
+        return connector.hasWithdraw();
+    }
+
     async withdraw(exchange: string, currency: string, amount: BigNumber, address: string): Promise<string | undefined> {
         const connector = this.connectors[exchange];
         if (!connector) throw new Error('Cant find exchange ' + exchange);

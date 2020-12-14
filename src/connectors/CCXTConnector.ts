@@ -148,6 +148,10 @@ export class CCXTConnector implements Connector {
         }
     }
 
+    hasWithdraw(): boolean {
+        return this.ccxtExchange.hasWithdraw;
+    }
+
     /**
      * https://github.com/ccxt/ccxt/wiki/Manual#withdraw
      * @return exchange withdrawal id / undefined if error
