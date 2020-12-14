@@ -96,6 +96,7 @@ export class OrionBlockchain {
 
     constructor(settings: OrionBlockchainSettings) {
         this.chainId = settings.production ? 1 : 3;
+        log.log('chainId=' + this.address);
         this.orionBlockchainUrl = settings.orionBlockchainUrl;
         this.matcherAddress = settings.matcherAddress;
         this.privateKey = settings.privateKey;
@@ -241,6 +242,7 @@ export class OrionBlockchain {
         unsignedTx.from = this.address;
         if (!unsignedTx.to) throw new Error('no unsignedTx.to');
         unsignedTx.nonce = nonce || (await this.getNonce());
+        if (unsignedTx.nonce === undefined || unsignedTx.nonce === null || isNaN(Number(unsignedTx.nonce))) throw new Error('no nonce');
         unsignedTx.gasPrice = await this.getGasPrice();
         if (!unsignedTx.gasPrice.gt(0)) throw new Error('no gasPrice');
         unsignedTx.gasLimit = ethers.BigNumber.from(gasLimit);
