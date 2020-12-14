@@ -260,15 +260,36 @@ export class Broker {
 
             const balance = await this.orionBlockchain.getBalance();
             const assetBalance = balance[assetName];
-            if (assetBalance.gte(amount)) {
+
+            const ethBalance = balance['ETH'];
+            const ethFeeAmount = new BigNumber(0.02); // todo
+            if (!ethBalance.gt(ethFeeAmount)) {
+                log.log('No ETH for gas on wallet');
+                return;
+            }
+
+            const fitBalance = assetName === 'ETH' ? assetBalance.gte(amount.plus(ethFeeAmount)) : assetBalance.gte(amount);
+
+            if (fitBalance) {
                 await this.deposit(amount, assetName);
             } else {
-                const remaining = assetBalance.minus(amount);
-                const exchange = this.getExchangeForWithdraw(remaining, assetName);
+                const remaining = amount.minus(assetBalance);
+                let remainingWithFee = remaining.multipliedBy(1.05);
+                const minWithdrawConfig = { // todo
+                    'ETH': 0.1,
+                    'ORN': 20,
+                    'USDT': 40
+                };
+                const minWithdraw = new BigNumber(minWithdrawConfig[assetName]);
+                if (minWithdraw.isNaN()) throw new Error('No min withdraw for ' + assetName);
+                if (remainingWithFee.lt(minWithdraw)) {
+                    remainingWithFee = minWithdraw;
+                }
+                const exchange = this.getExchangeForWithdraw(remainingWithFee, assetName);
                 if (exchange) {
                     await this.withdraw(exchange, remaining, assetName);
                 } else {
-                    log.log(`Need to make a ${assetName} deposit but there is not enough amount on the wallet and exchanges`);
+                    log.log(`Need to make ${amount.toString()} ${assetName} deposit but there is not enough amount on the wallet and exchanges`);
                 }
             }
         }
