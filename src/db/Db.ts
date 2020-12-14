@@ -56,7 +56,6 @@ function parseTrade(row: any): Trade {
         exchangeOrderId: row.exchangeOrderId,
         price: new BigNumber(row.price),
         amount: new BigNumber(row.amount),
-        timestamp: row.timestamp,
     };
 }
 
@@ -136,7 +135,6 @@ export class Db {
                          "exchangeOrderId" VARCHAR(255)   NOT NULL,
                          "price"           DECIMAL(18, 8) NOT NULL,
                          "amount"          DECIMAL(18, 8) NOT NULL,
-                         "timestamp"       DATETIME       NOT NULL,
                          UNIQUE ("exchange", "exchangeOrderId")
                      );`,
                     [],
@@ -328,7 +326,7 @@ export class Db {
 
     async getSubOrderTrades(exchange: string, exchangeOrderId: string): Promise<Trade[]> {
         return new Promise((resolve, reject) => {
-            this.db.all('SELECT DISTINCT * FROM trades WHERE exchange = ? AND exchangeOrderId = ? ORDER BY timestamp', [exchange, exchangeOrderId], (err, rows) => {
+            this.db.all('SELECT DISTINCT * FROM trades WHERE exchange = ? AND exchangeOrderId = ?', [exchange, exchangeOrderId], (err, rows) => {
                 if (err) {
                     reject(err);
                 } else {

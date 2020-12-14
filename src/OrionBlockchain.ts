@@ -171,8 +171,8 @@ export class OrionBlockchain {
             amount: this.toBaseUnit(trade.amount),
             price: this.toBaseUnit(trade.price),
             matcherFee: 0,
-            nonce: trade.timestamp,
-            expiration: trade.timestamp + DEFAULT_EXPIRATION,
+            nonce: subOrder.timestamp,
+            expiration: subOrder.timestamp + DEFAULT_EXPIRATION,
             buySide: buySide,
             signature: ''
         };

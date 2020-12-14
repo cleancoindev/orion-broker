@@ -76,7 +76,6 @@ function mockTradeObject(exchangeOrderId: string, amount: number): Trade {
         exchangeOrderId: exchangeOrderId,
         price: new BigNumber(data.price),
         amount: new BigNumber(amount),
-        timestamp: Date.now()
     }
 }
 

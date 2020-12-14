@@ -91,7 +91,6 @@ test("trades", async () => {
         exchangeOrderId: '123',
         price: new BigNumber(100.500),
         amount: new BigNumber(200.700),
-        timestamp: Date.now(),
     };
 
     await expect(db.insertTrade(trade)).resolves.toBe(1)

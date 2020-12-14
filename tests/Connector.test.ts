@@ -52,7 +52,6 @@ test("connector test", async () => {
             exchangeOrderId: order.exchangeOrderId,
             price: price,
             amount: amount,
-            timestamp: expect.anything()
         })
     })
 
