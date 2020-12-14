@@ -18,6 +18,12 @@ export class Broker {
     orionBlockchain: OrionBlockchain;
     lastBalances: Dictionary<Dictionary<BigNumber>> = {};
 
+    private balanceInterval: NodeJS.Timeout;
+    private checkSubOrdersInterval: NodeJS.Timeout;
+    private checkWithdrawsInterval: NodeJS.Timeout;
+    private checkTransactionsInterval: NodeJS.Timeout;
+    private checkLiabilitiesInterval: NodeJS.Timeout;
+
     constructor(settings: Settings, brokerHub: BrokerHub, db: Db, webUI: WebUI, connector: Connectors) {
         this.settings = settings;
         this.brokerHub = brokerHub;
@@ -174,7 +180,7 @@ export class Broker {
     }
 
     startUpdateBalances(): void {
-        setInterval(async () => {
+        this.balanceInterval = setInterval(async () => {
             try {
                 const balances = await this.connector.getBalances();
                 await this.sendUpdateBalance(balances);
@@ -185,7 +191,7 @@ export class Broker {
     }
 
     startCheckSubOrders(): void {
-        setInterval(async () => {
+        this.checkSubOrdersInterval = setInterval(async () => {
             try {
                 const subOrdersToResend = await this.db.getSubOrdersToResend();
                 for (const subOrder of subOrdersToResend) {
@@ -203,7 +209,7 @@ export class Broker {
     }
 
     startCheckWithdraws(): void {
-        setInterval(async () => {
+        this.checkWithdrawsInterval = setInterval(async () => {
             try {
                 const openWithdraws = await this.db.getWithdrawsToCheck();
                 if (openWithdraws.length) {
@@ -219,7 +225,7 @@ export class Broker {
     }
 
     startCheckTransactions(): void {
-        setInterval(async () => {
+        this.checkTransactionsInterval = setInterval(async () => {
             try {
                 const pendingTransactions: Transaction[] = await this.db.getPendingTransactions();
                 for (const tx of pendingTransactions) {
@@ -269,7 +275,7 @@ export class Broker {
     }
 
     startCheckLiabilities(): void {
-        setInterval(async () => {
+        this.checkLiabilitiesInterval = setInterval(async () => {
             try {
                 const liabilities: Liability[] = await this.orionBlockchain.getLiabilities();
                 for (const l of liabilities) {
@@ -292,6 +298,11 @@ export class Broker {
     }
 
     async connectToOrion(): Promise<void> {
+        clearInterval(this.balanceInterval);
+        clearInterval(this.checkSubOrdersInterval);
+        clearInterval(this.checkWithdrawsInterval);
+        clearInterval(this.checkTransactionsInterval);
+        clearInterval(this.checkLiabilitiesInterval);
         if (this.settings.privateKey) {
             this.orionBlockchain = new OrionBlockchain(this.settings);
             await this.orionBlockchain.initContracts();
