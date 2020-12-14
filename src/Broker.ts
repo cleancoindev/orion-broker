@@ -215,6 +215,7 @@ export class Broker {
                 if (openWithdraws.length) {
                     const withdrawsStatuses: ExchangeWithdrawStatus[] = await this.connector.checkWithdraws(openWithdraws);
                     for (const status of withdrawsStatuses) {
+                        log.log('Withdraw status ' + status.status);
                         await this.db.updateWithdrawStatus(status.exchangeWithdrawId, status.status);
                     }
                 }
@@ -398,15 +399,24 @@ export class Broker {
         }
     }
 
+    async approve(amount: BigNumber, assetName: string): Promise<void> {
+        log.log('Approving ' + amount.toString() + ' ' + assetName);
+        let transaction: Transaction = await this.orionBlockchain.approveERC20(amount, assetName);
+        await this.db.insetTransaction(transaction);
+    }
+
     async deposit(amount: BigNumber, assetName: string): Promise<void> {
         log.log('Depositing ' + amount.toString() + ' ' + assetName);
         let transaction: Transaction;
         if (assetName === 'ETH') {
             transaction = await this.orionBlockchain.depositETH(amount);
         } else {
-            const nonce = await this.orionBlockchain.getNonce();
-            await this.orionBlockchain.approveERC20(amount, assetName, nonce);
-            transaction = await this.orionBlockchain.depositERC20(amount, assetName, nonce + 1); // todo
+            const allowance: BigNumber = await this.orionBlockchain.getAllowance(assetName);
+            if (allowance.gte(amount)) {
+                transaction = await this.orionBlockchain.depositERC20(amount, assetName);
+            } else {
+                log.log(`Only ${allowance.toString()} ${assetName} approved, not enough for a deposit`);
+            }
         }
         await this.db.insetTransaction(transaction);
     }

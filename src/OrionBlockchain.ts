@@ -207,6 +207,12 @@ export class OrionBlockchain {
         return await this.send(this.orionBlockchainUrl + '/info');
     }
 
+    public async getAllowance(assetName: string): Promise<BigNumber> {
+        const assetAddress: string = tokens[assetName];
+        const data: any = await this.send(this.orionBlockchainUrl + '/broker/getAllowance/' + this.address + '/' + assetAddress);
+        return new BigNumber(data.allowance);
+    }
+
     public async getNonce(): Promise<number> {
         const data: any = await this.send(this.orionBlockchainUrl + '/broker/getNonce/' + this.address);
         return data.nonce;

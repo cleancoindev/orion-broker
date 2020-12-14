@@ -105,6 +105,22 @@ terminal.onDeposit = async (amount: BigNumber, assetName: string): Promise<void>
     }
 };
 
+terminal.onApprove = async (amount: BigNumber, assetName: string): Promise<void> => {
+    try {
+        await broker.approve(amount, assetName);
+    } catch (e) {
+        log.error('Approve error', e);
+    }
+};
+
+terminal.onWithdraw = async (exchange: string, amount: BigNumber, assetName: string): Promise<void> => {
+    try {
+        await broker.withdraw(exchange, amount, assetName);
+    } catch (e) {
+        log.error('Withdraw error', e);
+    }
+};
+
 terminal.onLockStake = async (amount: BigNumber): Promise<void> => {
     try {
         await broker.lockStake(amount);

@@ -10,6 +10,8 @@ export class Terminal {
     onConnectExchange: (exchange: string, apiKey: string, privateKey: string, password: string) => void;
     onSetPrivateKey: (privateKey: string) => void;
     onDeposit: (amount: BigNumber, assetName: string) => void;
+    onApprove: (amount: BigNumber, assetName: string) => void;
+    onWithdraw: (exchange: string, amount: BigNumber, assetName: string) => void;
     onLockStake: (amount: BigNumber) => void;
     ui: any; // TerminalUI
 
@@ -96,6 +98,53 @@ export class Terminal {
                 asks: [],
                 after: (state: any) => {
                     this.onDeposit(new BigNumber(state.amount), state.assetName);
+                    return '';
+                }
+            },
+            {
+                name: 'approve',
+                help: 'Approve asset for Orion smart contract',
+                params: [
+                    {
+                        name: 'amount',
+                        fieldName: 'amount',
+                        type: DataType.AMOUNT
+                    },
+                    {
+                        name: 'assetName',
+                        fieldName: 'assetName',
+                        type: DataType.ASSET_NAME
+                    },
+                ],
+                asks: [],
+                after: (state: any) => {
+                    this.onApprove(new BigNumber(state.amount), state.assetName);
+                    return '';
+                }
+            },
+            {
+                name: 'exwithdraw',
+                help: 'Withdraw from exchanges',
+                params: [
+                    {
+                        name: 'exchange',
+                        fieldName: 'exchange',
+                        type: DataType.EXCHANGE
+                    },
+                    {
+                        name: 'amount',
+                        fieldName: 'amount',
+                        type: DataType.AMOUNT
+                    },
+                    {
+                        name: 'assetName',
+                        fieldName: 'assetName',
+                        type: DataType.ASSET_NAME
+                    },
+                ],
+                asks: [],
+                after: (state: any) => {
+                    this.onWithdraw(state.exchange, new BigNumber(state.amount), state.assetName);
                     return '';
                 }
             },
