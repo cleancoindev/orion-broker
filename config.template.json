@@ -1,15 +1,15 @@
 {
-  "orionAggregatorUrl": "http://localhost:9092",
-  "orionAggregatorPath": "",
-  "orionBlockchainUrl": "http://localhost:3001",
+  "orionAggregatorUrl": "https://trade.orionprotocol.io/",
+  "orionAggregatorPath": "/broker",
+  "orionBlockchainUrl": "https://trade.orionprotocol.io/api",
   "brokerWebServerUrl": "http://localhost:4000",
-  "matcherAddress": "0x1FF516E5ce789085CFF86d37fc27747dF852a80a",
+  "matcherAddress": "0x15E030E12cD2C949181BFf268cbEF26F524d7929",
   "privateKey": "",
   "httpPort": 4000,
   "wsPort": 4001,
   "passwordHash": "",
   "passwordSalt": "",
-  "production": false,
+  "production": true,
   "duePeriodSeconds": 10800,
   "exchanges": {
   }
