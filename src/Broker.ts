@@ -181,7 +181,7 @@ export class Broker {
             } catch (e) {
                 log.error('Balances', e);
             }
-        }, 10000);
+        }, 10 * 1000);
     }
 
     startCheckSubOrders(): void {
@@ -199,7 +199,7 @@ export class Broker {
             } catch (e) {
                 log.error('Suborders check', e);
             }
-        }, this.settings.production ? 10000 : 3000);
+        }, 10 * 1000);
     }
 
     startCheckWithdraws(): void {
@@ -215,7 +215,26 @@ export class Broker {
             } catch (e) {
                 log.error('Withdraw check', e);
             }
-        }, 3000);
+        }, 60 * 1000);
+    }
+
+    startCheckTransactions(): void {
+        setInterval(async () => {
+            try {
+                const pendingTransactions: Transaction[] = await this.db.getPendingTransactions();
+                for (const tx of pendingTransactions) {
+                    const status = await this.orionBlockchain.getTransactionStatus(tx.transactionHash);
+                    if (status !== tx.status) {
+                        if (status === 'OK' || status === 'FAIL') {
+                            await this.db.updateTransactionStatus(tx.transactionHash, status);
+                            log.log('Tx ' + tx.method + ' ' + tx.amount.toString() + ' ' + tx.asset + ' ' + status);
+                        }
+                    }
+                }
+            } catch (e) {
+                log.error('Transactions check', e);
+            }
+        }, 10 * 1000);
     }
 
     async manageLiability(liability: Liability): Promise<void> {
@@ -259,26 +278,7 @@ export class Broker {
             } catch (e) {
                 log.error('Liabilities check', e);
             }
-        }, 3000);
-    }
-
-    startCheckTransactions(): void {
-        setInterval(async () => {
-            try {
-                const pendingTransactions: Transaction[] = await this.db.getPendingTransactions();
-                for (const tx of pendingTransactions) {
-                    const status = await this.orionBlockchain.getTransactionStatus(tx.transactionHash);
-                    if (status !== tx.status) {
-                        if (status === 'OK' || status === 'FAIL') {
-                            await this.db.updateTransactionStatus(tx.transactionHash, status);
-                            log.log('Tx ' + tx.method + ' ' + tx.amount.toString() + ' ' + tx.asset + ' ' + status);
-                        }
-                    }
-                }
-            } catch (e) {
-                log.error('Transactions check', e);
-            }
-        }, 3000);
+        }, 5 * 60 * 1000);
     }
 
     async connectToAggregator(): Promise<void> {
@@ -299,7 +299,7 @@ export class Broker {
             this.startUpdateBalances();
             this.startCheckSubOrders();
             this.startCheckWithdraws();
-            // this.startCheckLiabilities(); // todo: temporary disable
+            this.startCheckLiabilities();
             this.startCheckTransactions();
         }
     }
