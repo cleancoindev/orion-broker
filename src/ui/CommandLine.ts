@@ -72,6 +72,13 @@ function validateInput(input: string, type: DataType): string {
             }
             return '';
         case DataType.BLOCKCHAIN_PRIVATE_KEY: // todo: private key format
+            if (!input.startsWith('0x')) {
+                return 'Must starts with 0x';
+            }
+            if (input.length !== 66) {
+                return 'Invalid private key';
+            }
+            return '';
         case DataType.EXCHANGE_PRIVATE_KEY: // todo: private key format
             if (!input.length) {
                 return 'Invalid private key';

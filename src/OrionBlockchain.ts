@@ -93,7 +93,6 @@ export class OrionBlockchain {
     private exchangeContractAddress: string;
     private wallet: ethers.Wallet;
     private exchangeContract: ethers.Contract;
-    private ornFee: BigNumber;
 
     constructor(settings: OrionBlockchainSettings) {
         this.chainId = settings.production ? 1 : 3;
@@ -105,14 +104,13 @@ export class OrionBlockchain {
             this.address = '0x' + privateToAddress(this.bufferKey).toString('hex');
             log.log('My address=' + this.address);
         } catch (e) {
-            log.error('Orion blockchain init', e);
+            log.error('Orion blockchain init error', e);
         }
     }
 
     public async initContracts(): Promise<void> {
         const info: any = await this.getInfo();
         this.exchangeContractAddress = info.exchange;
-        this.ornFee = new BigNumber(info.ornFee);
         this.wallet = new ethers.Wallet(this.privateKey);
         this.exchangeContract = new ethers.Contract(
             this.exchangeContractAddress,
@@ -220,7 +218,7 @@ export class OrionBlockchain {
 
     private async getGasPrice(): Promise<ethers.BigNumber> { // in gwei
         const data: any = await this.send('https://ethgasstation.info/api/ethgasAPI.json');
-        const gwei = new BigNumber(data.fast).dividedBy(10).toString();
+        const gwei = new BigNumber(data.fast).dividedBy(10).toFixed(0, BigNumber.ROUND_UP);
         return ethers.utils.parseUnits(gwei, 'gwei');
     }
 
@@ -244,7 +242,9 @@ export class OrionBlockchain {
         if (!unsignedTx.to) throw new Error('no unsignedTx.to');
         unsignedTx.nonce = nonce || (await this.getNonce());
         unsignedTx.gasPrice = await this.getGasPrice();
+        if (!unsignedTx.gasPrice.gt(0)) throw new Error('no gasPrice');
         unsignedTx.gasLimit = ethers.BigNumber.from(gasLimit);
+        log.debug('tx', unsignedTx);
         const signedTxRaw: string = await this.wallet.signTransaction(unsignedTx);
         const resultRaw: any = await this.send(this.orionBlockchainUrl + '/broker/execute', 'POST', {signedTxRaw: signedTxRaw});
         return resultRaw.hash;
@@ -293,7 +293,8 @@ export class OrionBlockchain {
      * @param assetName "ETH"
      */
     public async approveERC20(amount: BigNumber, assetName: string, nonce: number = 0): Promise<Transaction> {
-        const value: string = toWei8(amount, 8); // todo: get real decimals
+        const decimals = this.chainId === 1 ? (assetName === 'USDT' ? 6 : 8) : 8; // todo: get real decimals
+        const value: string = toWei8(amount, decimals);
         const assetAddress: string = tokens.nameToAddress[assetName];
         const tokenContract: ethers.Contract = new ethers.Contract(
             assetAddress,
