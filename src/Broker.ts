@@ -332,7 +332,7 @@ export class Broker {
             this.startUpdateBalances();
             this.startCheckSubOrders();
             this.startCheckWithdraws();
-            this.startCheckLiabilities();
+            // this.startCheckLiabilities();
             this.startCheckTransactions();
         }
     }
@@ -418,7 +418,9 @@ export class Broker {
                 log.log(`Only ${allowance.toString()} ${assetName} approved, not enough for a deposit`);
             }
         }
-        await this.db.insetTransaction(transaction);
+        if (transaction) {
+            await this.db.insetTransaction(transaction);
+        }
     }
 
     async lockStake(amount: BigNumber): Promise<void> {
