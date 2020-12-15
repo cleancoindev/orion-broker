@@ -89,7 +89,7 @@ export class Db {
     async init() {
         let databaseExists = false;
         if (!this.isInMemory) {
-            databaseExists = fs.existsSync('./broker.db');
+            databaseExists = fs.existsSync('./data/broker.db');
         }
 
         await this.connectToDatabase();
@@ -101,7 +101,7 @@ export class Db {
 
     async connectToDatabase(): Promise<void> {
         return new Promise((resolve, reject) => {
-            const filename = this.isInMemory ? ':memory:' : './broker.db';
+            const filename = this.isInMemory ? ':memory:' : './data/broker.db';
             this.db = new sqlite3.Database(filename, (err) => {
                 if (err) {
                     reject(err);

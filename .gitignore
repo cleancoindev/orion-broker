@@ -6,3 +6,4 @@ broker.db
 config.json
 broker.log
 coverage/
+data/

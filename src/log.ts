@@ -3,7 +3,7 @@ import util from 'util';
 
 let logFile = null;
 try {
-    logFile = fs.createWriteStream('./broker.log', {flags: 'w'});
+    logFile = fs.createWriteStream('./data/broker.log', {flags: 'w'});
 } catch (e) {
     console.error('Cant create log file');
 }

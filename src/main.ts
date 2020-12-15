@@ -16,7 +16,7 @@ import express from 'express';
 import BigNumber from 'bignumber.js';
 import {Tokens} from './Tokens';
 
-const settingsManager = new SettingsManager('./config.json');
+const settingsManager = new SettingsManager('./data/config.json');
 const settings = settingsManager.settings;
 
 const tokensDict: Dictionary<string> = settings.production ?

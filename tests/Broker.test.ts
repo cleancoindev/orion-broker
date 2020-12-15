@@ -23,7 +23,7 @@ async function createBroker(db: Db): Promise<Broker> {
         "production": false,
     }))
 
-    const settingsManger = new SettingsManager('./config.json');
+    const settingsManger = new SettingsManager('./data/config.json');
     const settings = settingsManger.settings;
 
     const emulatorBalances: Dictionary<string> = {

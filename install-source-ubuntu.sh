@@ -25,7 +25,7 @@ npm run build &&
 
 cd .. &&
 
-cp config.template.json config.json &&
+cp config.template.json data/config.json &&
 
 npm install &&
 
