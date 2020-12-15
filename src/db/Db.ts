@@ -135,6 +135,7 @@ export class Db {
                          "exchangeOrderId" VARCHAR(255)   NOT NULL,
                          "price"           DECIMAL(18, 8) NOT NULL,
                          "amount"          DECIMAL(18, 8) NOT NULL,
+                         "timestamp"       DATETIME       NOT NULL,
                          UNIQUE ("exchange", "exchangeOrderId")
                      );`,
                     [],
@@ -211,6 +212,7 @@ export class Db {
 
     async insertTrade(trade: Trade): Promise<number> {
         return new Promise((resolve, reject) => {
+            (trade as any).timestamp = Date.now(); // todo
 
             const t = mapObject(trade);
 
