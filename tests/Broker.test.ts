@@ -27,13 +27,10 @@ async function createBroker(db: Db): Promise<Broker> {
     const settings = settingsManger.settings;
 
     const emulatorBalances: Dictionary<string> = {
-        "BTC": "20",
         "ETH": "500",
-        "XRP": "100000",
-        "WAVES": "100000",
         "USDT": "100000",
-        "EGLD": "1000000",
-        "ORN": "1000000"
+        "ORN": "1000000",
+        "LINK": "100"
     }
     const exchangeConfigs: Dictionary<ExchangeConfig> = createEmulatorExchangeConfigs();
     const connector: Connectors = new Connectors(emulatorBalances, false);

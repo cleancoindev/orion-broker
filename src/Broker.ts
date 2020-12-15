@@ -279,6 +279,7 @@ export class Broker {
                 const minWithdrawConfig = { // todo
                     'ETH': 0.1,
                     'ORN': 20,
+                    'LINK': 5,
                     'USDT': 40
                 };
                 const minWithdraw = new BigNumber(minWithdrawConfig[assetName]);

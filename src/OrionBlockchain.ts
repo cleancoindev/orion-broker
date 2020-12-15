@@ -301,7 +301,20 @@ export class OrionBlockchain {
      * @param assetName "ETH"
      */
     public async approveERC20(amount: BigNumber, assetName: string, nonce: number = 0): Promise<Transaction> {
-        const decimals = this.chainId === 1 ? (assetName === 'USDT' ? 6 : 8) : 8; // todo: get real decimals
+        const decimalsConfig = { // todo: hardcode
+            '1': {
+                'ORN': 8,
+                'USDT': 6,
+                'LINK': 18
+            },
+            '3': {
+                'ORN': 8,
+                'USDT': 8,
+                'LINK': 18
+            },
+        };
+
+        const decimals = decimalsConfig[this.chainId.toString()][assetName];
         const value: string = toWei8(amount, decimals);
         const assetAddress: string = tokens.nameToAddress[assetName];
         const tokenContract: ethers.Contract = new ethers.Contract(

@@ -23,12 +23,14 @@ const tokensDict: Dictionary<string> = settings.production ?
     {
         'ETH': '0x0000000000000000000000000000000000000000',
         'USDT': '0xdac17f958d2ee523a2206206994597c13d831ec7',
-        'ORN': '0x0258f474786ddfd37abce6df6bbb1dd5dfc4434a'
+        'ORN': '0x0258f474786ddfd37abce6df6bbb1dd5dfc4434a',
+        'LINK': '0x514910771af9ca656af840dff83e8264ecf986ca'
     } :
     {
         'ETH': '0x0000000000000000000000000000000000000000',
         'USDT': '0xfc1cd13a7f126efd823e373c4086f69beb8611c2',
-        'ORN': '0xfc25454ac2db9f6ab36bc0b0b034b41061c00982'
+        'ORN': '0xfc25454ac2db9f6ab36bc0b0b034b41061c00982',
+        'LINK': '0x95cf08b2381753c0f3a9ea4b80cf0621e1b796f3'
     };
 export const tokens = new Tokens(tokensDict);
 

@@ -56,12 +56,12 @@ function validateInput(input: string, type: DataType): string {
             }
             return '';
         case DataType.ASSET_NAME:
-            if (input !== 'ETH' && input !== 'USDT' && input !== 'ORN') {
+            if (input !== 'ETH' && input !== 'USDT' && input !== 'ORN' && input !== 'LINK') {
                 return 'Invalid asset';
             }
             return '';
         case DataType.TOKEN_NAME:
-            if (input !== 'USDT' && input !== 'ORN') {
+            if (input !== 'USDT' && input !== 'ORN' && input !== 'LINK') {
                 return 'Invalid token';
             }
             return '';
