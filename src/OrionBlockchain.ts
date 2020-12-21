@@ -12,8 +12,7 @@ import {ethers} from 'ethers';
 
 import exchangeArtifact from './abi/Exchange.json';
 import erc20Artifact from './abi/ERC20.json';
-import {Account, Sign} from 'web3-core';
-import {tokens} from './main';
+import {exchangeContractAddress, matcherAddress, tokens, tokensDecimals} from './main';
 
 const DOMAIN_TYPE = [
     {name: 'name', type: 'string'},
@@ -60,7 +59,6 @@ export function hashOrder(order: BlockchainOrder): string {
 export interface OrionBlockchainSettings {
     production: boolean;
     orionBlockchainUrl: string;
-    matcherAddress: string;
     privateKey: string;
 }
 
@@ -98,7 +96,7 @@ export class OrionBlockchain {
         this.chainId = settings.production ? 1 : 3;
         log.log('chainId=' + this.chainId);
         this.orionBlockchainUrl = settings.orionBlockchainUrl;
-        this.matcherAddress = settings.matcherAddress;
+        this.matcherAddress = matcherAddress;
         this.privateKey = settings.privateKey;
         try {
             this.bufferKey = Buffer.from(settings.privateKey.substr(2), 'hex');
@@ -110,8 +108,7 @@ export class OrionBlockchain {
     }
 
     public async initContracts(): Promise<void> {
-        const info: any = await this.getInfo();
-        this.exchangeContractAddress = info.exchange;
+        this.exchangeContractAddress = exchangeContractAddress;
         this.wallet = new ethers.Wallet(this.privateKey);
         this.exchangeContract = new ethers.Contract(
             this.exchangeContractAddress,
@@ -201,10 +198,6 @@ export class OrionBlockchain {
             headers,
             body
         }).then(result => result.json());
-    }
-
-    private async getInfo(): Promise<any> {
-        return await this.send(this.orionBlockchainUrl + '/info');
     }
 
     public async getAllowance(assetName: string): Promise<BigNumber> {
@@ -301,20 +294,8 @@ export class OrionBlockchain {
      * @param assetName "ETH"
      */
     public async approveERC20(amount: BigNumber, assetName: string, nonce: number = 0): Promise<Transaction> {
-        const decimalsConfig = { // todo: hardcode
-            '1': {
-                'ORN': 8,
-                'USDT': 6,
-                'LINK': 18
-            },
-            '3': {
-                'ORN': 8,
-                'USDT': 8,
-                'LINK': 18
-            },
-        };
-
-        const decimals = decimalsConfig[this.chainId.toString()][assetName];
+        const decimals = tokensDecimals[assetName];
+        if (decimals === undefined) throw new Error('No decimals for ' + assetName);
         const value: string = toWei8(amount, decimals);
         const assetAddress: string = tokens.nameToAddress[assetName];
         const tokenContract: ethers.Contract = new ethers.Contract(

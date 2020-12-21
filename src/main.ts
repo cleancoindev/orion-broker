@@ -11,149 +11,160 @@ import {Broker} from './Broker';
 import {BrokerHubWebsocket} from './hub/BrokerHubWebsocket';
 
 import Cryptr from 'cryptr';
-import fs from 'fs';
 import express from 'express';
 import BigNumber from 'bignumber.js';
 import {Tokens} from './Tokens';
+import fetch from 'node-fetch';
 
-const settingsManager = new SettingsManager('./data/config.json');
-const settings = settingsManager.settings;
+export let tokensDecimals: Dictionary<number>;
+export let minWithdrawFromExchanges: Dictionary<number>;
+export let tokens: Tokens;
+export let matcherAddress: string;
+export let exchangeContractAddress: string;
 
-const tokensDict: Dictionary<string> = settings.production ?
-    {
-        'ETH': '0x0000000000000000000000000000000000000000',
-        'USDT': '0xdac17f958d2ee523a2206206994597c13d831ec7',
-        'ORN': '0x0258f474786ddfd37abce6df6bbb1dd5dfc4434a',
-        'LINK': '0x514910771af9ca656af840dff83e8264ecf986ca'
-    } :
-    {
-        'ETH': '0x0000000000000000000000000000000000000000',
-        'USDT': '0xfc1cd13a7f126efd823e373c4086f69beb8611c2',
-        'ORN': '0xfc25454ac2db9f6ab36bc0b0b034b41061c00982',
-        'LINK': '0x95cf08b2381753c0f3a9ea4b80cf0621e1b796f3'
-    };
-export const tokens = new Tokens(tokensDict);
+const init = async (): Promise<void> => {
+    const settingsManager = new SettingsManager('./data/config.json');
+    const settings = settingsManager.settings;
 
-const emulatorBalances: Dictionary<string> = JSON.parse(fs.readFileSync('./emulator_balances.json').toString());
+    const blockchainInfoRaw = await fetch(settings.orionBlockchainUrl + '/info');
+    const blockchainInfo = await blockchainInfoRaw.json();
+    matcherAddress = blockchainInfo.matcherAddress;
+    exchangeContractAddress = blockchainInfo.exchangeContractAddress;
+    tokensDecimals = blockchainInfo.assetToDecimals;
+    minWithdrawFromExchanges = blockchainInfo.minWithdrawFromExchanges;
+    const tokensDict: Dictionary<string> = blockchainInfo.assetToAddress;
+    tokens = new Tokens(tokensDict);
 
-const connector: Connectors = new Connectors(emulatorBalances, settings.production);
-
-const app = express();
-
-app.use(express.json());
-
-app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,x-compress');
-    next();
-});
-
-function initHttpServer(): void {
-    app.listen(settings.httpPort, function () {
-        log.log('Broker app listening on http://localhost:' + settings.httpPort);
-    });
-}
-
-const db = new Db();
-db.init();
-
-const brokerHub: BrokerHub = new BrokerHubWebsocket(settings);
-const webUI = new WebUI(db, settings, app);
-const terminal = new Terminal(settingsManager);
-
-const broker = new Broker(settings, brokerHub, db, webUI, connector);
-connector.setOnTradeListener(trade => broker.onTrade(trade));
-
-terminal.onCreatePassword = async (password: string): Promise<void> => {
-    settingsManager.cryptr = new Cryptr(password);
-    settings.passwordSalt = uuid().toString();
-    settings.passwordHash = hashPassword(password + settings.passwordSalt);
-    await settingsManager.save();
-    start();
-};
-
-terminal.onLoginPassword = (password: string): boolean => {
-    const hash = hashPassword(password + settings.passwordSalt);
-    if (settings.passwordHash === hash) {
-        settingsManager.cryptr = new Cryptr(password);
-        settingsManager.decrypt();
-        start();
-        return true;
-    }
-    return false;
-};
-
-terminal.onConnectExchange = (exchange: string, apiKey: string, privateKey: string, password: string): void => {
-    settings.exchanges[exchange] = {
-        key: apiKey,
-        secret: privateKey,
-        password: password
-    };
-    settingsManager.save();
-    connector.updateExchange(exchange, settings.exchanges[exchange]);
-};
-
-terminal.onSetPrivateKey = (privateKey: string): void => {
-    settings.privateKey = privateKey;
-    settingsManager.save();
-    broker.connectToOrion();
-};
-
-terminal.onDeposit = async (amount: BigNumber, assetName: string): Promise<void> => {
-    try {
-        await broker.deposit(amount, assetName);
-    } catch (e) {
-        log.error('Deposit error', e);
-    }
-};
-
-terminal.onApprove = async (amount: BigNumber, assetName: string): Promise<void> => {
-    try {
-        await broker.approve(amount, assetName);
-    } catch (e) {
-        log.error('Approve error', e);
-    }
-};
-
-terminal.onWithdraw = async (exchange: string, amount: BigNumber, assetName: string): Promise<void> => {
-    try {
-        await broker.withdraw(exchange, amount, assetName);
-    } catch (e) {
-        log.error('Withdraw error', e);
-    }
-};
-
-terminal.onLockStake = async (amount: BigNumber): Promise<void> => {
-    try {
-        await broker.lockStake(amount);
-    } catch (e) {
-        log.error('Stake error', e);
-    }
-};
-
-function start(): void {
-    const exchangeConfigs: Dictionary<ExchangeConfig> = settings.production ? settings.exchanges : createEmulatorExchangeConfigs();
-    connector.updateExchanges(exchangeConfigs);
-
-    terminal.ui.showMain();
-    webUI.initWs();
-    initHttpServer();
-    broker.connectToOrion();
-}
-
-if (settings.passwordHash) {
-    const arg = process.argv.slice(2).find(arg => arg.startsWith('-p'));
-    const password = arg ? arg.substring(2) : undefined;
-
-    if (password) {
-        if (!terminal.onLoginPassword(password)) {
-            console.log('Invalid password');
-            process.exit();
+    const emulatorBalances: Dictionary<string> = {};
+    for (let asset of Object.keys(tokens.nameToAddress)) {
+        if (asset === 'ETH') {
+            emulatorBalances[asset] = '5';
+        } else {
+            emulatorBalances[asset] = '3000';
         }
-    } else {
-        terminal.ui.showLogin();
     }
 
-} else {
-    terminal.ui.showHello();
+    const connector: Connectors = new Connectors(emulatorBalances, settings.production);
+
+    const app = express();
+
+    app.use(express.json());
+
+    app.use((req, res, next) => {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type,x-compress');
+        next();
+    });
+
+    function initHttpServer(): void {
+        app.listen(settings.httpPort, function () {
+            log.log('Broker app listening on http://localhost:' + settings.httpPort);
+        });
+    }
+
+    const db = new Db();
+    db.init();
+
+    const brokerHub: BrokerHub = new BrokerHubWebsocket(settings);
+    const webUI = new WebUI(db, settings, app);
+    const terminal = new Terminal(settingsManager);
+
+    const broker = new Broker(settings, brokerHub, db, webUI, connector);
+    connector.setOnTradeListener(trade => broker.onTrade(trade));
+
+    terminal.onCreatePassword = async (password: string): Promise<void> => {
+        settingsManager.cryptr = new Cryptr(password);
+        settings.passwordSalt = uuid().toString();
+        settings.passwordHash = hashPassword(password + settings.passwordSalt);
+        await settingsManager.save();
+        start();
+    };
+
+    terminal.onLoginPassword = (password: string): boolean => {
+        const hash = hashPassword(password + settings.passwordSalt);
+        if (settings.passwordHash === hash) {
+            settingsManager.cryptr = new Cryptr(password);
+            settingsManager.decrypt();
+            start();
+            return true;
+        }
+        return false;
+    };
+
+    terminal.onConnectExchange = (exchange: string, apiKey: string, privateKey: string, password: string): void => {
+        settings.exchanges[exchange] = {
+            key: apiKey,
+            secret: privateKey,
+            password: password
+        };
+        settingsManager.save();
+        connector.updateExchange(exchange, settings.exchanges[exchange]);
+    };
+
+    terminal.onSetPrivateKey = (privateKey: string): void => {
+        settings.privateKey = privateKey;
+        settingsManager.save();
+        broker.connectToOrion();
+    };
+
+    terminal.onDeposit = async (amount: BigNumber, assetName: string): Promise<void> => {
+        try {
+            await broker.deposit(amount, assetName);
+        } catch (e) {
+            log.error('Deposit error', e);
+        }
+    };
+
+    terminal.onApprove = async (amount: BigNumber, assetName: string): Promise<void> => {
+        try {
+            await broker.approve(amount, assetName);
+        } catch (e) {
+            log.error('Approve error', e);
+        }
+    };
+
+    terminal.onWithdraw = async (exchange: string, amount: BigNumber, assetName: string): Promise<void> => {
+        try {
+            await broker.withdraw(exchange, amount, assetName);
+        } catch (e) {
+            log.error('Withdraw error', e);
+        }
+    };
+
+    terminal.onLockStake = async (amount: BigNumber): Promise<void> => {
+        try {
+            await broker.lockStake(amount);
+        } catch (e) {
+            log.error('Stake error', e);
+        }
+    };
+
+    function start(): void {
+        const exchangeConfigs: Dictionary<ExchangeConfig> = settings.production ? settings.exchanges : createEmulatorExchangeConfigs();
+        connector.updateExchanges(exchangeConfigs);
+
+        terminal.ui.showMain();
+        webUI.initWs();
+        initHttpServer();
+        broker.connectToOrion();
+    }
+
+    if (settings.passwordHash) {
+        const arg = process.argv.slice(2).find(arg => arg.startsWith('-p'));
+        const password = arg ? arg.substring(2) : undefined;
+
+        if (password) {
+            if (!terminal.onLoginPassword(password)) {
+                console.log('Invalid password');
+                process.exit();
+            }
+        } else {
+            terminal.ui.showLogin();
+        }
+
+    } else {
+        terminal.ui.showHello();
+    }
 }
+
+init();

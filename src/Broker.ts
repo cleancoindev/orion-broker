@@ -8,6 +8,7 @@ import {Connectors, ExchangeResolve} from './connectors/Connectors';
 import {fromWei8, OrionBlockchain} from './OrionBlockchain';
 import {Settings} from './Settings';
 import {ExchangeWithdrawStatus} from './connectors/Connector';
+import {minWithdrawFromExchanges} from './main';
 
 export class Broker {
     settings: Settings;
@@ -276,13 +277,7 @@ export class Broker {
             } else {
                 const remaining = amount.minus(assetBalance);
                 let remainingWithFee = remaining.multipliedBy(1.05);
-                const minWithdrawConfig = { // todo
-                    'ETH': 0.1,
-                    'ORN': 20,
-                    'LINK': 5,
-                    'USDT': 40
-                };
-                const minWithdraw = new BigNumber(minWithdrawConfig[assetName]);
+                const minWithdraw = new BigNumber(minWithdrawFromExchanges[assetName]);
                 if (minWithdraw.isNaN()) throw new Error('No min withdraw for ' + assetName);
                 if (remainingWithFee.lt(minWithdraw)) {
                     remainingWithFee = minWithdraw;

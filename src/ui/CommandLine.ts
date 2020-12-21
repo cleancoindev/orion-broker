@@ -1,5 +1,6 @@
 import {EXCHANGES} from '../Model';
 import BigNumber from 'bignumber.js';
+import {tokens} from '../main';
 
 export enum DataType {
     EXCHANGE,
@@ -56,12 +57,12 @@ function validateInput(input: string, type: DataType): string {
             }
             return '';
         case DataType.ASSET_NAME:
-            if (input !== 'ETH' && input !== 'USDT' && input !== 'ORN' && input !== 'LINK') {
+            if (Object.keys(tokens.nameToAddress).indexOf(input) === -1) {
                 return 'Invalid asset';
             }
             return '';
         case DataType.TOKEN_NAME:
-            if (input !== 'USDT' && input !== 'ORN' && input !== 'LINK') {
+            if (input === 'ETH' || Object.keys(tokens.nameToAddress).indexOf(input) === -1) {
                 return 'Invalid token';
             }
             return '';

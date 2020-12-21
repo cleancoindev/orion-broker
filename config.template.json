@@ -3,7 +3,6 @@
   "orionAggregatorPath": "/broker",
   "orionBlockchainUrl": "https://trade.orionprotocol.io/api",
   "brokerWebServerUrl": "http://localhost:4000",
-  "matcherAddress": "0x15E030E12cD2C949181BFf268cbEF26F524d7929",
   "privateKey": "",
   "httpPort": 4000,
   "wsPort": 4001,
