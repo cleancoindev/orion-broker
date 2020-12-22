@@ -195,6 +195,7 @@ export class OrionBlockchain {
 
         return fetch(url, {
             method,
+            cache: 'no-store',
             headers,
             body
         }).then(result => result.json());
@@ -217,7 +218,7 @@ export class OrionBlockchain {
     }
 
     private async getGasPrice(): Promise<ethers.BigNumber> { // in gwei
-        const data: any = await this.send('https://ethgasstation.info/api/ethgasAPI.json');
+        const data: any = await this.send('https://ethgasstation.info/api/ethgasAPI.json?' + Date.now());
         const gwei = new BigNumber(data.fast).dividedBy(10).toFixed(0, BigNumber.ROUND_UP);
         return ethers.utils.parseUnits(gwei, 'gwei');
     }
