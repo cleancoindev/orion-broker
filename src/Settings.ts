@@ -9,6 +9,7 @@ export interface Settings extends OrionBlockchainSettings {
     orionAggregatorPath: string;
     orionBlockchainUrl: string;
     brokerWebServerUrl: string;
+    matcherAddress: string;
     privateKey: string;
     httpPort: number;
     wsPort: number;

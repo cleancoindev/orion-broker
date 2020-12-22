@@ -19,7 +19,6 @@ import fetch from 'node-fetch';
 export let tokensDecimals: Dictionary<number>;
 export let minWithdrawFromExchanges: Dictionary<number>;
 export let tokens: Tokens;
-export let matcherAddress: string;
 export let exchangeContractAddress: string;
 
 const init = async (): Promise<void> => {
@@ -28,7 +27,6 @@ const init = async (): Promise<void> => {
 
     const blockchainInfoRaw = await fetch(settings.orionBlockchainUrl + '/info');
     const blockchainInfo = await blockchainInfoRaw.json();
-    matcherAddress = blockchainInfo.matcherAddress;
     exchangeContractAddress = blockchainInfo.exchangeContractAddress;
     tokensDecimals = blockchainInfo.assetToDecimals;
     minWithdrawFromExchanges = blockchainInfo.minWithdrawFromExchanges;

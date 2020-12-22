@@ -12,7 +12,7 @@ import {ethers} from 'ethers';
 
 import exchangeArtifact from './abi/Exchange.json';
 import erc20Artifact from './abi/ERC20.json';
-import {exchangeContractAddress, matcherAddress, tokens, tokensDecimals} from './main';
+import {exchangeContractAddress, tokens, tokensDecimals} from './main';
 
 const DOMAIN_TYPE = [
     {name: 'name', type: 'string'},
@@ -59,6 +59,7 @@ export function hashOrder(order: BlockchainOrder): string {
 export interface OrionBlockchainSettings {
     production: boolean;
     orionBlockchainUrl: string;
+    matcherAddress: string;
     privateKey: string;
 }
 
@@ -96,7 +97,7 @@ export class OrionBlockchain {
         this.chainId = settings.production ? 1 : 3;
         log.log('chainId=' + this.chainId);
         this.orionBlockchainUrl = settings.orionBlockchainUrl;
-        this.matcherAddress = matcherAddress;
+        this.matcherAddress = settings.matcherAddress;
         this.privateKey = settings.privateKey;
         try {
             this.bufferKey = Buffer.from(settings.privateKey.substr(2), 'hex');
