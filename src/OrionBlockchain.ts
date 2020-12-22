@@ -229,7 +229,7 @@ export class OrionBlockchain {
     }
 
     public async getBalance(): Promise<Dictionary<BigNumber>> {
-        const data: Dictionary<string> = await this.send(this.orionBlockchainUrl + '/broker/getBalance/' + this.address);
+        const data: Dictionary<string> = await this.send(this.orionBlockchainUrl + '/broker/getWalletBalance/' + this.address);
         const result = {};
         for (const key in data) {
             result[key] = new BigNumber(data[key]);
