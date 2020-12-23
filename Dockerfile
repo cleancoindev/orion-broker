@@ -12,7 +12,6 @@ RUN npm run build
 
 RUN mkdir dist/data
 RUN cp config.template.json dist/data/config.json
-RUN cp emulator_balances.json dist/emulator_balances.json
 RUN cp src/logo.png dist/logo.png
 RUN cp src/icon.png dist/icon.png
 
