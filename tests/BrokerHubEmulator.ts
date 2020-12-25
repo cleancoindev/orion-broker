@@ -21,6 +21,10 @@ export class BrokerHubEmulator implements BrokerHub {
 
     onReconnect: () => void;
 
+    getLastBalancesJson(): string {
+        return '{}';
+    }
+
     constructor(settings: Settings) {
         this.settings = settings;
     }

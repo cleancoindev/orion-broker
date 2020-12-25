@@ -68,6 +68,7 @@ const DEPOSIT_ETH_GAS_LIMIT = 70000;
 const DEPOSIT_ERC20_GAS_LIMIT = 150000;
 const APPROVE_ERC20_GAS_LIMIT = 70000;
 const LOCK_STAKE_GAS_LIMIT = 70000;
+const RELEASE_STAKE_GAS_LIMIT = 100000;
 
 function toWei8(amount: BigNumber, decimals: number = 8): string {
     return amount.multipliedBy(10 ** decimals).toFixed(0);
@@ -95,16 +96,16 @@ export class OrionBlockchain {
 
     constructor(settings: OrionBlockchainSettings) {
         this.chainId = settings.production ? 1 : 3;
-        log.log('chainId=' + this.chainId);
+        log.log('Chain ID: ' + this.chainId);
         this.orionBlockchainUrl = settings.orionBlockchainUrl;
         this.matcherAddress = settings.matcherAddress;
         this.privateKey = settings.privateKey;
         try {
             this.bufferKey = Buffer.from(settings.privateKey.substr(2), 'hex');
             this.address = '0x' + privateToAddress(this.bufferKey).toString('hex');
-            log.log('My address=' + this.address);
+            log.log('Broker address: ' + this.address);
         } catch (e) {
-            log.error('Orion blockchain init', e);
+            log.error('Orion blockchain init error:', e);
         }
     }
 
@@ -116,7 +117,7 @@ export class OrionBlockchain {
             exchangeArtifact.abi as any,
             this.wallet
         );
-        log.log('exchangeContractAddress=' + this.exchangeContractAddress);
+        log.log('Exchange Contract Address: ' + this.exchangeContractAddress);
     }
 
     private signOrder(order: BlockchainOrder): string {
@@ -213,6 +214,11 @@ export class OrionBlockchain {
         return data.nonce;
     }
 
+    public async getStakes(): Promise<string[]> {
+        const data: any = await this.send(this.orionBlockchainUrl + '/stakes');
+        return data;
+    }
+
     public async getTransactionStatus(transactionHash: string): Promise<'PENDING' | 'OK' | 'FAIL' | 'NONE'> {
         const data: any = await this.send(this.orionBlockchainUrl + '/broker/getTransactionStatus/' + transactionHash);
         return data.status;
@@ -229,7 +235,16 @@ export class OrionBlockchain {
         return response.map(parseLiability);
     }
 
-    public async getBalance(): Promise<Dictionary<BigNumber>> {
+    public async getContractBalance(): Promise<Dictionary<BigNumber>> {
+        const data: Dictionary<string> = await this.send(this.orionBlockchainUrl + '/broker/getContractBalance/' + this.address);
+        const result = {};
+        for (const key in data) {
+            result[key] = new BigNumber(data[key]);
+        }
+        return result;
+    }
+
+    public async getWalletBalance(): Promise<Dictionary<BigNumber>> {
         const data: Dictionary<string> = await this.send(this.orionBlockchainUrl + '/broker/getWalletBalance/' + this.address);
         const result = {};
         for (const key in data) {
@@ -276,8 +291,9 @@ export class OrionBlockchain {
      * @param assetName "ETH"
      */
     public async depositERC20(amount: BigNumber, assetName: string, nonce: number = 0): Promise<Transaction> {
-        const value: string = toWei8(amount);
+        const value: string = this.numberToUnit(assetName, amount);
         const assetAddress: string = tokens.nameToAddress[assetName];
+        if (assetAddress === undefined) throw new Error('no address for ' + assetName);
         const amountBN = ethers.BigNumber.from(value);
         const unsignedTx: ethers.PopulatedTransaction = await this.exchangeContract.populateTransaction.depositAsset(assetAddress, amountBN);
         const transactionHash: string = await this.sendTransaction(unsignedTx, DEPOSIT_ERC20_GAS_LIMIT, nonce);
@@ -296,10 +312,9 @@ export class OrionBlockchain {
      * @param assetName "ETH"
      */
     public async approveERC20(amount: BigNumber, assetName: string, nonce: number = 0): Promise<Transaction> {
-        const decimals = tokensDecimals[assetName];
-        if (decimals === undefined) throw new Error('No decimals for ' + assetName);
-        const value: string = toWei8(amount, decimals);
+        const value: string = this.numberToUnit(assetName, amount);
         const assetAddress: string = tokens.nameToAddress[assetName];
+        if (assetAddress === undefined) throw new Error('no address for ' + assetName);
         const tokenContract: ethers.Contract = new ethers.Contract(
             assetAddress,
             erc20Artifact.abi as any,
@@ -334,5 +349,28 @@ export class OrionBlockchain {
             createTime: Date.now(),
             status: 'PENDING'
         };
+    }
+
+    public async releaseStake(): Promise<Transaction> {
+        const unsignedTx: ethers.PopulatedTransaction = await this.exchangeContract.populateTransaction.requestReleaseStake();
+        const transactionHash: string = await this.sendTransaction(unsignedTx, RELEASE_STAKE_GAS_LIMIT);
+        return {
+            transactionHash,
+            method: 'requestReleaseStake',
+            asset: 'ORN',
+            amount: new BigNumber(0),
+            createTime: Date.now(),
+            status: 'PENDING'
+        };
+    }
+
+    private numberToUnit(currency: string, n: BigNumber): string {
+        if (currency === 'ETH') {
+            return Web3.utils.toWei(n.toString());
+        } else {
+            const decimals = tokensDecimals[currency];
+            if (decimals === undefined) throw new Error('no decimals for ' + currency);
+            return n.multipliedBy(Math.pow(10, decimals)).toFixed(0);
+        }
     }
 }

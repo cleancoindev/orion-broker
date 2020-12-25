@@ -117,7 +117,7 @@ export class Broker {
         try {
             subOrder = await this.connector.submitSubOrder(request.exchange, dbSubOrder.id, dbSubOrder.symbol, dbSubOrder.side, dbSubOrder.amount, dbSubOrder.price);
         } catch (e) {
-            log.error(e);
+            log.error('Submit order error:', e);
         }
 
         if (subOrder === null) {
@@ -165,7 +165,7 @@ export class Broker {
         for (const exchange in balances) {
             const exchangeBalances: ExchangeResolve<Balances> = balances[exchange];
             if (exchangeBalances.error) {
-                log.error(exchange + ' balances', exchangeBalances.error);
+                log.error('Get ' + exchange + ' balances error:', exchangeBalances.error);
             } else {
                 this.lastBalances[exchange] = {};
                 exchanges[exchange] = {};
@@ -176,8 +176,11 @@ export class Broker {
                 }
             }
         }
-        this.webUI.lastBalancesJson = JSON.stringify(exchanges);
-        return this.brokerHub.sendBalances(exchanges);
+        const newBalancesJson = JSON.stringify(exchanges);
+        if (this.brokerHub.getLastBalancesJson() !== newBalancesJson) {
+            this.webUI.lastBalancesJson = newBalancesJson;
+            return this.brokerHub.sendBalances(exchanges);
+        }
     }
 
     startUpdateBalances(): void {
@@ -186,7 +189,7 @@ export class Broker {
                 const balances = await this.connector.getBalances();
                 await this.sendUpdateBalance(balances);
             } catch (e) {
-                log.error('Balances', e);
+                log.error('Get balances error:', e);
             }
         }, 10 * 1000);
     }
@@ -204,7 +207,7 @@ export class Broker {
                     await this.connector.checkSubOrders(openSubOrders);
                 }
             } catch (e) {
-                log.error('Suborders check', e);
+                log.error('Suborders check error:', e);
             }
         }, 10 * 1000);
     }
@@ -221,7 +224,7 @@ export class Broker {
                     }
                 }
             } catch (e) {
-                log.error('Withdraw check', e);
+                log.error('Withdraw check error:', e);
             }
         }, 60 * 1000);
     }
@@ -240,7 +243,7 @@ export class Broker {
                     }
                 }
             } catch (e) {
-                log.error('Transactions check', e);
+                log.error('Transactions check error:', e);
             }
         }, 10 * 1000);
     }
@@ -260,7 +263,7 @@ export class Broker {
 
             log.log('Detected outstanding ' + amount.toString() + ' ' + assetName);
 
-            const balance = await this.orionBlockchain.getBalance();
+            const balance = await this.orionBlockchain.getWalletBalance();
             const assetBalance = balance[assetName];
 
             const ethBalance = balance['ETH'];
@@ -284,7 +287,7 @@ export class Broker {
                 }
                 const exchange = this.getExchangeForWithdraw(remainingWithFee, assetName);
                 if (exchange) {
-                    await this.withdraw(exchange, remaining, assetName);
+                    await this.exchangeWithdraw(exchange, remaining, assetName);
                 } else {
                     log.log(`Need to make ${amount.toString()} ${assetName} deposit but there is not enough amount on the wallet and exchanges`);
                 }
@@ -300,7 +303,7 @@ export class Broker {
                     await this.manageLiability(l);
                 }
             } catch (e) {
-                log.error('Liabilities check', e);
+                log.error('Liabilities check error:', e);
             }
         }, 5 * 60 * 1000);
     }
@@ -311,7 +314,7 @@ export class Broker {
             const signature = await this.orionBlockchain.sign(time.toString());
             await this.brokerHub.connect({address: this.orionBlockchain.address, time, signature});
         } catch (e) {
-            log.error('Failed to connect to aggregator ', e);
+            log.error('Failed to connect to aggregator:', e);
         }
     }
 
@@ -353,12 +356,13 @@ export class Broker {
             await this.db.insertTrade(trade); // todo: insertTrade & updateSubOrder in transaction
             await this.db.updateSubOrder(dbSubOrder);
 
-            log.log('Check suborder', dbSubOrder);
+            log.log('Send suborder ' + dbSubOrder.id + ' filled status: ' + dbSubOrder.side + ' ' + dbSubOrder.amount + ' ' + dbSubOrder.symbol + ' on ' + dbSubOrder.exchange);
+            log.debug('onTrade', dbSubOrder);
 
             await this.brokerHub.sendSubOrderStatus(await this.onCheckSubOrder(dbSubOrder.id));
             this.webUI.sendToFrontend(dbSubOrder);
         } catch (e) {
-            log.error('Error during Trade callback', e);
+            log.error('Trade error:', e);
         }
     }
 
@@ -375,7 +379,7 @@ export class Broker {
         return undefined;
     }
 
-    async withdraw(exchange: string, amount: BigNumber, assetName: string): Promise<void> {
+    async exchangeWithdraw(exchange: string, amount: BigNumber, assetName: string): Promise<void> {
         if (!this.connector.hasWithdraw(exchange)) {
             log.log(exchange + ' does not support withdrawals');
             log.log('Please make a manual deposit ' + amount.toString() + ' ' + assetName + ' to the contract');
@@ -397,7 +401,7 @@ export class Broker {
 
     async approve(amount: BigNumber, assetName: string): Promise<void> {
         log.log('Approving ' + amount.toString() + ' ' + assetName);
-        let transaction: Transaction = await this.orionBlockchain.approveERC20(amount, assetName);
+        const transaction: Transaction = await this.orionBlockchain.approveERC20(amount, assetName);
         await this.db.insetTransaction(transaction);
     }
 
@@ -422,6 +426,12 @@ export class Broker {
     async lockStake(amount: BigNumber): Promise<void> {
         log.log('Staking ' + amount.toString() + ' ORN');
         const transaction: Transaction = await this.orionBlockchain.lockStake(amount);
+        await this.db.insetTransaction(transaction);
+    }
+
+    async releaseStake(): Promise<void> {
+        log.log('Realising ORN stake');
+        const transaction: Transaction = await this.orionBlockchain.releaseStake();
         await this.db.insetTransaction(transaction);
     }
 }

@@ -8,11 +8,18 @@ export class Terminal {
     onCreatePassword: (password: string) => Promise<void>;
     onLoginPassword: (password: string) => boolean;
     onConnectExchange: (exchange: string, apiKey: string, privateKey: string, password: string) => void;
+    onDisconnectExchange: (exchange: string) => void;
+    onListExchanges: () => string;
+    onPrintExchangesBalances: () => string;
+    onPrintContractBalances: () => Promise<void>;
+    onPrintWalletBalances: () => Promise<void>;
+    onPrintStakes: () => Promise<void>;
     onSetPrivateKey: (privateKey: string) => void;
     onDeposit: (amount: BigNumber, assetName: string) => void;
     onApprove: (amount: BigNumber, assetName: string) => void;
-    onWithdraw: (exchange: string, amount: BigNumber, assetName: string) => void;
+    onExchangeWithdraw: (exchange: string, amount: BigNumber, assetName: string) => void;
     onLockStake: (amount: BigNumber) => void;
+    onReleaseStake: () => void;
     ui: any; // TerminalUI
 
     constructor(settingsManger: SettingsManager) {
@@ -62,6 +69,60 @@ export class Terminal {
                 after: (state: any) => {
                     this.onConnectExchange(state.exchange, state.apiKey, state.privateKey, state.password);
                     return state.exchange + ' connected';
+                }
+            },
+            {
+                name: 'disconnect',
+                help: 'Disconnect exchange',
+                params: [
+                    {
+                        name: 'exchange',
+                        fieldName: 'exchange',
+                        type: DataType.EXCHANGE
+                    },
+                ],
+                asks: [],
+                after: (state: any) => {
+                    this.onDisconnectExchange(state.exchange);
+                    return state.exchange + ' disconnected';
+                }
+            },
+            {
+                name: 'list',
+                help: 'List connected exchanges',
+                params: [],
+                asks: [],
+                after: (state: any) => {
+                    return this.onListExchanges();
+                }
+            },
+            {
+                name: 'balances',
+                help: 'Print exchanges balances',
+                params: [],
+                asks: [],
+                after: (state: any) => {
+                    return this.onPrintExchangesBalances();
+                }
+            },
+            {
+                name: 'deposits',
+                help: 'Print your deposits on contract',
+                params: [],
+                asks: [],
+                after: (state: any) => {
+                    this.onPrintContractBalances();
+                    return '';
+                }
+            },
+            {
+                name: 'wallet',
+                help: 'Print your wallet balances',
+                params: [],
+                asks: [],
+                after: (state: any) => {
+                    this.onPrintWalletBalances()
+                    return '';
                 }
             },
             {
@@ -144,7 +205,17 @@ export class Terminal {
                 ],
                 asks: [],
                 after: (state: any) => {
-                    this.onWithdraw(state.exchange, new BigNumber(state.amount), state.assetName);
+                    this.onExchangeWithdraw(state.exchange, new BigNumber(state.amount), state.assetName);
+                    return '';
+                }
+            },
+            {
+                name: 'stakes',
+                help: 'Get all broker stakes in Orion',
+                params: [],
+                asks: [],
+                after: (state: any) => {
+                    this.onPrintStakes();
                     return '';
                 }
             },
@@ -161,6 +232,16 @@ export class Terminal {
                 asks: [],
                 after: (state: any) => {
                     this.onLockStake(new BigNumber(state.amount));
+                    return '';
+                }
+            },
+            {
+                name: 'releaseStake',
+                help: 'Release your ORN stake',
+                params: [],
+                asks: [],
+                after: (state: any) => {
+                    this.onReleaseStake();
                     return '';
                 }
             },
