@@ -219,7 +219,8 @@ export class Broker {
                 if (openWithdraws.length) {
                     const withdrawsStatuses: ExchangeWithdrawStatus[] = await this.connector.checkWithdraws(openWithdraws);
                     for (const status of withdrawsStatuses) {
-                        log.log('Withdraw status ' + status.status);
+                        const w = openWithdraws.find(w => w.exchangeWithdrawId === status.exchangeWithdrawId);
+                        log.log('Withdraw ' + w.amount.toString() + ' ' + w.currency + ' from ' + w.exchange + ' status ' + status.status);
                         await this.db.updateWithdrawStatus(status.exchangeWithdrawId, status.status);
                     }
                 }
@@ -265,9 +266,12 @@ export class Broker {
 
             const balance = await this.orionBlockchain.getWalletBalance();
             const assetBalance = balance[assetName];
-
             const ethBalance = balance['ETH'];
-            const ethFeeAmount = new BigNumber(0.02); // todo
+
+            if (!assetBalance || assetBalance.isNaN()) throw new Error('No balance for ' + assetName);
+            if (!ethBalance || ethBalance.isNaN()) throw new Error('No balance for ETH');
+
+            const ethFeeAmount = new BigNumber(0.02); // todo: fee hardcode
             if (!ethBalance.gt(ethFeeAmount)) {
                 log.log('No ETH for gas on wallet');
                 return;
@@ -279,7 +283,7 @@ export class Broker {
                 await this.deposit(amount, assetName);
             } else {
                 const remaining = amount.minus(assetBalance);
-                let remainingWithFee = remaining.multipliedBy(1.05);
+                let remainingWithFee = remaining.multipliedBy(1.05); // todo: fee hardcode
                 const minWithdraw = new BigNumber(minWithdrawFromExchanges[assetName]);
                 if (minWithdraw.isNaN()) throw new Error('No min withdraw for ' + assetName);
                 if (remainingWithFee.lt(minWithdraw)) {
@@ -331,7 +335,7 @@ export class Broker {
             this.startUpdateBalances();
             this.startCheckSubOrders();
             this.startCheckWithdraws();
-            // this.startCheckLiabilities();
+            this.startCheckLiabilities();
             this.startCheckTransactions();
         }
     }
@@ -421,6 +425,12 @@ export class Broker {
         if (transaction) {
             await this.db.insetTransaction(transaction);
         }
+    }
+
+    async withdraw(amount: BigNumber, assetName: string): Promise<void> {
+        log.log('Withdrawing ' + amount.toString() + ' ' + assetName);
+        const transaction: Transaction = await this.orionBlockchain.withdraw(amount, assetName);
+        await this.db.insetTransaction(transaction);
     }
 
     async lockStake(amount: BigNumber): Promise<void> {

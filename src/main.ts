@@ -120,7 +120,7 @@ const init = async (): Promise<void> => {
             }
         }
         return arr.length === 0 ? 'empty' : arr.join(', ');
-    }
+    };
 
     terminal.onPrintExchangesBalances = (): string => {
         const balances = broker.lastBalances;
@@ -135,18 +135,30 @@ const init = async (): Promise<void> => {
     };
 
     terminal.onPrintContractBalances = async (): Promise<void> => {
-        const balances = await broker.orionBlockchain.getWalletBalance();
-        terminal.ui.log.add(formatBalances(balances));
+        try {
+            const balances = await broker.orionBlockchain.getContractBalance();
+            terminal.ui.log.add(formatBalances(balances));
+        } catch (e) {
+            log.error('Contract balances error:', e);
+        }
     };
 
     terminal.onPrintWalletBalances = async (): Promise<void> => {
-        const balances = await broker.orionBlockchain.getContractBalance();
-        terminal.ui.log.add(formatBalances(balances));
+        try {
+            const balances = await broker.orionBlockchain.getWalletBalance();
+            terminal.ui.log.add(formatBalances(balances));
+        } catch (e) {
+            log.error('Wallet balances error:', e);
+        }
     };
 
     terminal.onPrintStakes = async (): Promise<void> => {
-        const stakes = await broker.orionBlockchain.getStakes();
-        terminal.ui.log.add(stakes.join(','));
+        try {
+            const stakes = await broker.orionBlockchain.getStakes();
+            terminal.ui.log.add(stakes.join(','));
+        } catch (e) {
+            log.error('Stakes error:', e);
+        }
     };
 
     terminal.onSetPrivateKey = (privateKey: string): void => {
@@ -163,6 +175,14 @@ const init = async (): Promise<void> => {
         }
     };
 
+    terminal.onWithdraw = async (amount: BigNumber, assetName: string): Promise<void> => {
+        try {
+            await broker.withdraw(amount, assetName);
+        } catch (e) {
+            log.error('Withdraw error:', e);
+        }
+    };
+
     terminal.onApprove = async (amount: BigNumber, assetName: string): Promise<void> => {
         try {
             await broker.approve(amount, assetName);
@@ -176,6 +196,15 @@ const init = async (): Promise<void> => {
             await broker.exchangeWithdraw(exchange, amount, assetName);
         } catch (e) {
             log.error('Withdraw error:', e);
+        }
+    };
+
+    terminal.onGetStake = async (): Promise<void> => {
+        try {
+            const stake = await broker.orionBlockchain.getStake();
+            terminal.ui.log.add(stake);
+        } catch (e) {
+            log.error('Get stake error:', e);
         }
     };
 
@@ -221,6 +250,6 @@ const init = async (): Promise<void> => {
     } else {
         terminal.ui.showHello();
     }
-}
+};
 
 init();

@@ -25,6 +25,8 @@ npm run build &&
 
 cd .. &&
 
+mkdir data/ &&
+
 cp config.template.json data/config.json &&
 
 npm install &&

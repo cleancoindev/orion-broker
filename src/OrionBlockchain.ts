@@ -219,6 +219,11 @@ export class OrionBlockchain {
         return data;
     }
 
+    public async getStake(): Promise<string> {
+        const data: any = await this.send(this.orionBlockchainUrl + '/broker/getStake/' + this.address);
+        return data.stake;
+    }
+
     public async getTransactionStatus(transactionHash: string): Promise<'PENDING' | 'OK' | 'FAIL' | 'NONE'> {
         const data: any = await this.send(this.orionBlockchainUrl + '/broker/getTransactionStatus/' + transactionHash);
         return data.status;
@@ -253,11 +258,11 @@ export class OrionBlockchain {
         return result;
     }
 
-    private async sendTransaction(unsignedTx: ethers.PopulatedTransaction, gasLimit: number, nonce: number = 0): Promise<string> {
+    private async sendTransaction(unsignedTx: ethers.PopulatedTransaction, gasLimit: number): Promise<string> {
         unsignedTx.chainId = this.chainId;
         unsignedTx.from = this.address;
         if (!unsignedTx.to) throw new Error('no unsignedTx.to');
-        unsignedTx.nonce = nonce || (await this.getNonce());
+        unsignedTx.nonce = await this.getNonce();
         if (unsignedTx.nonce === undefined || unsignedTx.nonce === null || isNaN(Number(unsignedTx.nonce))) throw new Error('no nonce');
         unsignedTx.gasPrice = await this.getGasPrice();
         if (!unsignedTx.gasPrice.gt(0)) throw new Error('no gasPrice');
@@ -290,13 +295,13 @@ export class OrionBlockchain {
      * @param amount    '0.123'
      * @param assetName "ETH"
      */
-    public async depositERC20(amount: BigNumber, assetName: string, nonce: number = 0): Promise<Transaction> {
+    public async depositERC20(amount: BigNumber, assetName: string): Promise<Transaction> {
         const value: string = this.numberToUnit(assetName, amount);
         const assetAddress: string = tokens.nameToAddress[assetName];
         if (assetAddress === undefined) throw new Error('no address for ' + assetName);
         const amountBN = ethers.BigNumber.from(value);
         const unsignedTx: ethers.PopulatedTransaction = await this.exchangeContract.populateTransaction.depositAsset(assetAddress, amountBN);
-        const transactionHash: string = await this.sendTransaction(unsignedTx, DEPOSIT_ERC20_GAS_LIMIT, nonce);
+        const transactionHash: string = await this.sendTransaction(unsignedTx, DEPOSIT_ERC20_GAS_LIMIT);
         return {
             transactionHash,
             method: 'depositAsset',
@@ -311,7 +316,28 @@ export class OrionBlockchain {
      * @param amount    '0.123'
      * @param assetName "ETH"
      */
-    public async approveERC20(amount: BigNumber, assetName: string, nonce: number = 0): Promise<Transaction> {
+    public async withdraw(amount: BigNumber, assetName: string): Promise<Transaction> {
+        const value: string = this.numberToUnit(assetName, amount);
+        const assetAddress: string = tokens.nameToAddress[assetName];
+        if (assetAddress === undefined) throw new Error('no address for ' + assetName);
+        const amountBN = ethers.BigNumber.from(value);
+        const unsignedTx: ethers.PopulatedTransaction = await this.exchangeContract.populateTransaction.withdraw(assetAddress, amountBN);
+        const transactionHash: string = await this.sendTransaction(unsignedTx, DEPOSIT_ERC20_GAS_LIMIT);
+        return {
+            transactionHash,
+            method: 'withdraw',
+            asset: assetName,
+            amount: amount,
+            createTime: Date.now(),
+            status: 'PENDING'
+        };
+    }
+
+    /**
+     * @param amount    '0.123'
+     * @param assetName "ETH"
+     */
+    public async approveERC20(amount: BigNumber, assetName: string): Promise<Transaction> {
         const value: string = this.numberToUnit(assetName, amount);
         const assetAddress: string = tokens.nameToAddress[assetName];
         if (assetAddress === undefined) throw new Error('no address for ' + assetName);
@@ -322,7 +348,7 @@ export class OrionBlockchain {
         );
         const amountBN = ethers.BigNumber.from(value);
         const unsignedTx: ethers.PopulatedTransaction = await tokenContract.populateTransaction.approve(this.exchangeContractAddress, amountBN);
-        const transactionHash: string = await this.sendTransaction(unsignedTx, APPROVE_ERC20_GAS_LIMIT, nonce);
+        const transactionHash: string = await this.sendTransaction(unsignedTx, APPROVE_ERC20_GAS_LIMIT);
         return {
             transactionHash,
             method: 'approve',

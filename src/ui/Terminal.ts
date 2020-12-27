@@ -16,8 +16,10 @@ export class Terminal {
     onPrintStakes: () => Promise<void>;
     onSetPrivateKey: (privateKey: string) => void;
     onDeposit: (amount: BigNumber, assetName: string) => void;
+    onWithdraw: (amount: BigNumber, assetName: string) => void;
     onApprove: (amount: BigNumber, assetName: string) => void;
     onExchangeWithdraw: (exchange: string, amount: BigNumber, assetName: string) => void;
+    onGetStake: () => void;
     onLockStake: (amount: BigNumber) => void;
     onReleaseStake: () => void;
     ui: any; // TerminalUI
@@ -184,6 +186,27 @@ export class Terminal {
                 }
             },
             {
+                name: 'withdraw',
+                help: 'Withdraw asset from Orion smart contract',
+                params: [
+                    {
+                        name: 'amount',
+                        fieldName: 'amount',
+                        type: DataType.AMOUNT
+                    },
+                    {
+                        name: 'assetName',
+                        fieldName: 'assetName',
+                        type: DataType.ASSET_NAME
+                    },
+                ],
+                asks: [],
+                after: (state: any) => {
+                    this.onWithdraw(new BigNumber(state.amount), state.assetName);
+                    return '';
+                }
+            },
+            {
                 name: 'exwithdraw',
                 help: 'Withdraw from exchanges',
                 params: [
@@ -216,6 +239,16 @@ export class Terminal {
                 asks: [],
                 after: (state: any) => {
                     this.onPrintStakes();
+                    return '';
+                }
+            },
+            {
+                name: 'getstake',
+                help: 'Get your ORN stake',
+                params: [],
+                asks: [],
+                after: (state: any) => {
+                    this.onGetStake();
                     return '';
                 }
             },

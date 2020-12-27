@@ -78,7 +78,7 @@ export interface BlockchainOrder {
 
 export interface Transaction {
     transactionHash: string;
-    method: 'deposit' | 'depositAsset' | 'approve' | 'lockStake' | 'requestReleaseStake';
+    method: 'deposit' | 'depositAsset' | 'withdraw' | 'approve' | 'lockStake' | 'requestReleaseStake';
     asset: string;
     amount: BigNumber;
     createTime: number;

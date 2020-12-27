@@ -1,7 +1,7 @@
 import ccxt from 'ccxt';
 
 const EXCHANGES = ['binance', 'bitmax', 'kucoin'];
-const SYMBOLS = ['LINK/USDT'];
+const SYMBOLS = ["ETH-USDT","ORN-USDT","LINK-USDT","USDC-USDT","USDT-DAI","YFI-USDT","GRT-USDT","OMG-USDT","BAT-USDT","UNI-USDT","BTMX-USDT","KCS-USDT"].map(symbol => symbol.split('-').join('/'));
 
 const getPrecision = (exchange: string, n: number): number => {
     if (n === undefined) return n;
@@ -28,10 +28,16 @@ const processSymbol = async (symbol: string) => {
     const processExchange = async (exchange: string) => {
         const e = new ccxt[exchange]({verbose: false});
         const markets = await e.loadMarkets();
+
+        if (!markets[symbol]) {
+            // console.log('no '+ symbol + ' at ' + exchange);
+            return
+        }
+
         const limits = markets[symbol].limits;
-        console.log(e.id + ' ' + symbol + ' limits:', limits);
+        // console.log(e.id + ' ' + symbol + ' limits:', limits);
         const precision = markets[symbol].precision;
-        console.log(e.id + ' ' + symbol + ' precision:', precision);
+        // console.log(e.id + ' ' + symbol + ' precision:', precision);
 
         // amount
 
@@ -84,7 +90,7 @@ const processSymbol = async (symbol: string) => {
     }
 
     const result = {
-        'name': symbol,
+        'name': symbol.split('/').join('-'),
         'minQty': minQty,
         'maxQty': maxQty,
         'minPrice': minPrice,
@@ -98,12 +104,12 @@ const processSymbol = async (symbol: string) => {
         'limitOrderThreshold': 0.001
     };
 
-    console.log(JSON.stringify(result));
+    console.log(JSON.stringify(result) + ',');
 };
 
 const init = async () => {
     for (let symbol of SYMBOLS) {
-        processSymbol(symbol);
+        await processSymbol(symbol);
     }
 }
 
