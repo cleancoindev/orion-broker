@@ -75,7 +75,7 @@ export class CCXTConnector implements Connector {
             toNumber(price),
             {'clientOrderId': subOrderId}
         );
-        log.log(this.exchange.id + ' submit order response: ', ccxtOrder);
+        log.debug(this.exchange.id + ' submit order response: ', ccxtOrder);
 
         return {
             id: subOrderId,
@@ -97,13 +97,13 @@ export class CCXTConnector implements Connector {
     async cancelSubOrder(subOrder: SubOrder): Promise<boolean> {
         try {
             const ccxtOrder: ccxt.Order = await this.ccxtExchange.cancelOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
-            log.log(this.exchange.id + ' cancel order response: ', ccxtOrder);
+            log.debug(this.exchange.id + ' cancel order response: ', ccxtOrder);
             // todo: KUCOIN return success result for cancel closed (filled) order
             // todo: manage partially canceled order
             return true;
         } catch (e) {
             // todo: retry if error no final
-            log.error(this.exchange.id + ' cancel order error: ', e);
+            log.error(this.exchange.id + ' cancel order error:', e);
             return false;
         }
     }
@@ -135,7 +135,7 @@ export class CCXTConnector implements Connector {
     async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
         for (const subOrder of subOrders) {
             const ccxtOrder: ccxt.Order = await this.ccxtExchange.fetchOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
-            log.log(this.exchange.id + ' check order response: ', ccxtOrder);
+            log.debug(this.exchange.id + ' check order response: ', ccxtOrder);
             const newStatus = fromStatus(ccxtOrder.status);
             if (newStatus === Status.FILLED) {
                 this.onTrade({
@@ -169,14 +169,14 @@ export class CCXTConnector implements Connector {
                     to: 'main',
                     amount: amount.toString()
                 });
-                log.log(this.exchange.id + ' inner transfer response: ', transferResponse);
+                log.debug(this.exchange.id + ' inner transfer response: ', transferResponse);
             }
 
             const response = await this.ccxtExchange.withdraw(toCurrency(currency), toNumber(amount), address);
-            log.log(this.exchange.id + ' withdraw response: ', response);
+            log.debug(this.exchange.id + ' withdraw response:', response);
             return response.id;
         } catch (e) {
-            log.error(this.exchange.id + ' withdraw error: ', e);
+            log.error(this.exchange.id + ' withdraw error:', e);
             return undefined;
         }
     }
@@ -189,7 +189,7 @@ export class CCXTConnector implements Connector {
         const result: ExchangeWithdrawStatus[] = [];
 
         const transactions: ccxt.Transaction[] = await this.ccxtExchange.fetchWithdrawals(); // todo: paging
-        log.log(this.exchange.id + ' checkWithdraws response: ', transactions);
+        log.debug(this.exchange.id + ' checkWithdraws response: ', transactions);
 
         for (const withdraw of withdraws) {
             const tx = transactions.find(t => t.id === withdraw.exchangeWithdrawId);

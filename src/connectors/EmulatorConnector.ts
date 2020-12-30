@@ -66,7 +66,7 @@ export class EmulatorConnector implements Connector {
     }
 
     hasWithdraw(): boolean {
-        return true;
+        return this.exchange.id !== 'bitmax';
     }
 
     async withdraw(currency: string, amount: BigNumber, address: string): Promise<string | undefined> {

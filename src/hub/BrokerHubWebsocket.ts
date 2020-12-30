@@ -45,6 +45,12 @@ export class BrokerHubWebsocket implements BrokerHub {
 
     onReconnect: () => void;
 
+    private lastBalancesJson = '{}';
+
+    getLastBalancesJson(): string {
+        return this.lastBalancesJson;
+    }
+
     constructor(settings: Settings) {
         this.settings = settings;
     }
@@ -54,7 +60,7 @@ export class BrokerHubWebsocket implements BrokerHub {
             await this.disconnect();
         }
 
-        log.log('Try to connect to aggregator', this.settings.orionAggregatorUrl);
+        log.log('Try to connect to aggregator ' + this.settings.orionAggregatorUrl);
 
         this.socket = io(this.settings.orionAggregatorUrl, {
             path: this.settings.orionAggregatorPath,
@@ -62,23 +68,23 @@ export class BrokerHubWebsocket implements BrokerHub {
         });
 
         this.socket.on('error', (error: any) => { // Fired upon a connection error.
-            log.error('Ws error', error);
+            log.error('Connection error:', error);
         });
 
         this.socket.on('reconnect', (attempt: number) => { // Fired upon an attempt to reconnect.
-            log.log('Ws reconnect', attempt);
+            log.log('Reconnect #' + attempt);
         });
 
         this.socket.on('reconnect_attempt', (attempt: number) => { // Fired upon an attempt to reconnect.
-            log.log('Ws reconnect attempt', attempt);
+            log.log('Reconnect attempt #' + attempt);
         });
 
         this.socket.on('reconnect_error', (error: any) => { // Fired upon a reconnection attempt error.
-            log.error('Ws reconnect error', error);
+            log.error('Reconnect error:', error);
         });
 
         this.socket.on('reconnect_failed', (error: any) => { // Fired when couldn’t reconnect within reconnectionAttempts.
-            log.error('Ws reconnect failed', error);
+            log.error('Reconnect failed:', error);
         });
 
         this.socket.on('connect', () => {
@@ -87,7 +93,7 @@ export class BrokerHubWebsocket implements BrokerHub {
         });
 
         this.socket.on('disconnect', (reason: string) => {
-            log.log('Disconnected from aggregator, reason "' + reason + '"');
+            log.log('Disconnected from aggregator by reason "' + reason + '"');
             if (reason === 'io server disconnect') { // The server has forcefully disconnected the socket with socket.disconnect()
                 clearTimeout(this.globalReconnectTimeoutId);
 
@@ -98,7 +104,9 @@ export class BrokerHubWebsocket implements BrokerHub {
         });
 
         this.socket.on('register_accepted', (data: any) => {
-            log.log('Receive register_accepted', data);
+            log.log('Registered in the aggregator');
+            log.debug('Receive register_accepted', data);
+            this.lastBalancesJson = '{}';
         });
 
         this.socket.on('suborder_status_accepted', async (data: any) => {
@@ -108,7 +116,7 @@ export class BrokerHubWebsocket implements BrokerHub {
                 log.debug('Received suborder_status_accepted after parse', request);
                 await this.onSubOrderStatusAccepted(request);
             } catch (error) {
-                log.error(error);
+                log.error('Status accepted error:', error);
             }
         });
 
@@ -121,7 +129,7 @@ export class BrokerHubWebsocket implements BrokerHub {
                 const subOrderStatus = await this.onCreateSubOrder(request);
                 await this.sendSubOrderStatus(subOrderStatus);
             } catch (error) {
-                log.error(error);
+                log.error('Create suborder error:', error);
             }
         });
 
@@ -134,7 +142,7 @@ export class BrokerHubWebsocket implements BrokerHub {
                 const subOrderStatus = await this.onCancelSubOrder(subOrderId);
                 await this.sendSubOrderStatus(subOrderStatus);
             } catch (error) {
-                log.error(error);
+                log.error('Cancel suborder error:', error);
             }
         });
 
@@ -146,7 +154,7 @@ export class BrokerHubWebsocket implements BrokerHub {
                 const subOrderStatus = await this.onCheckSubOrder(data.id);
                 await this.sendSubOrderStatus(subOrderStatus);
             } catch (error) {
-                log.error(error);
+                log.error('Check suborder error:', error);
             }
         });
     }
@@ -156,35 +164,41 @@ export class BrokerHubWebsocket implements BrokerHub {
             try {
                 this.socket.disconnect();
             } catch (e) {
-                log.error(e);
+                log.error('Error when disconnect:', e);
             }
             this.socket = null;
         }
         log.log('Disconnect from aggregator');
     }
 
-    private async send(method: string, data: any): Promise<void> {
+    private async send(method: string, data: any): Promise<boolean> {
         try {
             log.debug('Send ' + method, data);
             this.socket.emit(method, data);
+            return true;
         } catch (e) {
-            log.error(e);
+            log.error('Send message error:', e);
+            return false;
         }
     }
 
     private async register(data: BrokerHubRegisterRequest): Promise<void> {
-        return this.send('register', data);
+        await this.send('register', data);
     }
 
     async sendBalances(exchanges: Dictionary<Dictionary<string>>): Promise<void> {
+        const json = JSON.stringify(exchanges);
         const data: BalancesRequest = {
-            exchanges: JSON.stringify(exchanges)
+            exchanges: json
         };
-        return this.send('balances', data);
+        log.log('Send balances');
+        if (await this.send('balances', data)) {
+            this.lastBalancesJson = json;
+        }
     }
 
     async sendSubOrderStatus(subOrderStatus: SubOrderStatus): Promise<void> {
-        return this.send('suborder_status', subOrderStatus);
+        await this.send('suborder_status', subOrderStatus);
     }
 }
 

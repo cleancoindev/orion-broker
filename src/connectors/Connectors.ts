@@ -21,7 +21,7 @@ export class Connectors {
     private readonly emulatorBalances: Dictionary<string>;
     private readonly isProduction: boolean;
 
-    private exchangesIds: string[] = [];
+    public readonly exchangesIds: string[] = [];
     private exchanges: Dictionary<Exchange> = {};
     private connectors: Dictionary<Connector> = {};
     private onTrade: (trade: Trade) => void = null;
@@ -64,6 +64,16 @@ export class Connectors {
         this.connectors[id] = this.isProduction ? new CCXTConnector(exchange) : new EmulatorConnector(exchange);
         if (this.onTrade) {
             this.connectors[id].setOnTradeListener(this.onTrade);
+        }
+    }
+
+    removeExchange(id: string) {
+        const index = this.exchangesIds.indexOf(id);
+        if (index > -1) {
+            this.exchangesIds.splice(index, 1);
+            this.connectors[id].destroy();
+            delete this.connectors[id];
+            delete this.exchanges[id];
         }
     }
 

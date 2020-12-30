@@ -99,6 +99,68 @@ const init = async (): Promise<void> => {
         connector.updateExchange(exchange, settings.exchanges[exchange]);
     };
 
+    terminal.onDisconnectExchange = (exchange: string): void => {
+        delete settings.exchanges[exchange];
+        settingsManager.save();
+        connector.removeExchange(exchange);
+    };
+
+    terminal.onListExchanges = (): string => {
+        return connector.exchangesIds.length === 0 ? 'no exchanges connected' : connector.exchangesIds.join(', ');
+    };
+
+    const formatBalances = (balances: Dictionary<BigNumber>): string => {
+        const arr: string[] = [];
+        for (let currency in balances) {
+            if (balances.hasOwnProperty(currency)) {
+                const balance = balances[currency];
+                if (!balance.isZero()) {
+                    arr.push(balance.toString() + ' ' + currency);
+                }
+            }
+        }
+        return arr.length === 0 ? 'empty' : arr.join(', ');
+    };
+
+    terminal.onPrintExchangesBalances = (): string => {
+        const balances = broker.lastBalances;
+        let s = '';
+        for (let exchange in balances) {
+            if (balances.hasOwnProperty(exchange)) {
+                s += exchange + ': ' + formatBalances(balances[exchange]);
+                s += '\n';
+            }
+        }
+        return s;
+    };
+
+    terminal.onPrintContractBalances = async (): Promise<void> => {
+        try {
+            const balances = await broker.orionBlockchain.getContractBalance();
+            terminal.ui.log.add(formatBalances(balances));
+        } catch (e) {
+            log.error('Contract balances error:', e);
+        }
+    };
+
+    terminal.onPrintWalletBalances = async (): Promise<void> => {
+        try {
+            const balances = await broker.orionBlockchain.getWalletBalance();
+            terminal.ui.log.add(formatBalances(balances));
+        } catch (e) {
+            log.error('Wallet balances error:', e);
+        }
+    };
+
+    terminal.onPrintStakes = async (): Promise<void> => {
+        try {
+            const stakes = await broker.orionBlockchain.getStakes();
+            terminal.ui.log.add(stakes.join(','));
+        } catch (e) {
+            log.error('Stakes error:', e);
+        }
+    };
+
     terminal.onSetPrivateKey = (privateKey: string): void => {
         settings.privateKey = privateKey;
         settingsManager.save();
@@ -109,7 +171,15 @@ const init = async (): Promise<void> => {
         try {
             await broker.deposit(amount, assetName);
         } catch (e) {
-            log.error('Deposit error', e);
+            log.error('Deposit error:', e);
+        }
+    };
+
+    terminal.onWithdraw = async (amount: BigNumber, assetName: string): Promise<void> => {
+        try {
+            await broker.withdraw(amount, assetName);
+        } catch (e) {
+            log.error('Withdraw error:', e);
         }
     };
 
@@ -117,15 +187,24 @@ const init = async (): Promise<void> => {
         try {
             await broker.approve(amount, assetName);
         } catch (e) {
-            log.error('Approve error', e);
+            log.error('Approve error:', e);
         }
     };
 
-    terminal.onWithdraw = async (exchange: string, amount: BigNumber, assetName: string): Promise<void> => {
+    terminal.onExchangeWithdraw = async (exchange: string, amount: BigNumber, assetName: string): Promise<void> => {
         try {
-            await broker.withdraw(exchange, amount, assetName);
+            await broker.exchangeWithdraw(exchange, amount, assetName);
         } catch (e) {
-            log.error('Withdraw error', e);
+            log.error('Withdraw error:', e);
+        }
+    };
+
+    terminal.onGetStake = async (): Promise<void> => {
+        try {
+            const stake = await broker.orionBlockchain.getStake();
+            terminal.ui.log.add(stake);
+        } catch (e) {
+            log.error('Get stake error:', e);
         }
     };
 
@@ -133,7 +212,15 @@ const init = async (): Promise<void> => {
         try {
             await broker.lockStake(amount);
         } catch (e) {
-            log.error('Stake error', e);
+            log.error('Stake error:', e);
+        }
+    };
+
+    terminal.onReleaseStake = async (): Promise<void> => {
+        try {
+            await broker.releaseStake();
+        } catch (e) {
+            log.error('Release stake error:', e);
         }
     };
 
@@ -163,6 +250,6 @@ const init = async (): Promise<void> => {
     } else {
         terminal.ui.showHello();
     }
-}
+};
 
 init();

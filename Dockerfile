@@ -2,11 +2,17 @@ FROM node:14-alpine
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+COPY . .
+
+WORKDIR broker-frontend
 
 RUN npm install
 
-COPY . .
+RUN npm run build
+
+WORKDIR /usr/src/app
+
+RUN npm install
 
 RUN npm run build
 

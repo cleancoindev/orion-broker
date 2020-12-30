@@ -63,10 +63,10 @@ export class WebUI {
 
     initWs() {
         const wss = new WebSocket.Server({port: this.settings.wsPort});
-        log.log('Broker websocket on ws://localhost:' + this.settings.wsPort);
+        log.debug('Broker websocket on ws://localhost:' + this.settings.wsPort);
 
         wss.on('connection', ws => {
-            log.log('Receive websocket connection');
+            log.debug('Receive websocket connection');
             this.frontendWs = ws;
 
             ws.on('message', (message: string) => {

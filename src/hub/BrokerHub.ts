@@ -18,6 +18,8 @@ export interface BrokerHub {
 
     sendBalances(exchanges: Dictionary<Dictionary<string>>): Promise<void>;
 
+    getLastBalancesJson(): string;
+
     sendSubOrderStatus(subOrderStatus: SubOrderStatus): Promise<void>;
 }
 

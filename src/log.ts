@@ -17,6 +17,16 @@ function formatArguments(a: IArguments): string {
     return '[' + now.toLocaleDateString() + ' ' + now.toLocaleTimeString() + '] ' + result.join(', ') + '\n';
 }
 
+function formatError(e: any): string {
+    if ((typeof e) === 'string') {
+        return e;
+    }
+    if (e && e.message) {
+        return e.message;
+    }
+    return '';
+}
+
 class Log {
     writer: (s: string) => void;
 
@@ -40,7 +50,7 @@ class Log {
 
     error(...args) {
         if (this.writer) {
-            this.writer('Error: ' + args.join(', '));
+            this.writer(args.map(formatError).join(' '));
         }
         if (logFile) {
             logFile.write('Error: ' + formatArguments(arguments));
