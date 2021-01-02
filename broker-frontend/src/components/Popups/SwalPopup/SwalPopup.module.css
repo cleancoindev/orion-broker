@@ -1,0 +1,105 @@
+.root {
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+    max-width: 300px;
+}
+
+.root .h2 {
+    line-height: 26px;
+}
+
+.header {
+    display: flex;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+}
+
+.headerIcon {
+    width: 25px;
+    height: 25px;
+    display: flex;
+    align-items: center;
+}
+
+.buttons {
+    margin-top: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.button {
+    padding: 12px 25px;
+    margin-left: 40px;
+}
+
+.button:first-child {
+    margin-left: 0;
+}
+
+.hashTextIcon {
+    margin-left: 10px;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.text {
+    text-align: center;
+    margin-top: 20px;
+    padding: 0 20px 10px;
+}
+
+.subtext {
+    text-align: center;
+}
+
+.link {
+    color: var(--blue);
+}
+
+.link:hover {
+    opacity: 0.7;
+}
+
+.loading {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin-bottom: 26px;
+}
+
+.loading .loadingIcon {
+    transform: scale(1);
+}
+
+@media (max-width: 800px) {
+    .root {
+        padding: 10px;
+    }
+
+    .header {
+        justify-content: flex-start;
+        flex-direction: column;
+    }
+
+    .h2 {
+        margin: 10px 0 0;
+    }
+
+    .button {
+        margin-left: 15px;
+        flex-grow: 1;
+    }
+
+    .button:first-child {
+        margin-left: 0;
+    }
+
+    .buttons {
+        margin-top: 50px;
+    }
+}

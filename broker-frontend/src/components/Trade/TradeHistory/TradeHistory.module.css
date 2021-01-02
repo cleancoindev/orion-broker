@@ -1,0 +1,408 @@
+.root {
+    composes: group from "../../../css/Blocks.module.css";
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+/* TOOLBAR */
+
+.toolbar {
+    display: flex;
+    align-items: center;
+
+    height: 43px;
+    padding: 8px;
+    padding-bottom: 10px;
+    margin-bottom: 5px;
+
+    background: #FFFFFF;
+    box-shadow: 0px 4px 10px rgba(32, 32, 54, 0.09);
+    border-radius: 4px 4px 0px 0px;
+}
+
+:global(.dark) .toolbar {
+    background: linear-gradient(90deg, rgba(224, 224, 255, 0.067) 0%, rgba(224, 224, 255, 0.1) 100%);
+    box-shadow: 0px 4px 10px rgba(32, 32, 54, 0.7);
+}
+
+.dateSeparator {
+    width: 12px;
+    height: 1px;
+    border-top: 1px solid var(--color-text-grey);
+    margin-left: 2px;
+    margin-right: 2px;
+}
+
+.currencySeparator {
+    margin-left: 4px;
+    margin-right: 4px;
+    color: var(--color-text-grey);
+}
+
+
+/* TABLE */
+
+.table {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    position: relative;
+}
+
+.scrollContainer {
+    width: 100%;
+    flex: 1 1 auto;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+    height: 0;
+
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+/* TABLE HEADER */
+
+.tableHeader {
+    display: flex;
+    align-items: center;
+    height: 24px;
+
+    font-size: 10px;
+    font-weight: var(--medium);
+    color: var(--color-text);
+    margin-bottom: 6px;
+
+    padding-left: 12px;
+    padding-right: 20px;
+}
+
+.headerCol {
+    width: 14%;
+
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.headerCol.subHeaderCol {
+    width: 20%;
+}
+
+.headerColRight {
+    justify-content: flex-end;
+    padding-right: 10px;
+
+}
+
+.headerCol:after {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* TABLE ROW */
+
+.rowWrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.tableRow {
+    display: flex;
+    align-items: center;
+    height: 24px;
+    font-size: 10px;
+    font-weight: var(--medium);
+    color: var(--color-text-second);
+    cursor: pointer;
+}
+
+.tableCol {
+    width: 14%;
+}
+
+.tableClose {
+    width: 18px;
+    transition: opacity 0.25s ease;
+}
+
+.tableClose:hover {
+    opacity: 0.7;
+}
+
+.tableColRight {
+    text-align: right;
+    padding-right: 26px;
+}
+
+.colWhite {
+    color: var(--color-text);
+}
+
+.statusFilled {
+    color: #FFAA00;
+}
+
+:global(.dark) .statusFilled {
+    color: #EEFF00;
+}
+
+.statusNew {
+    color: #16B862;
+}
+
+:global(.dark) .statusNew {
+    color: #00FFAA;
+}
+
+.statusCancelled {
+    color: #F54562;
+}
+
+:global(.dark) .statusCancelled {
+    color: #FF00AA;
+}
+
+/* SUB TABLE ROW */
+
+.subTable {
+    display: flex;
+    flex-direction: column;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+}
+
+.subTableScrollContainer {
+    width: 100%;
+    padding-left: 12px;
+    padding-right: 12px;
+    margin-bottom: 20px;
+}
+
+.subTableRow {
+    display: flex;
+    align-items: center;
+    height: 24px;
+    font-size: 10px;
+    font-weight: var(--medium);
+    color: var(--color-text-second);
+}
+
+.subTableCol {
+    width: 20%;
+}
+
+.subTableColRight {
+    text-align: right;
+    padding-right: 26px;
+}
+
+
+.filterSelect {
+    padding: 6px 30px 5px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 10px;
+    line-height: 12px;
+}
+
+:global(.dark) .filterSelect {
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.filterSelectWrapper {
+    flex-grow: 1;
+}
+
+.filterSelectWrapper:last-child {
+    margin-left: 8px;
+}
+
+.toolbarMobileRow {
+    align-items: center;
+    display: flex;
+    margin-left: 8px;
+}
+
+.toolbarMobileRow:first-child {
+    margin-left: 0;
+}
+
+.currencyFilter {
+    flex-shrink: 0;
+}
+
+.closeBtn {
+    width: 13px;
+    height: 13px;
+    background: var(--color-text-second);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.4;
+}
+
+:global(.dark) .closeBtn {
+
+}
+
+.orderHistoryTypeToggle {
+    background: rgba(224, 224, 255, 0.02);
+    border-radius: 2px;
+    padding: 2px;
+    margin-right: 23px;
+}
+
+@media (max-width: 1200px) {
+    .toolbarMobileRow {
+        width: 100%;
+        margin-top: 8px;
+    }
+
+
+    .toolbar {
+        height: auto;
+        flex-direction: column;
+    }
+
+    .toolbar .tab {
+        flex-grow: 1;
+    }
+
+    .toolbar :global(.react-datepicker-component) {
+        flex-grow: 1;
+    }
+
+    .orderHistoryTypeToggle {
+        width: 100%;
+        margin-right: 0;
+    }
+
+    .scrollContainer {
+        padding-top: 20px;
+    }
+
+    .tableHeader {
+        display: none;
+    }
+
+    .tableRow, .subTableRow {
+        height: auto;
+        align-items: flex-start;
+        flex-direction: column;
+        margin-bottom: 32px;
+        position: relative;
+    }
+
+    .subTableScrollContainer {
+        margin-bottom: 0;
+    }
+
+    .subTableRow {
+        margin-bottom: 12px;
+        margin-top: 12px;
+    }
+
+    .subTable {
+        margin-top: -20px;
+        margin-bottom: 20px;
+    }
+
+    .tableColRight, .subTableColRight {
+        text-align: left;
+        padding-right: 0;
+    }
+
+    .tableCol, .subTableCol {
+        width: 100%;
+        font-size: 14px;
+    }
+
+    .colSell {
+        font-size: 16px;
+    }
+
+    .colCurrency {
+        font-size: 16px;
+        position: absolute;
+        width: auto;
+        left: 33%;
+        top: 0;
+        color: var(--color-text);
+    }
+
+    .colDate {
+        position: absolute;
+        width: auto;
+        right: 0;
+        top: 60px;
+        max-width: 120px;
+        text-align: right;
+    }
+
+    .colStatus {
+        position: absolute;
+        width: auto;
+        right: 0;
+        top: 32px;
+    }
+
+    .tableClose {
+        position: absolute;
+        width: auto;
+        right: 0;
+        top: 0;
+    }
+
+    .colAmount {
+        margin-top: 16px;
+        margin-bottom: 8px;
+    }
+
+    .colAmount:before {
+        content: 'Amount';
+        color: var(--color-text);
+        width: 33%;
+        display: inline-block;
+    }
+
+    .colPrice {
+        margin-bottom: 8px;
+    }
+
+    .colPrice:before {
+        content: 'Price';
+        color: var(--color-text);
+        width: 33%;
+        display: inline-block;
+    }
+
+    .colTotal {
+    }
+
+    .colTotal:before {
+        content: 'Total';
+        color: var(--color-text);
+        width: 33%;
+        display: inline-block;
+    }
+
+    .colExchange:before {
+        content: 'Exchange';
+        color: var(--color-text);
+        width: 33%;
+        display: inline-block;
+    }
+
+    .toolbarMobileRow:first-child {
+        margin-top: 0;
+    }
+}
