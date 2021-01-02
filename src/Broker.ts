@@ -251,7 +251,7 @@ export class Broker {
 
     async manageLiability(liability: Liability): Promise<void> {
         const now = Date.now() / 1000;
-        if (liability.outstandingAmount.gte(0) && (now - liability.timestamp > this.settings.duePeriodSeconds)) {
+        if (liability.outstandingAmount.gt(0) && (now - liability.timestamp > this.settings.duePeriodSeconds)) {
             const assetName = liability.assetName;
             const amount: BigNumber = fromWei8(liability.outstandingAmount);
 
