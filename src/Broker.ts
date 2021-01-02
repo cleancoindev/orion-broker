@@ -255,10 +255,10 @@ export class Broker {
             const assetName = liability.assetName;
             const amount: BigNumber = fromWei8(liability.outstandingAmount);
 
-            if ((await this.db.getPendingTransactions(assetName)).length) {
+            if ((await this.db.getPendingTransactions()).length) {
                 return;
             }
-            if ((await this.db.getWithdrawsToCheck(assetName)).length) {
+            if ((await this.db.getWithdrawsToCheck()).length) {
                 return;
             }
 
