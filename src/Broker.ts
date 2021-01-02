@@ -291,7 +291,8 @@ export class Broker {
                 }
                 const exchange = this.getExchangeForWithdraw(remainingWithFee, assetName);
                 if (exchange) {
-                    await this.exchangeWithdraw(exchange, remaining, assetName);
+                    // NOTE: мы снимаем remainingWithFee так как большинство бирж вычитают свою комиссию из переданного амаунта
+                    await this.exchangeWithdraw(exchange, remainingWithFee, assetName);
                 } else {
                     log.log(`Need to make ${amount.toString()} ${assetName} deposit but there is not enough amount on the wallet and exchanges`);
                 }
