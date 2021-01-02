@@ -1,1 +1,0 @@
-var BROKER_URL = 'http://localhost:4000';
