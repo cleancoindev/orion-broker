@@ -385,7 +385,7 @@ export class Broker {
     getExchangeForWithdraw(amount: BigNumber, assetName: string): string | undefined {
         for (const exchange in this.lastBalances) {
             if (this.lastBalances.hasOwnProperty(exchange)) {
-                if (this.lastBalances[exchange][assetName].gte(amount)) {
+                if (this.lastBalances[exchange][assetName].gte(amount) && this.connector.hasWithdraw(exchange)) {
                     return exchange;
                 }
             }
