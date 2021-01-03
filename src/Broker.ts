@@ -271,9 +271,9 @@ export class Broker {
             if (!assetBalance || assetBalance.isNaN()) throw new Error('No balance for ' + assetName);
             if (!ethBalance || ethBalance.isNaN()) throw new Error('No balance for ETH');
 
-            const ethFeeAmount = new BigNumber(0.02); // todo: fee hardcode
+            const ethFeeAmount = new BigNumber(0.02); // todo: gas fee hardcode
             if (!ethBalance.gt(ethFeeAmount)) {
-                log.log('No ETH for gas on wallet');
+                log.log('No ' + ethFeeAmount.toString() + ' ETH for gas on wallet');
                 return;
             }
 
@@ -283,7 +283,7 @@ export class Broker {
                 await this.deposit(amount, assetName);
             } else {
                 const remaining = amount.minus(assetBalance);
-                let remainingWithFee = remaining.multipliedBy(1.05); // todo: fee hardcode
+                let remainingWithFee = remaining.multipliedBy(1.05); // todo: exchange withdraw fee hardcode
                 const minWithdraw = new BigNumber(minWithdrawFromExchanges[assetName]);
                 if (minWithdraw.isNaN()) throw new Error('No min withdraw for ' + assetName);
                 if (remainingWithFee.lt(minWithdraw)) {
@@ -294,7 +294,7 @@ export class Broker {
                     // NOTE: мы снимаем remainingWithFee так как большинство бирж вычитают свою комиссию из переданного амаунта
                     await this.exchangeWithdraw(exchange, remainingWithFee, assetName);
                 } else {
-                    log.log(`Need to make ${amount.toString()} ${assetName} deposit but there is not enough amount on the wallet and exchanges`);
+                    log.log(`Need to make ${amount.toString()} ${assetName} deposit to orion contract but there is not enough amount on the wallet and exchanges`);
                 }
             }
         }
