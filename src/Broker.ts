@@ -445,12 +445,19 @@ export class Broker {
         }
     }
 
+    /**
+     * @param amount     1.23
+     * @param assetName 'ETH'
+     */
     async withdraw(amount: BigNumber, assetName: string): Promise<void> {
         log.log('Withdrawing ' + amount.toString() + ' ' + assetName);
         const transaction: Transaction = await this.orionBlockchain.withdraw(amount, assetName);
         await this.db.insetTransaction(transaction);
     }
 
+    /**
+     * @param amount     1.23
+     */
     async lockStake(amount: BigNumber): Promise<void> {
         log.log('Staking ' + amount.toString() + ' ORN');
         const transaction: Transaction = await this.orionBlockchain.lockStake(amount);
