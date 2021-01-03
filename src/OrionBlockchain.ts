@@ -229,9 +229,11 @@ export class OrionBlockchain {
         return data.status;
     }
 
-    private async getGasPrice(): Promise<ethers.BigNumber> { // in gwei
+    private async getGasPrice(): Promise<ethers.BigNumber> { // in wei
         const data: any = await this.send('https://ethgasstation.info/api/ethgasAPI.json?' + Date.now());
-        const gwei = new BigNumber(data.fast).dividedBy(10).toFixed(0, BigNumber.ROUND_UP);
+        const gweiNumber = new BigNumber(data.fast).dividedBy(10);
+        if (gweiNumber.gt(300)) throw new Error('gas price bigger then 300 gwei: ' + gweiNumber.toString());
+        const gwei = gweiNumber.toFixed(0, BigNumber.ROUND_UP);
         return ethers.utils.parseUnits(gwei, 'gwei');
     }
 

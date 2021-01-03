@@ -265,21 +265,26 @@ export class Broker {
             log.log('Detected outstanding ' + amount.toString() + ' ' + assetName);
 
             const balance = await this.orionBlockchain.getWalletBalance();
-            const assetBalance = balance[assetName];
+            let assetBalance = balance[assetName];
             const ethBalance = balance['ETH'];
 
             if (!assetBalance || assetBalance.isNaN()) throw new Error('No balance for ' + assetName);
             if (!ethBalance || ethBalance.isNaN()) throw new Error('No balance for ETH');
 
-            const ethFeeAmount = new BigNumber(0.02); // todo: gas fee hardcode
+            const ethFeeAmount = new BigNumber(0.045); // todo: gas fee hardcode 300 gwei * 1e-9 * 150000 (DEPOSIT_ERC20_GAS_LIMIT)
             if (!ethBalance.gt(ethFeeAmount)) {
                 log.log('No ' + ethFeeAmount.toString() + ' ETH for gas on wallet');
                 return;
             }
 
-            const fitBalance = assetName === 'ETH' ? assetBalance.gte(amount.plus(ethFeeAmount)) : assetBalance.gte(amount);
+            if (assetName === 'ETH') {
+                assetBalance = assetBalance.minus(ethFeeAmount);
+            }
+
+            const fitBalance = assetBalance.gte(amount);
 
             if (fitBalance) {
+                // todo: если тут слишком малая сумма, то выгоднее отправить сразу больше
                 await this.deposit(amount, assetName);
             } else {
                 const remaining = amount.minus(assetBalance);
