@@ -373,6 +373,10 @@ export class Broker {
 
     // DEPOSIT/WITHDRAW
 
+    /**
+     * @param amount     1.23
+     * @param assetName 'USDT'
+     */
     getExchangeForWithdraw(amount: BigNumber, assetName: string): string | undefined {
         for (const exchange in this.lastBalances) {
             if (this.lastBalances.hasOwnProperty(exchange)) {
@@ -384,6 +388,11 @@ export class Broker {
         return undefined;
     }
 
+    /**
+     * @param exchange  'binance'
+     * @param amount     1.23
+     * @param assetName 'ETH'
+     */
     async exchangeWithdraw(exchange: string, amount: BigNumber, assetName: string): Promise<void> {
         if (!this.connector.hasWithdraw(exchange)) {
             log.log(exchange + ' does not support withdrawals');
@@ -404,12 +413,20 @@ export class Broker {
         }
     }
 
+    /**
+     * @param amount     1.23
+     * @param assetName 'USDT'
+     */
     async approve(amount: BigNumber, assetName: string): Promise<void> {
         log.log('Approving ' + amount.toString() + ' ' + assetName);
         const transaction: Transaction = await this.orionBlockchain.approveERC20(amount, assetName);
         await this.db.insetTransaction(transaction);
     }
 
+    /**
+     * @param amount     1.23
+     * @param assetName 'ETH'
+     */
     async deposit(amount: BigNumber, assetName: string): Promise<void> {
         log.log('Depositing ' + amount.toString() + ' ' + assetName);
         let transaction: Transaction;
