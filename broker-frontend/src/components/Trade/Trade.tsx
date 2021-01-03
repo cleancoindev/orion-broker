@@ -1,43 +1,47 @@
-import React, {useEffect, useState} from "react";
-import {TradeHistory} from "./TradeHistory";
-import "./Trade.css"
-import {DashboardTotalProfit} from "../Dashboard/DashboardTotalProfit";
-import {httpGet} from "../../Utils";
-import {Dictionary, parseTradeOrder, TradeOrder} from "../../Model";
-import BigNumber from "bignumber.js";
-import {Stats} from "fs";
+import React, {useEffect, useState} from 'react';
+import {TradeHistory} from "./TradeHistory/TradeHistory";
+import {TradeOrder, Dictionary, parseTradeOrder} from "../../Model";
+import {useSelector} from "react-redux";
+import {getCurrentTradeTab} from "../../redux/selectors";
+import styles from "./Trade.module.css"
+import cn from "classnames";
+import {DashboardTotalBalance} from '../Dashboard/DashboardTotalBalance/DashboardTotalBalance';
+import BigNumber from 'bignumber.js';
+import {BrokerApi} from '../../BrokerApi';
 
-interface TradeProps {
-}
-
-export default function Trade(props: TradeProps) {
+export default function Trade() {
+    const currentTradeTab = useSelector(getCurrentTradeTab);
     const [items, setItems] = useState([] as TradeOrder[]);
-    const [profits, setProfits] = useState({} as Dictionary<BigNumber>);
+    const [profits, setProfits] = useState({} as Dictionary<Dictionary<BigNumber>>);
     const [isLoading, setIsLoading] = useState(true);
 
     const getData = () => {
         setIsLoading(true);
-        httpGet((window as any).BROKER_URL + '/api/orderhistory')
-            .then((dataText: string) => {
-                let newProfits: Dictionary<BigNumber> = {};
+        BrokerApi.getTradeHistory()
+            .then((data) => {
+                let newProfits: Dictionary<Dictionary<BigNumber>> = {};
 
-                const data = JSON.parse(dataText);
                 console.log('Trade History Json', data)
                 const orders: TradeOrder[] = [];
 
                 for (let item of data) {
                     const order = parseTradeOrder(item);
+
                     orders.push(order);
                     if (order.status === "FILLED") {
                         const profit = order.total.multipliedBy(0.02);
                         if (!newProfits[order.toCurrency]) {
-                            newProfits[order.toCurrency] = new BigNumber(0);
+                            newProfits[order.toCurrency] = {};
                         }
-                        newProfits[order.toCurrency] = newProfits[order.toCurrency].plus(profit);
+
+                        if (!newProfits[order.toCurrency][order.exchange]) {
+                            newProfits[order.toCurrency] = {
+                                [order.exchange]: new BigNumber(0),
+                            }
+                        }
+                        newProfits[order.toCurrency][order.exchange] = newProfits[order.toCurrency][order.exchange].plus(profit);
                     }
                 }
-
-                console.log('ORDERS', orders)
 
                 setItems(orders);
                 setProfits(newProfits);
@@ -54,19 +58,18 @@ export default function Trade(props: TradeProps) {
         return () => clearInterval(interval);
     }, []);
 
-
     return (
-        <div className="dashboard">
-            <div className="col-dashboard-left">
-                <div className="row-100">
-                    <DashboardTotalProfit profits={profits} />
+        <div className={cn(styles.root, styles[currentTradeTab])}>
+            <div className={styles.colLeft}>
+                <div className={styles.tradeBuySell}>
+                    <DashboardTotalBalance balances={profits} />
                 </div>
             </div>
-            <div className="col-dashboard-right">
-                <div className="row-grow dashboard_row-grow">
+            <div className={styles.colMiddle}>
+                <div className={styles.tradeHistoryRow}>
                     <TradeHistory items={items} isLoading={isLoading}/>
                 </div>
             </div>
         </div>
-    )
+    );
 }

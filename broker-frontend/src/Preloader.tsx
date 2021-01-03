@@ -1,49 +1,24 @@
 import React, {FC, useEffect} from "react";
-import {httpGet} from "./Utils";
-import {DEFAULT_PAIRS_LIST} from "./redux/reducers/pairs";
-import {Dictionary, NumberFormat} from "./Model";
+import {DEFAULT_PAIR} from "./redux/reducers/pairs";
+import {BlockchainInfo, Dictionary, NumberFormat} from "./Model";
 import WebFont from "webfontloader";
 import {useDispatch, useSelector} from "react-redux";
-import {setAssets, setNumberFormat} from "./redux/actions";
+import {setCurrentPair, setNumberFormat, setPairsList} from "./redux/actions";
 import {App} from "./App";
-import {LoadingIcon} from "./components/Table/Loading";
+import {LoadingIcon} from "@orionprotocol/orion-ui-kit";
 import {getPairsInitialized} from "./redux/selectors";
-
-const filesToPreload = [ // todo
-    '/img/icons_currency_color/eth.svg',
-    '/img/icons_currency_color/bitcoin.svg',
-    '/img/icons_currency_color/xrp.svg',
-    '/img/icons_currency_color/usdt.svg',
-    '/img/icons_currency_color/egld.svg',
-    '/img/plus.svg',
-    '/img/plus_dark.svg',
-    '/img/minus.svg',
-    '/img/minus_dark.svg',
-    '/img/star.svg',
-    '/img/star_dark.svg',
-    '/img/star_fill.svg',
-    '/img/next.svg',
-]
+import {Api} from "./Api";
 
 export const Preloader: FC = () => {
     const dispatch = useDispatch();
     const isLoaded = useSelector(getPairsInitialized);
 
-    async function preloadIcons() {
-        for (let i = 0; i < filesToPreload.length; i++) {
-            try {
-                await httpGet(filesToPreload[i]);
-            } catch (e) {
-                console.error(e);
-            }
-        }
-    }
-
     async function preloadFonts() {
         return new Promise((resolve, reject) => {
             const WebFontConfig = {
-                google: {
-                    families: ['Montserrat:400,500,600,700']
+                custom: {
+                    families: ['Montserrat:400,500,600,700'],
+                    urls: ['/fonts/fonts.css']
                 },
                 active: resolve
             };
@@ -52,48 +27,47 @@ export const Preloader: FC = () => {
         });
     }
 
-    async function loadPairsList(): Promise<string[]> {
-        try {
-            const dataString: string = await httpGet(process.env.REACT_APP_BACKEND! + '/api/v1/pairs/list');
-            const data: string[] = JSON.parse(dataString);
-            console.log('pairsList', data);
-            return data;
-        } catch (e) {
-            console.error(e);
-            return DEFAULT_PAIRS_LIST;
-        }
-    }
-
     async function loadNumberFormat(): Promise<Dictionary<NumberFormat>> {
-        try {
-            const dataString: string = await httpGet(process.env.REACT_APP_BACKEND! + '/api/v1/pairs/exchangeInfo')
-            const data = JSON.parse(dataString);
-            const numberFormat: Dictionary<NumberFormat> = {};
-            for (let pairName in data) {
+        const data = await Api.getExchangeInfo();
+        const numberFormat: Dictionary<NumberFormat> = {};
+        for (let pairName in data) {
+            if (data.hasOwnProperty(pairName)) {
                 const item = data[pairName];
                 numberFormat[item.name] = item;
             }
-            console.log('numberFormat', numberFormat);
-            return numberFormat;
-        } catch (e) {
-            console.error(e);
-            return {};
+        }
+        console.log('numberFormat', numberFormat);
+        return numberFormat;
+    }
+
+    function getPairFromLocation(pairsList: string[]): string {
+        const s = window.location.pathname;
+        if (s.indexOf('/trade/') === -1) return DEFAULT_PAIR;
+        const pair = s.substr('/trade/'.length);
+        if (pairsList.indexOf(pair) > -1) {
+            return pair;
+        } else {
+            window.history.pushState({}, '', '/trade/' + DEFAULT_PAIR);
+            return DEFAULT_PAIR;
         }
     }
 
-    async function start() {
-        await preloadIcons();
+    async function start(): Promise<void> {
         await preloadFonts();
 
-        const pairsList: string[] = await loadPairsList();
+        const blockchainInfo: BlockchainInfo = await Api.getBlockchainInfo();
+        const pairsList: string[] = await Api.getPairsList();
+        const initPair: string = getPairFromLocation(pairsList);
         const numberFormat = await loadNumberFormat();
 
+        Api.blockchainInfo = blockchainInfo;
         dispatch(setNumberFormat(numberFormat));
-        dispatch(setAssets(pairsList));
+        dispatch(setPairsList(pairsList));
+        dispatch(setCurrentPair(initPair));
     }
 
     useEffect(() => {
-        start();
+        start()
     }, []);
 
     return isLoaded ? <App/> : <LoadingIcon/>;

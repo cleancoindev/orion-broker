@@ -8,7 +8,7 @@ import WebSocket from 'ws';
 
 export class WebUI {
     settings: Settings;
-    lastBalancesJson: string = '{}';
+    lastBalancesJson = '{}';
     frontendWs: WebSocket.Server;
 
     constructor(db: Db, settings: Settings, app: Express) {

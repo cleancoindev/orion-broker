@@ -1,0 +1,20 @@
+/* hide pair and timerange from chart legend */
+.item-3eXPhOmy.series-12hzsxbp .noWrapWrapper-AC879h-w {
+    display: none;
+}
+
+/* make OHLC values smaller */
+.item-3eXPhOmy.series-12hzsxbp {
+    font-size: 11px;
+}
+
+/* hide last OHLC value "+/- grow/loss" */
+.item-3eXPhOmy.series-12hzsxbp .valuesAdditionalWrapper-3BfAIuML .valueItem-3JDGGSt_.blockHidden-pECc1q1w + .valueItem-3JDGGSt_ :last-child {
+    display: none;
+}
+
+/* date range toolbar height */
+.chart-toolbar.chart-controls-bar {
+    height: 26px;
+    margin-bottom: 4px;
+}

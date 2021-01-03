@@ -1,0 +1,107 @@
+.root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    overflow: hidden;
+}
+
+.colLeft {
+    composes: col from "../../css/Blocks.module.css";
+    flex-shrink: 0;
+}
+
+.colMiddle {
+    composes: col from "../../css/Blocks.module.css";
+    flex-grow: 1;
+}
+
+.colRight {
+    composes: col from "../../css/Blocks.module.css";
+    width: 280px;
+    flex-shrink: 0;
+}
+
+.tradeBuySell {
+    composes: row100 from "../../css/Blocks.module.css";
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.tradeChartRow {
+    composes: row50 from "../../css/Blocks.module.css";
+}
+
+.tradeHistoryRow {
+    composes: row100 from "../../css/Blocks.module.css";
+}
+
+.tradeOrderBookRow {
+    composes: row100 from "../../css/Blocks.module.css";
+}
+
+@media (max-width: 800px) {
+    .root {
+        padding-top: 0;
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .tradeBuySell {
+        display: none;
+    }
+
+    .tradeChartRow {
+        display: none;
+        flex-direction: column;
+    }
+
+    .tradeHistoryRow {
+        display: none;
+        flex-direction: column;
+    }
+
+    .tradeOrderBookRow {
+        display: none;
+        flex-direction: column;
+    }
+
+    .pair .tradePairRow {
+        display: flex;
+        flex-grow: 1;
+    }
+
+    .buySell .tradeBuySell {
+        display: flex;
+        flex-grow: 1;
+    }
+
+    .pair .colLeft,
+    .buySell .colLeft {
+        flex-grow: 1;
+    }
+
+    .chart .tradeChartRow {
+        display: flex;
+        flex-grow: 1;
+    }
+
+    .history .tradeHistoryRow {
+        display: flex;
+        flex-grow: 1;
+    }
+
+    .chart .colMiddle,
+    .history .colMiddle {
+        flex-grow: 1;
+    }
+
+    .orderbook .tradeOrderBookRow {
+        display: flex;
+        flex-grow: 1;
+    }
+
+    .orderbook .colRight {
+        flex-grow: 1;
+    }
+}

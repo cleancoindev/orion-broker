@@ -1,11 +1,9 @@
-import React, {FC, useContext, useEffect, useMemo, useState} from "react";
+import React, {FC, FormEvent, useContext, useEffect, useMemo, useState} from 'react';
 import {DatePickerInput} from "rc-datepicker";
 import 'moment/locale/ru.js';
-import {useLingui} from "@lingui/react";
-import {defineMessage, Trans} from '@lingui/macro';
-import "./TradeHistory.css"
+import {Trans} from '@lingui/macro';
 import cn from 'classnames';
-import {Dictionary, NumberFormat, Pair, parseTradeOrder, TradeOrder, TradeSubOrder} from "../../../Model";
+import {Dictionary, isOrderOpen, NumberFormat, Pair, parseTradeOrder, TradeOrder, TradeSubOrder} from '../../../Model';
 import {
     capitalize,
     formatPairAmount,
@@ -14,31 +12,34 @@ import {
     getDateTime,
     getLastMonth,
     getTomorrow,
-    httpGet,
     statusToText
 } from "../../../Utils";
-import {Table} from "../../Table";
+import {LanguageContext, Select, STATUS_TYPE, Table, ToggleTabs, useTrans} from "@orionprotocol/orion-ui-kit";
 import BigNumber from "bignumber.js";
 import {useSelector} from "react-redux";
-import {getAddress, getCurrentPair, getCurrentPairName, getNumberFormat} from "../../../redux/selectors";
-import {Select} from "../../Swap/Inputs";
+import {
+    getFromCurrencies,
+    getNumberFormat,
+    getToCurrencies
+} from "../../../redux/selectors";
 import styles from './TradeHistory.module.css';
-import {STATUS_TYPE} from "../../Swap/Text/components/StatusText";
-import {I18nContext} from "../../I18nContext";
-import {THEME, Theme} from "../../Theme";
+import {Api} from "../../../Api";
 
-const getStatusClass = (statusText: string): string => {
-    switch (statusText) {
-        case 'New':
-            return 'status-new';
-        case 'Partial':
-            return 'status-filled';
-        case 'Filled':
-            return 'status-filled';
-        case 'Canceled':
-            return 'status-cancelled';
+const getStatusClass = (status: string): string => {
+    switch (status.toUpperCase()) {
+        case 'CANCELED':
+        case 'PARTIALLY_CANCELED':
+        case 'REJECTED':
+        case 'PARTIALLY_REJECTED':
+        case 'FAILED':
+            return styles.statusCancelled;
+
+        case 'CONFIRMED':
+        case 'SETTLED':
+            return styles.statusFilled;
+
         default:
-            return '';
+            return styles.statusNew;
     }
 }
 
@@ -51,21 +52,21 @@ function TradeHistorySubRow(index: number, item: TradeHistorySubRowProps) {
     const statusText = capitalize(statusToText(item.subOrder.status));
 
     return (
-        <div className="tradeHistory_subTable-row" key={'sub_' + index}>
-            <div className="tradeHistory_subTable-col">
+        <div className={styles.subTableRow} key={'sub_' + index}>
+            <div className={styles.subTableCol}>
                 {item.subOrder.id}
             </div>
-            <div className="tradeHistory_subTable-col tradeHistory_subTable-col-right tradeHistory_table-colAmount">
+            <div className={cn(styles.subTableCol, styles.subTableColRight, styles.colAmount)}>
                 {formatPairAmount(item.subOrder.amount, item.subOrder.pair, item.numberFormat)}
             </div>
-            <div className="tradeHistory_subTable-col tradeHistory_subTable-col-right tradeHistory_table-colPrice">
+            <div className={cn(styles.subTableCol, styles.subTableColRight, styles.colPrice)}>
                 {formatPairPrice(item.subOrder.price, item.subOrder.pair, item.numberFormat)}
             </div>
             <div
-                className={"tradeHistory_subTable-col tradeHistory_table-colStatus " + getStatusClass(statusText)}>
+                className={cn(styles.subTableCol, styles.colStatus, getStatusClass(item.subOrder.status))}>
                 {statusText}
             </div>
-            <div className="tradeHistory_subTable-col tradeHistory_table-colExchange">
+            <div className={cn(styles.subTableCol, styles.colExchange)}>
                 {capitalize(item.subOrder.exchange)}
             </div>
         </div>
@@ -75,54 +76,44 @@ function TradeHistorySubRow(index: number, item: TradeHistorySubRowProps) {
 interface TradeHistoryRow {
     order: TradeOrder;
     numberFormat: Dictionary<NumberFormat>;
+    onCancelOrder: (item: TradeOrder) => void;
 }
 
 function TradeHistoryRow(index: number, props: TradeHistoryRow, isOpen?: boolean, onClick?: (index: number) => void) {
     const item = props.order;
+    const itemIsOpen = isOrderOpen(item);
     const date = new Date(item.date);
     const dateString = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
     const statusText = capitalize(statusToText(item.status));
-    const {i18n} = useLingui();
-    const subOrdersId = i18n._(defineMessage({id: 'components.trade_history_row.sib_orders.id', message: 'ID'}));
-    const subOrdersAmount = i18n._(defineMessage({
-        id: 'components.trade_history_row.sib_orders.price',
-        message: 'Price'
-    }));
-    const subOrdersPrice = i18n._(defineMessage({
-        id: 'components.trade_history_row.sib_orders.amount',
-        message: 'Amount'
-    }));
-    const subOrdersStatus = i18n._(defineMessage({
-        id: 'components.trade_history_row.sib_orders.status',
-        message: 'Status'
-    }));
-    const subOrdersExchange = i18n._(defineMessage({
-        id: 'components.trade_history_row.sib_orders.exchange',
-        message: 'Exchange'
-    }));
+    const {translate} = useTrans();
+    const subOrdersId = translate('id', 'ID');
+    const subOrdersAmount = translate('price', 'Price');
+    const subOrdersPrice = translate('amount', 'Amount');
+    const subOrdersStatus = translate('status', 'Status');
+    const subOrdersExchange = translate('exchange', 'Exchange');
 
     const createSubOrders = () => {
         return <Table
             isLoading={false}
             headers={[
                 {
-                    className: 'tradeHistory_table-headerCol tradeHistory_subTable-headerCol',
+                    className: cn(styles.headerCol, styles.subHeaderCol),
                     text: subOrdersId
                 },
                 {
-                    className: 'tradeHistory_table-headerCol tradeHistory_subTable-headerCol tradeHistory_table-headerCol-right',
+                    className: cn(styles.headerCol, styles.subHeaderCol, styles.headerColRight),
                     text: subOrdersPrice
                 },
                 {
-                    className: 'tradeHistory_table-headerCol tradeHistory_subTable-headerCol tradeHistory_table-headerCol-right',
+                    className: cn(styles.headerCol, styles.subHeaderCol, styles.headerColRight),
                     text: subOrdersAmount
                 },
                 {
-                    className: 'tradeHistory_table-headerCol tradeHistory_subTable-headerCol',
+                    className: cn(styles.headerCol, styles.subHeaderCol),
                     text: subOrdersStatus
                 },
                 {
-                    className: 'tradeHistory_table-headerCol tradeHistory_subTable-headerCol',
+                    className: cn(styles.headerCol, styles.subHeaderCol),
                     text: subOrdersExchange
                 },
             ]}
@@ -148,36 +139,36 @@ function TradeHistoryRow(index: number, props: TradeHistoryRow, isOpen?: boolean
                     dataType: 'Text'
                 },
             ]}
-            className="tradeHistory_subTable"
-            headerClassName="tradeHistory_table-header"
-            scrollContainerClassName="tradeHistory_subTable-scrollContainer"
+            className={styles.subTable}
+            headerClassName={styles.tableHeader}
+            scrollContainerClassName={styles.subTableScrollContainer}
             rowRenderer={TradeHistorySubRow}
             data={item.subOrders.map(subOrder => ({subOrder, numberFormat: props.numberFormat}))}/>
     }
 
     return (
-        <div className="tradeHistory_table-rowWrapper" key={index}>
-            <div className="tradeHistory_table-row" onClick={() => onClick!(index)}>
-                <div className="tradeHistory_table-col tradeHistory_table-colSell tradeHistory_table-col-white">
+        <div className={styles.rowWrapper} key={index}>
+            <div className={styles.tableRow} onClick={() => onClick!(index)}>
+                <div className={cn(styles.tableCol, styles.colSell, styles.colWhite)}>
                     {capitalize(item.type)}
                 </div>
-                <div className="tradeHistory_table-col tradeHistory_table-colCurrency">
+                <div className={cn(styles.tableCol, styles.colCurrency)}>
                     {item.fromCurrency} / {item.toCurrency}
                 </div>
-                <div className="tradeHistory_table-col tradeHistory_table-colDate">
+                <div className={cn(styles.tableCol, styles.colDate)}>
                     {dateString}
                 </div>
-                <div className="tradeHistory_table-col tradeHistory_table-colAmount tradeHistory_table-col-right">
+                <div className={cn(styles.tableCol, styles.colAmount, styles.tableColRight)}>
                     {formatPairAmount(item.amount, item.pair, props.numberFormat)}
                 </div>
-                <div className="tradeHistory_table-col tradeHistory_table-colPrice tradeHistory_table-col-right">
+                <div className={cn(styles.tableCol, styles.colPrice, styles.tableColRight)}>
                     {formatPairPrice(item.price, item.pair, props.numberFormat)}
                 </div>
                 <div
-                    className={"tradeHistory_table-col tradeHistory_table-colStatus " + getStatusClass(statusText)}>
+                    className={cn(styles.tableCol, styles.colStatus, getStatusClass(item.status))}>
                     {statusText}
                 </div>
-                <div className="tradeHistory_table-col tradeHistory_table-colTotal tradeHistory_table-col-right">
+                <div className={cn(styles.tableCol, styles.colTotal, styles.tableColRight)}>
                     {formatPairTotal(item.total, item.pair, props.numberFormat)}
                 </div>
             </div>
@@ -194,54 +185,39 @@ interface Props {
 }
 
 // todo: paging
-export const TradeHistory: FC<Props> = (props: Props) => {
-    const {theme} = useContext(Theme);
-    const dark = theme === THEME.DARK ? styles.dark : '';
-    const {language, getLocale} = useContext(I18nContext);
+export const TradeHistory: FC<Props> = (props) => {
+    const {items} = props;
+    const {language, getLocale} = useContext(LanguageContext);
     const currentLocale = getLocale(language);
+    const fromCurrencies = useSelector(getFromCurrencies);
+    const toCurrencies = useSelector(getToCurrencies);
     const numberFormat = useSelector(getNumberFormat);
 
-    const [isOrders, setIsOrders] = useState(false);
+    enum OrderHistoryType {
+        OPEN = 'open',
+        HISTORY = 'history',
+    }
+
+    const [orderHistoryType, setOrderHistoryType] = useState(OrderHistoryType.OPEN);
     const [startDate, setStartDate] = useState(getLastMonth());
     const [endDate, setEndDate] = useState(getTomorrow());
-    const [fromCurrency, setFromCurrency] = useState('All');
-    const [toCurrency, setToCurrency] = useState('All');
-    const [status, setStatus] = useState('All');
+    const [fromCurrency, setFromCurrency] = useState('ALL');
+    const [toCurrency, setToCurrency] = useState('ALL');
+    const [status, setStatus] = useState('ALL');
+    const {translate} = useTrans();
 
-    const {i18n} = useLingui();
-    const orderStatusAll = i18n._(defineMessage({id: 'components.trade_history.order_status.all', message: 'All'}));
-    const orderStatusOpen = i18n._(defineMessage({id: 'components.trade_history.order_status.open', message: 'Open'}));
-    const orderStatusFilled = i18n._(defineMessage({
-        id: 'components.trade_history.order_status.filled',
-        message: 'Filled'
-    }));
-    const orderStatusCancelled = i18n._(defineMessage({
-        id: 'components.trade_history.order_status.cancelled',
-        message: 'Cancelled'
-    }));
-    const orderStatusPartial = i18n._(defineMessage({
-        id: 'components.trade_history.order_status.partial',
-        message: 'Partial'
-    }));
-    const tableHeaderPair = i18n._(defineMessage({id: 'components.trade_history.table_header.pair', message: 'Pair'}));
-    const tableHeaderType = i18n._(defineMessage({id: 'components.trade_history.table_header.type', message: 'Type'}));
-    const tableHeaderTime = i18n._(defineMessage({id: 'components.trade_history.table_header.time', message: 'Time'}));
-    const tableHeaderAmount = i18n._(defineMessage({
-        id: 'components.trade_history.table_header.amount',
-        message: 'Amount'
-    }));
-    const tableHeaderPrice = i18n._(defineMessage({
-        id: 'components.trade_history.table_header.price',
-        message: 'Price'
-    }));
-    const tableHeaderStatus = i18n._(defineMessage({
-        id: 'components.trade_history.table_header.status',
-        message: 'Status'
-    }));
-    const tableHeaderTotal = i18n._(defineMessage({
-        id: 'components.trade_history.table_header.total',
-        message: 'Total'
-    }));
+    const orderStatusAll = translate('all', 'All');
+    const orderStatusNew = translate('open', 'New');
+    const orderStatusFilled = translate('filled', 'Filled');
+    const orderStatusCancelled = translate('cancelled', 'Cancelled');
+    const orderStatusPartial = translate('partial', 'Partial');
+    const tableHeaderPair = translate('pair', 'Pair');
+    const tableHeaderType = translate('type', 'Type');
+    const tableHeaderTime = translate('date', 'Time');
+    const tableHeaderAmount = translate('amount', 'Amount');
+    const tableHeaderPrice = translate('price', 'Price');
+    const tableHeaderStatus = translate('status', 'Status');
+    const tableHeaderTotal = translate('total', 'Total');
 
     const onStartDateChange = (jsDate: Date, dateString: string) => {
         setStartDate(jsDate);
@@ -256,60 +232,66 @@ export const TradeHistory: FC<Props> = (props: Props) => {
 
     const rows: any[] = [];
 
-    for (let i = 0; i < props.items.length; i++) {
-        const item = props.items[i];
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+
         if (startTime > item.date) continue;
         if (endTime > 0 && endTime < item.date) continue;
-        if (fromCurrency !== 'All' && item.fromCurrency !== fromCurrency) continue;
-        if (toCurrency !== 'All' && item.toCurrency !== toCurrency) continue;
-        if (status !== 'All') {
-            if ((status === 'OPEN') && (item.status !== 'NEW')) continue;
-            if ((status === 'FILLED') && (item.status !== 'FILLED')) continue;
-            if ((status === 'PARTIAL') && (item.status !== 'PARTIALLY_FILLED')) continue;
-            if ((status === 'CANCELLED') && (item.status !== 'CANCELLED' && item.status !== 'PARTIALLY_CANCELLED')) continue;
+        if (fromCurrency !== 'ALL' && item.fromCurrency !== fromCurrency) continue;
+        if (toCurrency !== 'ALL' && item.toCurrency !== toCurrency) continue;
+        const itemIsOpen = isOrderOpen(item);
+        if (status !== STATUS_TYPE.ALL) {
+            if ((status === STATUS_TYPE.NEW) && !itemIsOpen) continue;
+            if ((status === STATUS_TYPE.FILLED) && (item.status !== STATUS_TYPE.FILLED)) continue;
+            if ((status === STATUS_TYPE.PARTIAL) && (item.status !== 'PARTIALLY_FILLED')) continue;
+            if ((status === STATUS_TYPE.CANCELLED) && (item.status !== 'CANCELED' && item.status !== 'PARTIALLY_CANCELED')) continue;
+        } else {
+            if (orderHistoryType === OrderHistoryType.OPEN && !itemIsOpen) continue;
+            if (orderHistoryType === OrderHistoryType.HISTORY && itemIsOpen) continue;
         }
-        const itemIsOpen = item.status === 'NEW' || item.status === 'PARTIALLY_FILLED' || item.status === 'PARTIALLY_CANCELLED';
-        if (isOrders && !itemIsOpen) continue;
-        if (!isOrders && itemIsOpen) continue;
         rows.push({
             order: item,
-            numberFormat: numberFormat
+            numberFormat: numberFormat,
         });
     }
 
-
     return (
-        <div className={cn([dark, 'group', 'tradeHistory_container'])}>
-            <div className="tradeHistory_toolbar">
+        <div className={styles.root}>
+            <div className={styles.toolbar}>
                 <div className={styles.toolbarMobileRow}>
-                    <div className="btn-group-container btn-group-container_buttons">
-                        <button className={`btn btn_transparent ${isOrders ? 'selected' : ''}`}
-                                onClick={() => setIsOrders(true)}>
-                            <Trans id="components.trade_history.btn.orders">Orders</Trans>
-                        </button>
-                        <button className={`btn btn_transparent ${isOrders ? '' : 'selected'}`}
-                                onClick={() => setIsOrders(false)}>
-                            <Trans id="components.trade_history.btn.history">History</Trans>
-                        </button>
-                    </div>
+                    <ToggleTabs selected={orderHistoryType} tabClassName={styles.tab} transparent
+                                className={styles.orderHistoryTypeToggle}
+                                onTabChanged={(key) => setOrderHistoryType(key as OrderHistoryType)}>
+                        <Trans id="open_orders" key={OrderHistoryType.OPEN}>
+                            Open Orders
+                        </Trans>
+
+                        <Trans id="history" key={OrderHistoryType.HISTORY}>
+                            Order History
+                        </Trans>
+                    </ToggleTabs>
                 </div>
 
                 <div className={styles.toolbarMobileRow}>
-                    <DatePickerInput
-                        onChange={onStartDateChange}
-                        locale={currentLocale}
-                        displayFormat="DD/MM/YYYY"
-                        maxDate={endDate}
-                        value={startDate}
-                    />
-                    <div className="tradeHistory_toolbar-dateSeparator"/>
-                    <DatePickerInput
-                        onChange={onEndDateChange}
-                        locale={currentLocale}
-                        displayFormat="DD/MM/YYYY"
-                        minDate={startDate}
-                        value={endDate}
-                    />
+                    {useMemo(() => (
+                        <DatePickerInput
+                            onChange={onStartDateChange}
+                            locale={currentLocale}
+                            displayFormat="DD/MM/YYYY"
+                            maxDate={endDate}
+                            value={startDate}
+                        />
+                    ), [endDate, startDate, currentLocale])}
+                    <div className={styles.dateSeparator}/>
+                    {useMemo(() => (
+                        <DatePickerInput
+                            onChange={onEndDateChange}
+                            locale={currentLocale}
+                            displayFormat="DD/MM/YYYY"
+                            minDate={startDate}
+                            value={endDate}
+                        />
+                    ), [endDate, startDate, currentLocale])}
                 </div>
 
                 <div className={cn([styles.toolbarMobileRow, styles.currencyFilter])}>
@@ -317,38 +299,37 @@ export const TradeHistory: FC<Props> = (props: Props) => {
                         <Select value={fromCurrency}
                                 className={styles.filterSelect}
                                 onChange={event => {
-                                    setFromCurrency(event.target.value)
+                                    setFromCurrency(event.currentTarget.value)
                                 }}
                         >
-                            <option value="All">All</option>
-                            <option value="BTC">BTC</option>
-                            <option value="ETH">ETH</option>
-                            <option value="XRP">XRP</option>
-                            <option value="USDT">USDT</option>
-                            <option value="ORN">ORN</option>
-                            <option value="EGLD">EGLD</option>
+                            <option value="ALL">All</option>
+                            {
+                                fromCurrencies.map(currency => <option key={currency} value={currency}>{currency}</option>)
+                            }
                         </Select>
                     </div>
-                    <div className="tradeHistory_toolbar-currencySeparator">/</div>
+                    <div className={styles.currencySeparator}>/</div>
                     <div className={styles.filterSelectWrapper}>
                         <Select value={toCurrency}
                                 className={styles.filterSelect}
                                 onChange={event => {
-                                    setToCurrency(event.target.value)
+                                    console.log(event.currentTarget.value)
+                                    setToCurrency(event.currentTarget.value)
                                 }}>
-                            <option value="All">All</option>
-                            <option value="BTC">BTC</option>
-                            <option value="USDT">USDT</option>
+                            <option value="ALL">All</option>
+                            {
+                                toCurrencies.map(currency => <option key={currency} value={currency}>{currency}</option>)
+                            }
                         </Select>
                     </div>
 
                     <div className={styles.filterSelectWrapper}>
                         <Select value={status}
-                                onChange={event => setStatus(event.target.value)}
+                                onChange={event => setStatus(event.currentTarget.value)}
                                 className={styles.filterSelect}
                         >
                             <option value={STATUS_TYPE.ALL}>{orderStatusAll}</option>
-                            <option value={STATUS_TYPE.OPEN}>{orderStatusOpen}</option>
+                            <option value={STATUS_TYPE.NEW}>{orderStatusNew}</option>
                             <option value={STATUS_TYPE.FILLED}>{orderStatusFilled}</option>
                             <option value={STATUS_TYPE.PARTIAL}>{orderStatusPartial}</option>
                             <option value={STATUS_TYPE.CANCELLED}>{orderStatusCancelled}</option>
@@ -358,34 +339,34 @@ export const TradeHistory: FC<Props> = (props: Props) => {
             </div>
 
             <Table
-                isLoading={props.isLoading && props.items.length === 0}
+                isLoading={props.isLoading && items.length === 0}
                 headers={[
                     {
-                        className: 'tradeHistory_table-headerCol',
+                        className: styles.headerCol,
                         text: tableHeaderType
                     },
                     {
-                        className: 'tradeHistory_table-headerCol',
+                        className: styles.headerCol,
                         text: tableHeaderPair
                     },
                     {
-                        className: 'tradeHistory_table-headerCol',
+                        className: styles.headerCol,
                         text: tableHeaderTime
                     },
                     {
-                        className: 'tradeHistory_table-headerCol tradeHistory_table-headerCol-right',
+                        className: cn(styles.headerCol, styles.headerColRight),
                         text: tableHeaderAmount
                     },
                     {
-                        className: 'tradeHistory_table-headerCol tradeHistory_table-headerCol-right',
+                        className: cn(styles.headerCol, styles.headerColRight),
                         text: tableHeaderPrice
                     },
                     {
-                        className: 'tradeHistory_table-headerCol',
+                        className: styles.headerCol,
                         text: tableHeaderStatus
                     },
                     {
-                        className: 'tradeHistory_table-headerCol tradeHistory_table-headerCol-right',
+                        className: cn(styles.headerCol, styles.headerColRight),
                         text: tableHeaderTotal
                     },
                 ]}
@@ -420,9 +401,9 @@ export const TradeHistory: FC<Props> = (props: Props) => {
                     },
                 ]}
                 defaultSortIndex={2}
-                className="tradeHistory_table"
-                headerClassName="tradeHistory_table-header"
-                scrollContainerClassName="tradeHistory_scrollContainer"
+                className={styles.table}
+                headerClassName={styles.tableHeader}
+                scrollContainerClassName={styles.scrollContainer}
                 rowRenderer={TradeHistoryRow}
                 data={rows}/>
         </div>

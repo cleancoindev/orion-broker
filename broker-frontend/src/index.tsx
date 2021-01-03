@@ -1,10 +1,11 @@
+// Should be very first to not break css precedence
+import '@orionprotocol/orion-ui-kit/dist/index.css'
 import React from 'react';
 import ReactDOM from 'react-dom';
 import {Provider} from 'react-redux';
 import store from './redux/store'
-import './css/main.css';
 import {BrowserRouter as Router} from "react-router-dom";
-import {WithTheme, WithTranslate} from "./hocs";
+import {WithLanguage, WithTheme} from "@orionprotocol/orion-ui-kit";
 import {Preloader} from "./Preloader";
 // import * as Sentry from "@sentry/react";
 
@@ -18,11 +19,11 @@ async function start() {
         <React.StrictMode>
             <Provider store={store}>
                 <Router>
-                    <WithTranslate>
+                    <WithLanguage>
                         <WithTheme>
                             <Preloader/>
                         </WithTheme>
-                    </WithTranslate>
+                    </WithLanguage>
                 </Router>
             </Provider>
         </React.StrictMode>,

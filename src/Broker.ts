@@ -251,39 +251,44 @@ export class Broker {
 
     async manageLiability(liability: Liability): Promise<void> {
         const now = Date.now() / 1000;
-        if (liability.outstandingAmount.gte(0) && (now - liability.timestamp > this.settings.duePeriodSeconds)) {
+        if (liability.outstandingAmount.gt(0) && (now - liability.timestamp > this.settings.duePeriodSeconds)) {
             const assetName = liability.assetName;
             const amount: BigNumber = fromWei8(liability.outstandingAmount);
 
-            if ((await this.db.getPendingTransactions(assetName)).length) {
+            if ((await this.db.getPendingTransactions()).length) {
                 return;
             }
-            if ((await this.db.getWithdrawsToCheck(assetName)).length) {
+            if ((await this.db.getWithdrawsToCheck()).length) {
                 return;
             }
 
             log.log('Detected outstanding ' + amount.toString() + ' ' + assetName);
 
             const balance = await this.orionBlockchain.getWalletBalance();
-            const assetBalance = balance[assetName];
+            let assetBalance = balance[assetName];
             const ethBalance = balance['ETH'];
 
             if (!assetBalance || assetBalance.isNaN()) throw new Error('No balance for ' + assetName);
             if (!ethBalance || ethBalance.isNaN()) throw new Error('No balance for ETH');
 
-            const ethFeeAmount = new BigNumber(0.02); // todo: fee hardcode
+            const ethFeeAmount = new BigNumber(0.045); // todo: gas fee hardcode 300 gwei * 1e-9 * 150000 (DEPOSIT_ERC20_GAS_LIMIT)
             if (!ethBalance.gt(ethFeeAmount)) {
-                log.log('No ETH for gas on wallet');
+                log.log('No ' + ethFeeAmount.toString() + ' ETH for gas on wallet');
                 return;
             }
 
-            const fitBalance = assetName === 'ETH' ? assetBalance.gte(amount.plus(ethFeeAmount)) : assetBalance.gte(amount);
+            if (assetName === 'ETH') {
+                assetBalance = assetBalance.minus(ethFeeAmount);
+            }
+
+            const fitBalance = assetBalance.gte(amount);
 
             if (fitBalance) {
+                // todo: если тут слишком малая сумма, то выгоднее отправить сразу больше
                 await this.deposit(amount, assetName);
             } else {
                 const remaining = amount.minus(assetBalance);
-                let remainingWithFee = remaining.multipliedBy(1.05); // todo: fee hardcode
+                let remainingWithFee = remaining.multipliedBy(1.05); // todo: exchange withdraw fee hardcode
                 const minWithdraw = new BigNumber(minWithdrawFromExchanges[assetName]);
                 if (minWithdraw.isNaN()) throw new Error('No min withdraw for ' + assetName);
                 if (remainingWithFee.lt(minWithdraw)) {
@@ -291,9 +296,10 @@ export class Broker {
                 }
                 const exchange = this.getExchangeForWithdraw(remainingWithFee, assetName);
                 if (exchange) {
-                    await this.exchangeWithdraw(exchange, remaining, assetName);
+                    // NOTE: мы снимаем remainingWithFee так как большинство бирж вычитают свою комиссию из переданного амаунта
+                    await this.exchangeWithdraw(exchange, remainingWithFee, assetName);
                 } else {
-                    log.log(`Need to make ${amount.toString()} ${assetName} deposit but there is not enough amount on the wallet and exchanges`);
+                    log.log(`Need to make ${amount.toString()} ${assetName} deposit to orion contract but there is not enough amount on the wallet and exchanges`);
                 }
             }
         }
@@ -372,10 +378,14 @@ export class Broker {
 
     // DEPOSIT/WITHDRAW
 
+    /**
+     * @param amount     1.23
+     * @param assetName 'USDT'
+     */
     getExchangeForWithdraw(amount: BigNumber, assetName: string): string | undefined {
         for (const exchange in this.lastBalances) {
             if (this.lastBalances.hasOwnProperty(exchange)) {
-                if (this.lastBalances[exchange][assetName].gte(amount)) {
+                if (this.lastBalances[exchange][assetName].gte(amount) && this.connector.hasWithdraw(exchange)) {
                     return exchange;
                 }
             }
@@ -383,6 +393,11 @@ export class Broker {
         return undefined;
     }
 
+    /**
+     * @param exchange  'binance'
+     * @param amount     1.23
+     * @param assetName 'ETH'
+     */
     async exchangeWithdraw(exchange: string, amount: BigNumber, assetName: string): Promise<void> {
         if (!this.connector.hasWithdraw(exchange)) {
             log.log(exchange + ' does not support withdrawals');
@@ -403,12 +418,20 @@ export class Broker {
         }
     }
 
+    /**
+     * @param amount     1.23
+     * @param assetName 'USDT'
+     */
     async approve(amount: BigNumber, assetName: string): Promise<void> {
         log.log('Approving ' + amount.toString() + ' ' + assetName);
         const transaction: Transaction = await this.orionBlockchain.approveERC20(amount, assetName);
         await this.db.insetTransaction(transaction);
     }
 
+    /**
+     * @param amount     1.23
+     * @param assetName 'ETH'
+     */
     async deposit(amount: BigNumber, assetName: string): Promise<void> {
         log.log('Depositing ' + amount.toString() + ' ' + assetName);
         let transaction: Transaction;
@@ -427,12 +450,19 @@ export class Broker {
         }
     }
 
+    /**
+     * @param amount     1.23
+     * @param assetName 'ETH'
+     */
     async withdraw(amount: BigNumber, assetName: string): Promise<void> {
         log.log('Withdrawing ' + amount.toString() + ' ' + assetName);
         const transaction: Transaction = await this.orionBlockchain.withdraw(amount, assetName);
         await this.db.insetTransaction(transaction);
     }
 
+    /**
+     * @param amount     1.23
+     */
     async lockStake(amount: BigNumber): Promise<void> {
         log.log('Staking ' + amount.toString() + ' ORN');
         const transaction: Transaction = await this.orionBlockchain.lockStake(amount);

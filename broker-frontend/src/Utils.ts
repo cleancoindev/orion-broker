@@ -1,9 +1,47 @@
 import BigNumber from "bignumber.js";
-import {DEFAULT_NUMBER_FORMAT, Dictionary, NumberFormat, Pair} from "./Model";
+import {DEFAULT_NUMBER_FORMAT, Dictionary, NumberFormat, Pair, Transaction} from "./Model";
+import {STATUS_TYPE} from "@orionprotocol/orion-ui-kit";
 
 export const EXCHANGES = ['poloniex', 'bittrex', 'binance', 'bitmax', 'coinex', 'kucoin'];
 
-export const ROUND_DOWN = 1;
+export function getColorIcon(currency: string): string {
+    return 'icon-color-' + currency.toLowerCase();
+}
+
+export function getCurrencyFullName(currency: string): string {
+    switch (currency) {
+        case 'ETH':
+            return 'Ethereum';
+        case 'BTC':
+            return 'Bitcoin';
+        case 'XRP':
+            return 'Ripple';
+        case 'ORN':
+            return 'Orion';
+        case 'EGLD':
+            return 'Elrond';
+        case 'LINK':
+            return 'Chainlink';
+        default:
+            return currency;
+    }
+}
+
+export const CURRENCY_DEFAULT_COLOR: string = '#39ff00';
+
+export function getCurrencyColor(currency: string): string {
+    const COLORS: Dictionary<string> = {
+        'ETH': '#8800FF',
+        'BTC': '#F7931A',
+        'XRP': '#F54562',
+        'USDT': '#39ff00',
+        'ORN': '#00BBFF',
+        'LINK': '#ffe700',
+    }
+    return COLORS[currency] || CURRENCY_DEFAULT_COLOR;
+}
+
+export const ROUND_DOWN = BigNumber.ROUND_DOWN;
 
 export const DAY = 1000 * 60 * 60 * 24;
 
@@ -36,47 +74,43 @@ export function getDateTime(date: Date): number {
     return date.getTime();
 }
 
+export function wait(millis: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => resolve(), millis)
+    })
+}
+
 export function capitalize(s: string): string {
     return s.substr(0, 1).toUpperCase() + s.substr(1).toLowerCase();
 }
 
 export function statusToText(status: string): string {
+    if (!status) return 'New';
     switch (status.toUpperCase()) {
         case 'NEW':
             return "New";
+        case 'ACCEPTED':
+            return "Accepted";
+        case 'ROUTED':
+            return "Routed";
         case 'PARTIALLY_FILLED':
             return 'Partial';
         case 'FILLED':
             return 'Filled';
+        case 'CONFIRMED':
+            return 'Confirmed';
+        case 'TX_PENDING':
+            return 'Tx Pending';
         case 'PARTIALLY_CANCELLED':
+            return 'Part. Canceled';
         case 'CANCELED':
             return 'Canceled';
+        case 'PARTIALLY_REJECTED':
+            return 'Part. Rejected';
+        case 'REJECTED':
+            return 'Rejected';
         default:
             return status;
-    }
-}
-
-export function convertCurrency(name: string): string {
-    switch (name.toUpperCase()) {
-        case 'WBTC':
-            return 'BTC';
-        case 'WETH':
-            return 'ETH';
-        case 'WXRP':
-            return 'XRP';
-        default:
-            return name.toUpperCase();
-    }
-}
-
-export function convertCurrency2(name: string): string {
-    switch (name.toUpperCase()) {
-        case 'BTC':
-            return 'WBTC';
-        case 'XRP':
-            return 'WXRP';
-        default:
-            return name.toUpperCase();
     }
 }
 
@@ -84,7 +118,11 @@ export const stringToNum = (s: string, maxDecimals: number) => {
     const n = s.replace(/,/g, '.').replace(/[^0-9\.]/g, '');
     const arr = n.split('.');
     if (arr.length === 2) {
-        return arr[0] + '.' + arr[1].substring(0, maxDecimals);
+        if (maxDecimals === 0) {
+            return arr[0];
+        } else {
+            return arr[0] + '.' + arr[1].substring(0, maxDecimals);
+        }
     } else {
         return n;
     }
@@ -169,8 +207,7 @@ export function formatPercent(n: BigNumber): string {
     return n.toFixed(2);
 }
 
-export function formatNumber(n: BigNumber, toFixed = 4): string {
-    if (!n) return '0';
+export function formatNumber(n: BigNumber, toFixed = 8): string {
     if (n.eq(0)) return '0'
     if (n.gte(1000000000)) {
         return n.dividedBy(1000000000).toFixed(1) + 'B';
@@ -182,30 +219,22 @@ export function formatNumber(n: BigNumber, toFixed = 4): string {
     return n.toFixed(toFixed);
 }
 
-export function getFullName(currency: string): string {
-    switch (currency) {
-        case 'ETH':
-            return 'Ethereum';
-        case 'BTC':
-            return 'Bitcoin';
-        case 'XRP':
-            return 'Ripple';
-        case 'ORN':
-            return 'Orion';
-        case 'EGLD':
-            return 'Elrond';
+export const getStatusIconByString = (status: string | null) => {
+    switch (status?.toUpperCase()) {
+        case 'DONE':
+        case 'FILLED':
+            return STATUS_TYPE.FILLED;
+        case 'PARTIALLY_FILLED':
+            return STATUS_TYPE.PARTIAL;
+        case 'CANCELED':
+        case 'PARTIALLY_CANCELLED':
+        case 'REJECTED':
+        case 'PARTIALLY_REJECTED':
+            return STATUS_TYPE.CANCELLED;
         default:
-            return currency;
+            return STATUS_TYPE.NEW;
     }
-}
-
-export function getColorIcon(currency: string): string {
-    return 'icon-color-' + currency.toLowerCase();
-}
-
-export function getExchangeIcon(exchangeName: string): string {
-    return 'icon-' + exchangeName.toLowerCase();
-}
+};
 
 export function getUsdPrice(toCurrency: string, nameToPair: Dictionary<Pair>): BigNumber {
     if (toCurrency === 'USDT') return new BigNumber(1);
@@ -224,43 +253,35 @@ export function getBtcPrice(toCurrency: string, nameToPair: Dictionary<Pair>): B
     }
 }
 
-export function httpGet(url: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("GET", url, true);
-        xhr.onload = function (e) {
-            if (xhr.readyState === 4) {
-                if (xhr.status === 200) {
-                    resolve(xhr.responseText);
-                } else {
-                    reject(xhr.statusText);
-                }
-            }
-        }
-        xhr.onerror = function (e) {
-            reject(xhr.statusText);
-        };
-        xhr.send(null);
-    })
+export const getPendingTransactions = (): Transaction[] => {
+    const item = localStorage.getItem('pendingTransactions');
+    return item ? JSON.parse(item).map(stringToTransaction) : [];
 }
 
-export function httpPost(url: string, data: any): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", url, true);
-        xhr.setRequestHeader("Content-type", "application/json");
-        xhr.onload = function (e) {
-            if (xhr.readyState === 4) {
-                if (xhr.status === 200) {
-                    resolve(xhr.responseText);
-                } else {
-                    reject(xhr.statusText);
-                }
-            }
-        }
-        xhr.onerror = function (e) {
-            reject(xhr.statusText);
-        };
-        xhr.send(JSON.stringify(data));
-    })
+function transactionToString(tx: Transaction): any {
+    return {
+        type: tx.type,
+        date: tx.date,
+        token: tx.token,
+        amount: tx.amount.toString(),
+        status: tx.status,
+        transactionHash: tx.transactionHash,
+        user: tx.user.toLowerCase(),
+    }
+}
+
+function stringToTransaction(tx: any): Transaction {
+    return {
+        type: tx.type,
+        date: tx.date,
+        token: tx.token,
+        amount: new BigNumber(tx.amount),
+        status: tx.status,
+        transactionHash: tx.transactionHash,
+        user: tx.user
+    }
+}
+
+export const savePendingTransactions = (txs: Transaction[]) => {
+    localStorage.setItem('pendingTransactions', JSON.stringify(txs.map(transactionToString)));
 }

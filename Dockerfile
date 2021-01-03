@@ -4,11 +4,11 @@ WORKDIR /usr/src/app
 
 COPY . .
 
-WORKDIR broker-frontend
-
-RUN npm install
-
-RUN npm run build
+#WORKDIR broker-frontend
+#
+#RUN npm install
+#
+#RUN npm run build
 
 WORKDIR /usr/src/app
 

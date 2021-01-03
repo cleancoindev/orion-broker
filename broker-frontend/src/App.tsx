@@ -1,26 +1,33 @@
 import React, {FC, useContext, useEffect} from "react";
 
 import {Redirect, Route, Switch, useHistory, useLocation} from "react-router-dom";
-import {hideAllPopups, setPairs} from "./redux/actions";
-import Dashboard from "./components/Dashboard/Dashboard";
-import {LeftSidebar} from "./components/LeftSidebar/LeftSidebar";
-import Trade from "./components//Trade/Trade";
-import {Dictionary, Pair, parsePair} from "./Model";
-import BigNumber from "bignumber.js";
-import {PromptPopup} from "./components/PromptPopup/PromptPopup";
-import {Notify} from "./components/Notify/Notify";
-import {Theme, THEME} from "./components/Theme";
-import WebsocketHeartbeatJs from "./WebsocketHeartbeatJs";
-import {useDispatch, useSelector, useStore} from "react-redux";
 import {
-    getAddWalletVisible,
+    clearOrderbook,
+    disconnectWallets,
+    hidePairSelector,
+    removeSnackbar,
+    setAsksBids,
+    setCurrentPair,
+    setPairs,
+} from "./redux/actions";
+import Dashboard from "./components/Dashboard/Dashboard";
+import Trade from "./components/Trade/Trade";
+import {formatPairPrice} from "./Utils";
+import {Dictionary, Pair, parseOrderbookItem, parsePair} from "./Model";
+import {Snackbars, THEME, Theme} from "@orionprotocol/orion-ui-kit";
+import WebsocketHeartbeatJs from "./WebsocketHeartbeatJs";
+import {useDispatch, useSelector} from "react-redux";
+import {
     getCurrentPairName,
-    getCurrentTradeTab,
     getNumberFormat,
-    getPairSelectorVisible,
-    getPromptProps
+    getSnackbars,
 } from "./redux/selectors";
+import styles from "./App.module.css";
+import cn from "classnames";
+import {LeftSidebar} from "./components/LeftSidebar/LeftSidebar";
 
+let orderBookWebSocket: any = null;
+let priceWebSocket: any = null;
 let pairsWebSocket: any = null;
 let lastBalancesAddressSended: string = '';
 
@@ -30,30 +37,61 @@ export const App: FC = () => {
     const location = useLocation();
     const {theme} = useContext(Theme);
 
-    const store = useStore().getState();
-    const isPairSelectorVisible = useSelector(getPairSelectorVisible);
-    const isAddWalletVisible = useSelector(getAddWalletVisible);
-    const promptProps = useSelector(getPromptProps);
-    const currentTradeTab = useSelector(getCurrentTradeTab);
+    const snackbars = useSelector(getSnackbars);
+    const onCloseSnackbar = (id: string) => dispatch(removeSnackbar({id}));
+
     const numberFormat = useSelector(getNumberFormat);
     const currentPairName = useSelector(getCurrentPairName);
 
-    const onModalClick = (e?: React.MouseEvent) => {
-        if (e) {
-            let target: HTMLElement | null = e.target as HTMLElement;
-            while (target) {
-                if (target.classList.contains('tradePairSelector') || target.classList.contains('promptPopup')) {
-                    return;
-                }
-                target = target.parentElement;
-            }
+    /**
+     * @param symbol    "ETH-BTC"
+     */
+    const loadOrderbook = (symbol: string) => {
+        if (priceWebSocket !== null) {
+            priceWebSocket.onmessage = null;
+            priceWebSocket.close();
+            priceWebSocket = null;
         }
-        dispatch(hideAllPopups());
-    }
+
+        priceWebSocket = new WebsocketHeartbeatJs({
+            url: process.env.REACT_APP_PRICE_FEED_WS + '/ticker/' + symbol
+        });
+
+        priceWebSocket.onmessage = (data: any) => {
+            if (data.data === 'pong') return;
+            const ticketsData: any[] = JSON.parse(data.data);
+            const pair = parsePair(ticketsData[1]);
+            dispatch(setPairs({
+                [pair.name]: pair
+            }));
+            document.title = formatPairPrice(pair.lastPrice, pair.name, numberFormat) + ' | ' + pair.name + ' | Orion Protocol';
+        }
+
+        if (orderBookWebSocket !== null) {
+            orderBookWebSocket.onmessage = null;
+            orderBookWebSocket.close();
+            orderBookWebSocket = null;
+        }
+
+        orderBookWebSocket = new WebsocketHeartbeatJs({
+            url: process.env.REACT_APP_AGGREGATOR_WS! + '/' + symbol
+        });
+
+        orderBookWebSocket.onmessage = (data: any) => {
+            if (data.data === 'pong') return;
+            const orderbookData: any = JSON.parse(data.data);
+            // console.log('WS ORDERBOOK', orderbookData);
+
+            dispatch(setAsksBids(
+                orderbookData.asks.map(parseOrderbookItem),
+                orderbookData.bids.map(parseOrderbookItem)
+            ));
+        }
+    };
 
     const setPairsWebsocket = () => {
         pairsWebSocket = new WebsocketHeartbeatJs({
-            url: process.env.REACT_APP_URL_WS2! + '/allTickers'
+            url: process.env.REACT_APP_PRICE_FEED_WS! + '/allTickers'
         });
         pairsWebSocket.onmessage = (data: any) => {
             if (data.data === 'pong') return;
@@ -70,40 +108,48 @@ export const App: FC = () => {
     }
 
     const onDisconnectWallet = () => {
+        lastBalancesAddressSended = '';
+        dispatch(disconnectWallets());
+        if (location.pathname !== '/widget') {
+            history.push('/trade/' + currentPairName);
+        }
     }
 
     useEffect(() => {
+        loadOrderbook(currentPairName);
         setPairsWebsocket();
     }, []);
 
+    const changeCurrentPair = (pairName: string) => {
+        console.log('changeCurrentPair', pairName)
+        dispatch(hidePairSelector());
+
+        if (currentPairName !== pairName) {
+            dispatch(setCurrentPair(pairName));
+            dispatch(clearOrderbook());
+            loadOrderbook(pairName);
+        }
+        history.push('/trade/' + pairName);
+    }
 
     return (
-        <div id="mainContainer"
-             className={`${theme === THEME.DARK ? 'dark' : ''}  ${'tradeTab_' + currentTradeTab}`}>
-
+        <div className={cn(styles.mainContainer, {"dark": theme === THEME.DARK})}>
             <LeftSidebar onDisconnectWallet={onDisconnectWallet}/>
-            <div id="main">
+            <div className={styles.main}>
                 <Switch>
                     <Route path="/dashboard">
                         <Dashboard
-                            />
+                            onSetCurrentPair={changeCurrentPair}
+                            onDisconnectClick={onDisconnectWallet}/>
                     </Route>
                     <Route path="/stats">
-                        <Trade />
+                        <Trade/>
                     </Route>
                     <Redirect from="/" to={`/stats`}/>
                 </Switch>
             </div>
 
-            <div id="modalContainer"
-                 className={`${isPairSelectorVisible ? 'visible-no-anim' : ''} ${isAddWalletVisible || promptProps ? 'visible' : ''}`}
-                 onClick={onModalClick}>
-                {
-                    promptProps &&
-                    <PromptPopup props={promptProps} onClose={() => onModalClick(undefined)}/>
-                }
-            </div>
-            <Notify/>
+            <Snackbars snackbars={snackbars} onClose={onCloseSnackbar}/>
         </div>
     );
 }

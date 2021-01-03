@@ -11,13 +11,14 @@
 
     <meta name="theme-color" content="#191929"/>
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png"/>
+    <link rel="prefetch" href="%PUBLIC_URL%/img/icons/ui/logo/dark.svg" as="image" type="image/svg+xml">
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json"/>
     <meta name="description" content="Orion"/>
     <title>Orion Broker</title>
-    <script type="text/javascript" src="%PUBLIC_URL%/host.js"></script>
 </head>
 <body>
 <noscript>You need to enable JavaScript to run this app.</noscript>
+<script type="text/javascript" src="%PUBLIC_URL%/host.js"></script>
 <script>
     if ((localStorage.getItem('theme') !== 'WHITE' && window.location.href.toLowerCase().indexOf('theme=light') === -1) || window.location.href.toLowerCase().indexOf('theme=dark') > -1) {
         document.body.style.backgroundColor = '#191929'
@@ -25,6 +26,8 @@
         document.body.style.backgroundColor = '#fff'
     }
 </script>
+<script type="text/javascript" src="/datafeeds/udf/dist/polyfills.js"></script>
+<script type="text/javascript" src="/datafeeds/udf/dist/bundle.js"></script>
 <div id="root">
     <div class="lds-roller">
         <div></div>

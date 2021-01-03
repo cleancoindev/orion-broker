@@ -3,7 +3,7 @@ dist/
 build/
 node_modules/
 broker.db
-config.json
+data/config.json
 broker.log
 coverage/
 data/

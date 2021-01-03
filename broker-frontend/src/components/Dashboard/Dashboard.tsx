@@ -1,44 +1,30 @@
-import React, {useEffect, useState} from "react";
-import "./Dashboard.css";
-import "./DashboardTotalBalance.css";
-import "./DashboardWallets.css";
-import "./DashboardWalletItem.css";
-import "./DashboardTable.css";
-import {DashboardTotalBalance} from "./DashboardTotalBalance";
-import {DashboardWallets} from "./DashboardWallets";
-import {DashboardTable} from "./DashboardTable";
+import React, {useState, useEffect} from 'react';
+import styles from "./Dashboard.module.css";
+import {DashboardTotalBalance} from "./DashboardTotalBalance/DashboardTotalBalance";
+import {DashboardTable} from "./DashboardTable/DashboardTable";
+import {LoadingIcon} from "@orionprotocol/orion-ui-kit";
 import BigNumber from "bignumber.js";
-import {LoadingIcon} from "../Table/Loading";
-import {useSelector} from "react-redux";
-import {getBalancesLoaded, getPairsLoaded} from "../../redux/selectors";
-import {Dictionary, parseTradeOrder, TradeOrder} from "../../Model";
-import {EXCHANGES, httpGet} from "../../Utils";
+import {Dictionary} from '../../Model';
+import {BrokerApi} from '../../BrokerApi';
 
 interface DashboardProps {
-
+    onSetCurrentPair: (pairName: string) => void;
+    onDisconnectClick: () => void;
 }
 
 export default function Dashboard(props: DashboardProps) {
-    const pairsLoaded = useSelector(getPairsLoaded);
-
     const [balances, setBalances] = useState({} as Dictionary<Dictionary<BigNumber>>);
     const [isLoading, setIsLoading] = useState(true);
 
     const getData = () => {
-        httpGet((window as any).BROKER_URL + '/api/balance')
-            .then((dataText: string) => {
-                const data = JSON.parse(dataText);
-                console.log('Balances Json', data)
-
+        BrokerApi.getBalances()
+            .then((data) => {
                 const newBalances: Dictionary<Dictionary<BigNumber>> = {};
 
                 for (let exchange in data) {
                     for (let currency in data[exchange]) {
                         if (!newBalances[currency]) {
                             newBalances[currency] = {};
-                            for (let e of EXCHANGES) {
-                                newBalances[currency][e] = new BigNumber(0);
-                            }
                         }
                         newBalances[currency][exchange] = new BigNumber(data[exchange][currency]);
                     }
@@ -63,16 +49,12 @@ export default function Dashboard(props: DashboardProps) {
     return (
         isLoading ?
             <LoadingIcon/> :
-            <div className="dashboard">
-                <div className="col-dashboard-left">
-                    <div className="row-100">
-                        <DashboardTotalBalance balances={balances} />
-                    </div>
+            <div className={styles.root}>
+                <div className={styles.left}>
+                    <DashboardTotalBalance balances={balances}/>
                 </div>
-                <div className="col-dashboard-right">
-                    <div className="row-grow dashboard_row-grow">
-                        <DashboardTable balances={balances} />
-                    </div>
+                <div className={styles.right}>
+                    <DashboardTable balances={balances} onSetCurrentPair={props.onSetCurrentPair}/>
                 </div>
             </div>
     );

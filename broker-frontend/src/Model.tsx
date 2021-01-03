@@ -1,8 +1,17 @@
 import BigNumber from "bignumber.js";
-import {convertCurrency} from "./Utils";
 
 export interface Dictionary<T> {
     [key: string]: T;
+}
+
+export interface BlockchainInfo {
+    chainId: number;
+    chainName: string;
+    exchangeContractAddress: string;
+    matcherAddress: string;
+    minOrnFee: BigNumber;
+    assetToAddress: Dictionary<string>;
+    assetToDecimals: Dictionary<number>;
 }
 
 export interface NumberFormat {
@@ -153,19 +162,25 @@ export const getDefaultPair = (name: string): Pair => {
 }
 
 export interface Transaction {
+    type: string;
     date: number;
     token: string;
     amount: BigNumber;
     status: string;
+    transactionHash: string;
+    user: string;
 }
 
 export function parseTransaction(item: any): Transaction {
-    const createdAt: string = item.created_at; // "2020-04-08T12:34:39.940Z"
+    const createdAt: number = item.createdAt;
     return {
-        date: new Date(createdAt).getTime(),
-        token: convertCurrency(item.asset),
-        amount: new BigNumber(item.amount),
-        status: 'Filled'
+        type: item.type,
+        date: createdAt * 1000,
+        token: item.asset,
+        amount: new BigNumber(item.amountNumber),
+        status: 'Done',
+        transactionHash: item.transactionHash,
+        user: item.user,
     }
 }
 
@@ -178,11 +193,6 @@ export interface TradeSubOrder {
     status: string;
 }
 
-function parseOrderStatus(status: string): string {
-    if (status === 'FILLED_AND_SENT_TO_ORION') return 'FILLED';
-    return status;
-}
-
 export function parseTradeSubOrder(item: any, pair: string): TradeSubOrder {
     return {
         pair: pair,
@@ -190,13 +200,14 @@ export function parseTradeSubOrder(item: any, pair: string): TradeSubOrder {
         id: Number(item.id),
         amount: new BigNumber(item.subOrdQty),
         price: new BigNumber(item.price),
-        status: parseOrderStatus(item.status)
+        status: item.status || 'NEW', // todo: backend
     }
 }
 
 export interface TradeOrder {
     status: string;
     date: number;
+    clientOrdId: string;
     id: number;
     type: string,
     pair: string;
@@ -206,16 +217,19 @@ export interface TradeOrder {
     price: BigNumber;
     total: BigNumber;
     subOrders: TradeSubOrder[];
+    exchange: string;
 }
 
 export function parseTradeOrder(item: any): TradeOrder {
-    const amount = new BigNumber(item.qty);
+    const amount = new BigNumber(item.amount);
     const price = new BigNumber(item.price);
     const [fromCurrency, toCurrency] = item.symbol.split('-');
+    const subOrders = item.subOrders ? item.subOrders.map((sub: any) => parseTradeSubOrder(sub, item.symbol)) : [];
     return {
-        status: parseOrderStatus(item.status),  // 'NEW' || 'PARTIALLY_FILLED' || 'PARTIALLY_CANCELLED' || 'FILLED' || 'CANCELED'
+        status: item.status,  // 'NEW' || 'PARTIALLY_FILLED' || 'PARTIALLY_CANCELLED' || 'FILLED' || 'CANCELED'
         date: Number(item.timestamp),
-        id: Number(item.ordId),
+        clientOrdId: item.clientOrdId,
+        id: Number(item.id),
         type: item.side, // 'buy' / 'sell'
         pair: item.symbol, // 'ETH-BTC'
         fromCurrency,
@@ -223,7 +237,86 @@ export function parseTradeOrder(item: any): TradeOrder {
         amount,
         price,
         total: amount.multipliedBy(price),
-        subOrders: []
+        subOrders,
+        exchange: getExchangeBySubOrders(subOrders)
     };
 }
 
+function getExchangeBySubOrders(subOrders: TradeSubOrder[]): string {
+    if (!subOrders.length) return '-';
+
+    const arr = [];
+    for (let subOrder of subOrders) {
+        if (arr.indexOf(subOrder.exchange) === -1) {
+            arr.push(subOrder.exchange);
+        }
+    }
+    return arr.length === 1 ? arr[0] : 'Multi';
+}
+
+export function isOrderOpen(order: TradeOrder): boolean {
+    return order.status === 'NEW' || order.status === 'ACCEPTED';
+}
+
+function getSwapStatusByOrders(orders: TradeOrder[]): string {
+    if (!orders.length) return 'NEW';
+
+    let allFilled = true;
+    let hasFilled = false;
+    let allCanceled = true;
+    let hasCanceled = false;
+    let allRejected = true;
+    let hasRejected = false;
+    for (let order of orders) {
+        if (order.status !== 'SETTLED') allFilled = false;
+        if (order.status === 'SETTLED') hasFilled = true;
+
+        if (order.status !== 'CANCELED') allCanceled = false;
+        if (order.status === 'CANCELED') hasCanceled = true;
+
+        if (order.status !== 'REJECTED') allRejected = false;
+        if (order.status === 'REJECTED') hasRejected = true;
+    }
+    if (allFilled) return 'FILLED';
+    if (allCanceled) return 'CANCELED';
+    if (allRejected) return 'REJECTED';
+    if (hasCanceled) return 'PARTIALLY_CANCELED';
+    if (hasRejected) return 'PARTIALLY_REJECTED';
+    if (hasFilled) return 'PARTIALLY_FILLED';
+    return 'NEW';
+}
+
+export interface SwapOrder {
+    status: string;
+    date: number;
+    id: string;
+    pair: string;
+    fromCurrency: string;
+    toCurrency: string;
+    price: BigNumber;
+    amount: BigNumber;
+    orders: TradeOrder[];
+}
+
+export function parseSwapOrder(item: any): SwapOrder {
+    const orders = item.orders ? item.orders.map(parseTradeOrder) : [];
+    const status = getSwapStatusByOrders(orders);
+
+    const price0 = orders.length > 0 ? orders[0].price : new BigNumber(0);
+    const price1 = orders.length > 1 ? orders[1].price : new BigNumber(1);
+    const price = price0.dividedBy(price1);
+    const amount = new BigNumber(item.srcAmount);
+
+    const [fromCurrency, toCurrency] = item.symbol.split('-');
+    return {
+        status: status,
+        date: Number(item.time),
+        id: item.id,
+        pair: item.symbol, // 'ETH-BTC'
+        fromCurrency,
+        toCurrency,
+        price,
+        amount,
+        orders
+    };
+}

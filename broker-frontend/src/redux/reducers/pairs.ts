@@ -1,41 +1,69 @@
 import {Dictionary, Pair} from "../../Model";
-import {SET_ASSETS, SET_PAIRS} from "../actions";
+import {SET_CURRENT_PAIR, SET_PAIRS, SET_PAIRS_LIST} from "../actions";
 
 export const DEFAULT_PAIR = 'ORN-USDT';
-export const DEFAULT_PAIRS_LIST = ['XRP-BTC', 'ORN-USDT', 'BTC-USDT', 'ETH-USDT', 'XRP-USDT', 'ETH-BTC', 'EGLD-USDT'];
 
-const initialState = {
-    nameToPair: {} as Dictionary<Pair>,
+interface PairsState {
+    nameToPair: Dictionary<Pair>;
+    currentPairName: string;
+    currencies: string[];
+    fromCurrencies: string[];
+    toCurrencies: string[];
+    pairs: string[];
+    initialized: boolean;
+    loaded: boolean;
+}
+
+const initialState: PairsState = {
+    nameToPair: {},
     currentPairName: DEFAULT_PAIR,
-    currencies: ['ETH', 'BTC', 'XRP', 'USDT', 'EGLD', 'ORN'],
-    assets: DEFAULT_PAIRS_LIST,
+    currencies: [], // 'ETH', 'USDT', 'ORN'
+    fromCurrencies: [], // 'ETH', 'ORN'
+    toCurrencies: [], // 'USDT'
+    pairs: [], // 'ORN-USDT', 'ETH-USDT'
     initialized: false,
     loaded: false
 }
 
 export const pairsReducer = (state = initialState, action: any) => {
     switch (action.type) {
-        case SET_ASSETS:
-            const assets: string[] = action.payload;
-            const currencies: string[] = [];
-            assets.forEach(asset => {
-                const [a, b] = asset.split('-');
-                if (currencies.indexOf(a) === -1) currencies.push(a);
-                if (currencies.indexOf(b) === -1) currencies.push(b);
-            });
+        case SET_CURRENT_PAIR:
             return {
                 ...state,
-                assets: assets,
-                currencies: currencies,
+                currentPairName: action.payload,
                 initialized: true
             };
 
+        case SET_PAIRS_LIST:
+            const pairs: string[] = action.payload;
+            const currencies: string[] = [];
+            const fromCurrencies: string[] = [];
+            const toCurrencies: string[] = [];
+            pairs.forEach(pair => {
+                const [a, b] = pair.split('-');
+                if (currencies.indexOf(a) === -1) currencies.push(a);
+                if (currencies.indexOf(b) === -1) currencies.push(b);
+
+                if (fromCurrencies.indexOf(a) === -1) fromCurrencies.push(a);
+                if (toCurrencies.indexOf(b) === -1) toCurrencies.push(b);
+            });
+            return {
+                ...state,
+                pairs: pairs,
+                currencies,
+                fromCurrencies,
+                toCurrencies
+            };
+
         case SET_PAIRS:
-            for (let key in action.payload) {
-                state.nameToPair[key] = action.payload[key];
-            }
             state.loaded = true;
-            return state;
+            return {
+                ...state,
+                nameToPair: {
+                    ...state.nameToPair,
+                    ...action.payload,
+                }
+            };
 
         default: {
             return state;
