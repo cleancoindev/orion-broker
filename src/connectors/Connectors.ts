@@ -9,6 +9,7 @@ export interface ExchangeConfig {
     secret: string;
     key: string;
     password: string;
+    aliases?: Dictionary<string> 
 }
 
 export interface ExchangeResolve<T> {

@@ -38,6 +38,7 @@ function parseSubOrder(row: any): DbSubOrder {
     return {
         id: row.id,
         symbol: row.symbol,
+        symbolAlias: row.symbolAlias,
         side: row.side,
         price: new BigNumber(row.price),
         amount: new BigNumber(row.amount),
@@ -186,6 +187,7 @@ export class Db {
                      (
                          "id"               LONG PRIMARY KEY,
                          "symbol"           VARCHAR(255)   NOT NULL,
+                         "symbolAlias"      VARCHAR(255)   NOT NULL,
                          "side"             VARCHAR(255)   NOT NULL,
                          "price"            DECIMAL(18, 8) NOT NULL,
                          "amount"           DECIMAL(18, 8) NOT NULL,

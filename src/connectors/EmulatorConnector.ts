@@ -22,6 +22,7 @@ export class EmulatorConnector implements Connector {
             exchange: this.exchange.id,
             exchangeOrderId: uuid().toString(),
             symbol: symbol,
+            symbolAlias: symbol,
             side: side,
             price: price,
             amount: amount,

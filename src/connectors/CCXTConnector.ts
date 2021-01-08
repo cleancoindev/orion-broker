@@ -80,6 +80,7 @@ export class CCXTConnector implements Connector {
         return {
             id: subOrderId,
             symbol: symbol,
+            symbolAlias: symbol,
             side: side,
             price: price,
             amount: amount,

@@ -97,9 +97,16 @@ export class Broker {
             return this.onCheckSubOrder(request.id);
         }
 
+        const
+            exchange = this.settings.exchanges[request.exchange],
+            symbolAliases = exchange && exchange['aliases'] ? exchange['aliases'] : {},
+            symbolAlias = symbolAliases[request.symbol] ? symbolAliases[request.symbol] : request.symbol
+        ;
+
         const dbSubOrder: DbSubOrder = {
             id: request.id,
             symbol: request.symbol,
+            symbolAlias,
             side: request.side,
             price: request.price,
             amount: request.amount,
@@ -115,7 +122,7 @@ export class Broker {
         let subOrder: SubOrder = null;
 
         try {
-            subOrder = await this.connector.submitSubOrder(request.exchange, dbSubOrder.id, dbSubOrder.symbol, dbSubOrder.side, dbSubOrder.amount, dbSubOrder.price);
+            subOrder = await this.connector.submitSubOrder(request.exchange, dbSubOrder.id, symbolAlias, dbSubOrder.side, dbSubOrder.amount, dbSubOrder.price);
         } catch (e) {
             log.error('Submit order error:', e);
         }
