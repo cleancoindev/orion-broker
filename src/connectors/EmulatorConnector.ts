@@ -1,4 +1,4 @@
-import {Connector, ExchangeWithdrawStatus} from './Connector';
+import {Connector, ExchangeCancelOrderResponse, ExchangeWithdrawLimit, ExchangeWithdrawStatus} from './Connector';
 import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from '../Model';
 import {v1 as uuid} from 'uuid';
 import BigNumber from 'bignumber.js';
@@ -31,8 +31,11 @@ export class EmulatorConnector implements Connector {
         };
     }
 
-    async cancelSubOrder(subOrder: SubOrder): Promise<boolean> {
-        return true;
+    async cancelSubOrder(subOrder: SubOrder): Promise<ExchangeCancelOrderResponse> {
+        return {
+            success: true,
+            filledAmount: new BigNumber(0)
+        };
     }
 
     async getBalances(): Promise<Balances> {
@@ -67,6 +70,13 @@ export class EmulatorConnector implements Connector {
 
     hasWithdraw(): boolean {
         return this.exchange.id !== 'bitmax';
+    }
+
+    async getWithdrawLimit(currency: string): Promise<ExchangeWithdrawLimit> {
+        throw {
+            fee: new BigNumber(0.05),
+            min: new BigNumber(0.1),
+        };
     }
 
     async withdraw(currency: string, amount: BigNumber, address: string): Promise<string | undefined> {

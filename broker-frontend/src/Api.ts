@@ -6,6 +6,7 @@ import {
     TradeOrder,
 } from "./Model";
 import BigNumber from "bignumber.js";
+import {Tokens} from './Tokens';
 
 export interface SwapRequest {
     srcAsset: string;
@@ -58,6 +59,8 @@ export interface SwapComplexMarketPrice extends SwapMarketPrice {
 export class Api {
 
     public static blockchainInfo: BlockchainInfo;
+    public static tokens: Tokens;
+    public static prices: Dictionary<BigNumber>;
     public static orionBlockchain: OrionBlockchain;
     public static onWalletBalanceChange: (newBalances: Dictionary<BigNumber>) => void;
 
@@ -133,6 +136,21 @@ export class Api {
         const data: any = await Api.blockchainApi('/info');
         data.minOrnFee = new BigNumber(data.minOrnFee);
         return data;
+    }
+
+    /**
+     * @return {'ETH' -> 1.23}
+     */
+    static async getPricesFromBlockchain(): Promise<Dictionary<BigNumber>> {
+        const data: Dictionary<string> = await Api.blockchainApi('/prices');
+        const result: Dictionary<BigNumber> = {};
+        for (let key in data) {
+            const assetName = this.tokens.addressToName(key);
+            if (assetName) {
+                result[assetName] = new BigNumber(data[key]);
+            }
+        }
+        return result;
     }
 }
 

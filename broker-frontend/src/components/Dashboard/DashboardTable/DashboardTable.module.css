@@ -218,7 +218,6 @@
 .tableControls {
     display: flex;
     padding-top: 16px;
-    width: 340px;
     padding-left: 33px;
     padding-right: 32px;
 }

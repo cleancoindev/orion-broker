@@ -126,6 +126,7 @@
 
 .tableCol {
     width: 14%;
+    text-transform: capitalize;
 }
 
 .tableClose {
@@ -261,6 +262,10 @@
     margin-right: 23px;
 }
 
+.colHeaderText {
+    display: none
+}
+
 @media (max-width: 1200px) {
     .toolbarMobileRow {
         width: 100%;
@@ -367,36 +372,11 @@
         margin-bottom: 8px;
     }
 
-    .colAmount:before {
-        content: 'Amount';
-        color: var(--color-text);
-        width: 33%;
-        display: inline-block;
-    }
-
     .colPrice {
         margin-bottom: 8px;
     }
 
-    .colPrice:before {
-        content: 'Price';
-        color: var(--color-text);
-        width: 33%;
-        display: inline-block;
-    }
-
-    .colTotal {
-    }
-
-    .colTotal:before {
-        content: 'Total';
-        color: var(--color-text);
-        width: 33%;
-        display: inline-block;
-    }
-
-    .colExchange:before {
-        content: 'Exchange';
+    .colHeaderText {
         color: var(--color-text);
         width: 33%;
         display: inline-block;

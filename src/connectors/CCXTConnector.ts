@@ -1,4 +1,4 @@
-import {Connector, ExchangeWithdrawStatus} from './Connector';
+import {Connector, ExchangeCancelOrderResponse, ExchangeWithdrawLimit, ExchangeWithdrawStatus} from './Connector';
 import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from '../Model';
 import BigNumber from 'bignumber.js';
 import ccxt from 'ccxt';
@@ -94,17 +94,20 @@ export class CCXTConnector implements Connector {
     /**
      * https://github.com/ccxt/ccxt/wiki/Manual#canceling-orders
      */
-    async cancelSubOrder(subOrder: SubOrder): Promise<boolean> {
+    async cancelSubOrder(subOrder: SubOrder): Promise<ExchangeCancelOrderResponse> {
         try {
             const ccxtOrder: ccxt.Order = await this.ccxtExchange.cancelOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
             log.debug(this.exchange.id + ' cancel order response: ', ccxtOrder);
             // todo: KUCOIN return success result for cancel closed (filled) order
-            // todo: manage partially canceled order
-            return true;
+            const filledAmount: BigNumber = fromNumber(ccxtOrder.filled);
+            return {
+                success: true,
+                filledAmount: filledAmount,
+            };
         } catch (e) {
-            // todo: retry if error no final
+            // todo: retry if error not final
             log.error(this.exchange.id + ' cancel order error:', e);
-            return false;
+            return {success: false, filledAmount: new BigNumber(0)};
         }
     }
 
@@ -151,6 +154,41 @@ export class CCXTConnector implements Connector {
     hasWithdraw(): boolean {
         return this.ccxtExchange.hasWithdraw;
     }
+
+    getWithdrawLimit(currency: string): Promise<ExchangeWithdrawLimit> {
+        switch (this.exchange.id) {
+            case 'kucoin':
+                return this.getKucoinWithdrawLimit(currency);
+            case 'binance':
+                return this.getBinanceWithdrawLimit(currency);
+            default:
+                throw new Error('Unsupported withdraw limit for ' + this.exchange.id);
+        }
+    }
+
+    private getKucoinWithdrawLimit = async (currency: string): Promise<ExchangeWithdrawLimit> => {
+        await this.ccxtExchange.loadMarkets();
+        const cur: any = this.ccxtExchange.currencies[currency];
+        const info: any = cur.info;
+        return {
+            min: new BigNumber(info.withdrawalMinSize),
+            fee: new BigNumber(info.withdrawalMinFee)
+        };
+    };
+
+    private getBinanceWithdrawLimit = async (currency: string): Promise<ExchangeWithdrawLimit> => {
+        // https://binance-docs.github.io/apidocs/spot/en/#all-coins-39-information-user_data
+        const arr: any[] = await this.ccxtExchange.sapiGetCapitalConfigGetall();
+        log.debug('binance sapiGetCapitalConfigGetall', arr);
+        const coinInfo: any = arr.find(info => info.coin === currency);
+        if (!coinInfo) throw new Error('no binance coinInfo for ' + currency);
+        const network: any = coinInfo.networkList.find(n => n.network === 'ETH');
+        if (!network) throw new Error('no binance ETH network for coinInfo for ' + currency);
+        return {
+            min: new BigNumber(network.withdrawFee),
+            fee: new BigNumber(network.withdrawMin)
+        };
+    };
 
     /**
      * https://github.com/ccxt/ccxt/wiki/Manual#withdraw

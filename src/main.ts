@@ -17,7 +17,6 @@ import {Tokens} from './Tokens';
 import fetch from 'node-fetch';
 
 export let tokensDecimals: Dictionary<number>;
-export let minWithdrawFromExchanges: Dictionary<number>;
 export let tokens: Tokens;
 export let exchangeContractAddress: string;
 
@@ -29,7 +28,6 @@ const init = async (): Promise<void> => {
     const blockchainInfo = await blockchainInfoRaw.json();
     exchangeContractAddress = blockchainInfo.exchangeContractAddress;
     tokensDecimals = blockchainInfo.assetToDecimals;
-    minWithdrawFromExchanges = blockchainInfo.minWithdrawFromExchanges;
     const tokensDict: Dictionary<string> = blockchainInfo.assetToAddress;
     tokens = new Tokens(tokensDict);
 

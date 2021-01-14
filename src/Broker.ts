@@ -7,8 +7,7 @@ import {WebUI} from './ui/WebUI';
 import {Connectors, ExchangeResolve} from './connectors/Connectors';
 import {fromWei8, OrionBlockchain} from './OrionBlockchain';
 import {Settings} from './Settings';
-import {ExchangeWithdrawStatus} from './connectors/Connector';
-import {minWithdrawFromExchanges} from './main';
+import {Connector, ExchangeWithdrawLimit, ExchangeWithdrawStatus} from './connectors/Connector';
 
 export class Broker {
     settings: Settings;
@@ -144,9 +143,13 @@ export class Broker {
         } else if (dbSubOrder.status === Status.ACCEPTED) {
             const cancelResult = await this.connector.cancelSubOrder(dbSubOrder);
 
-            if (!cancelResult) throw new Error('Cant cancel suborder ' + dbSubOrder.id);
+            if (!cancelResult.success) throw new Error('Cant cancel suborder ' + dbSubOrder.id);
 
             dbSubOrder.status = Status.CANCELED;
+
+            if (cancelResult.filledAmount) {
+                dbSubOrder.filledAmount = cancelResult.filledAmount;
+            }
 
             await this.db.updateSubOrder(dbSubOrder);
             this.webUI.sendToFrontend(dbSubOrder);
@@ -288,16 +291,10 @@ export class Broker {
                 await this.deposit(amount, assetName);
             } else {
                 const remaining = amount.minus(assetBalance);
-                let remainingWithFee = remaining.multipliedBy(1.05); // todo: exchange withdraw fee hardcode
-                const minWithdraw = new BigNumber(minWithdrawFromExchanges[assetName]);
-                if (minWithdraw.isNaN()) throw new Error('No min withdraw for ' + assetName);
-                if (remainingWithFee.lt(minWithdraw)) {
-                    remainingWithFee = minWithdraw;
-                }
-                const exchange = this.getExchangeForWithdraw(remainingWithFee, assetName);
+                const {exchange, amountWithFee} = await this.getExchangeForWithdraw(remaining, assetName);
                 if (exchange) {
                     // NOTE: мы снимаем remainingWithFee так как большинство бирж вычитают свою комиссию из переданного амаунта
-                    await this.exchangeWithdraw(exchange, remainingWithFee, assetName);
+                    await this.exchangeWithdraw(exchange, amountWithFee, assetName);
                 } else {
                     log.log(`Need to make ${amount.toString()} ${assetName} deposit to orion contract but there is not enough amount on the wallet and exchanges`);
                 }
@@ -382,11 +379,25 @@ export class Broker {
      * @param amount     1.23
      * @param assetName 'USDT'
      */
-    getExchangeForWithdraw(amount: BigNumber, assetName: string): string | undefined {
+    async getExchangeForWithdraw(amount: BigNumber, assetName: string): Promise<{exchange: string, amountWithFee: BigNumber} | undefined> {
         for (const exchange in this.lastBalances) {
             if (this.lastBalances.hasOwnProperty(exchange)) {
-                if (this.lastBalances[exchange][assetName].gte(amount) && this.connector.hasWithdraw(exchange)) {
-                    return exchange;
+                try {
+                    const connector: Connector = this.connector.getConnector(exchange);
+                    if (!connector.hasWithdraw()) continue;
+                    const withdrawLimit: ExchangeWithdrawLimit = await connector.getWithdrawLimit(assetName);
+                    if (!withdrawLimit || withdrawLimit.fee.isNaN() || withdrawLimit.min.isNaN()) continue;
+
+                    let amountWithFee = amount.plus(withdrawLimit.fee);
+                    if (amountWithFee.lt(withdrawLimit.min)) {
+                        amountWithFee = withdrawLimit.min;
+                    }
+
+                    if (this.lastBalances[exchange][assetName].gt(amountWithFee)) {
+                        return {exchange, amountWithFee};
+                    }
+                } catch (e) {
+                    log.debug('Failed to get withdraw limit for ' + exchange, e);
                 }
             }
         }
@@ -434,6 +445,13 @@ export class Broker {
      */
     async deposit(amount: BigNumber, assetName: string): Promise<void> {
         log.log('Depositing ' + amount.toString() + ' ' + assetName);
+
+        const balance = await this.orionBlockchain.getWalletBalance();
+        if (balance[assetName].lt(amount)) {
+            log.log(`Only ${balance[assetName].toString()} ${assetName} on your wallet, not enough for a deposit`);
+            return;
+        }
+
         let transaction: Transaction;
         if (assetName === 'ETH') {
             transaction = await this.orionBlockchain.depositETH(amount);
@@ -443,6 +461,7 @@ export class Broker {
                 transaction = await this.orionBlockchain.depositERC20(amount, assetName);
             } else {
                 log.log(`Only ${allowance.toString()} ${assetName} approved, not enough for a deposit`);
+                log.log(`Please use 'approve' command`);
             }
         }
         if (transaction) {
@@ -456,6 +475,13 @@ export class Broker {
      */
     async withdraw(amount: BigNumber, assetName: string): Promise<void> {
         log.log('Withdrawing ' + amount.toString() + ' ' + assetName);
+
+        const balance = await this.orionBlockchain.getContractBalance();
+        if (balance[assetName].lt(amount)) {
+            log.log(`Only ${balance[assetName].toString()} ${assetName} on contract, not enough for a withdraw`);
+            return;
+        }
+
         const transaction: Transaction = await this.orionBlockchain.withdraw(amount, assetName);
         await this.db.insetTransaction(transaction);
     }
@@ -465,6 +491,14 @@ export class Broker {
      */
     async lockStake(amount: BigNumber): Promise<void> {
         log.log('Staking ' + amount.toString() + ' ORN');
+
+        const balance = await this.orionBlockchain.getContractBalance();
+        if (balance['ORN'].lt(amount)) {
+            log.log(`Only ${balance['ORN'].toString()} ORN on contract, not enough for a stake`);
+            log.log(`Please use 'deposit' command`);
+            return;
+        }
+
         const transaction: Transaction = await this.orionBlockchain.lockStake(amount);
         await this.db.insetTransaction(transaction);
     }

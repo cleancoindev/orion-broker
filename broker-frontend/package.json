@@ -2,6 +2,10 @@
   "name": "orion-broker-frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=14.0.0 <15.0.0"
+  },
+  "engineStrict": true,
   "dependencies": {
     "webfontloader": "1.6.28",
     "@types/webfontloader": "1.6.32",
@@ -41,7 +45,7 @@
     "typescript": "3.9.7",
     "walletlink": "2.0.2",
     "web3": "1.3.0",
-    "@orionprotocol/orion-ui-kit": "1.0.31"
+    "@orionprotocol/orion-ui-kit": "1.0.53"
   },
   "scripts": {
     "start": "react-scripts start",
