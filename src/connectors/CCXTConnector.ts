@@ -99,7 +99,8 @@ export class CCXTConnector implements Connector {
             const ccxtOrder: ccxt.Order = await this.ccxtExchange.cancelOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
             log.debug(this.exchange.id + ' cancel order response: ', ccxtOrder);
             // todo: KUCOIN return success result for cancel closed (filled) order
-            const filledAmount: BigNumber = fromNumber(ccxtOrder.filled);
+            let filledAmount: BigNumber = fromNumber(ccxtOrder.filled);
+            if (filledAmount.isNaN()) filledAmount = new BigNumber(0);
             return {
                 success: true,
                 filledAmount: filledAmount,
