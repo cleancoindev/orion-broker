@@ -34,7 +34,7 @@ export class EmulatorConnector implements Connector {
     async cancelSubOrder(subOrder: SubOrder): Promise<ExchangeCancelOrderResponse> {
         return {
             success: true,
-            filledAmount: new BigNumber(0)
+            filledAmount: subOrder.amount.eq(14) ? subOrder.amount.multipliedBy(0.5) : new BigNumber(0)
         };
     }
 
