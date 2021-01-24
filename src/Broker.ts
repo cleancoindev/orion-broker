@@ -133,33 +133,22 @@ export class Broker {
         return this.onCheckSubOrder(dbSubOrder.id);
     };
 
-    async onCancelSubOrder(id: number): Promise<SubOrderStatus> {
+    async onCancelSubOrder(id: number): Promise<SubOrderStatus | null> {
         const dbSubOrder: DbSubOrder = await this.db.getSubOrderById(id);
 
         if (!dbSubOrder) throw new Error('Cant find suborder ' + dbSubOrder.id);
 
         if (dbSubOrder.status === Status.PREPARE) {
             // todo: implement cancel order in prepare status
+            return null;
         } else if (dbSubOrder.status === Status.ACCEPTED) {
-            const cancelResult = await this.connector.cancelSubOrder(dbSubOrder);
-
-            if (!cancelResult.success) throw new Error('Cant cancel suborder ' + dbSubOrder.id);
-
-            if (cancelResult.filledAmount.gt(0)) {
-                // NOTE: this suborder will be send to broker hub in next checkSubOrders
-                return ;
-            }
-
-            dbSubOrder.status = Status.CANCELED;
-
-            await this.db.updateSubOrder(dbSubOrder);
-            this.webUI.sendToFrontend(dbSubOrder);
-
+            await this.connector.cancelSubOrder(dbSubOrder);
+            // NOTE: this suborder will be send to broker hub in next checkSubOrders
+            return null;
         } else {
             log.log('Cant cancel suborder in status ' + dbSubOrder.status);
+            return this.onCheckSubOrder(dbSubOrder.id);
         }
-
-        return this.onCheckSubOrder(dbSubOrder.id);
     };
 
     sendUpdateBalance(balances: Dictionary<ExchangeResolve<Balances>>): Promise<void> {

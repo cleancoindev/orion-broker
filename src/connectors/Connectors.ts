@@ -1,4 +1,4 @@
-import {Connector, ExchangeCancelOrderResponse, ExchangeWithdrawStatus} from './Connector';
+import {Connector, ExchangeWithdrawStatus} from './Connector';
 import {Balances, Dictionary, Exchange, Side, SubOrder, Trade, Withdraw} from '../Model';
 import BigNumber from 'bignumber.js';
 import {EmulatorConnector} from './EmulatorConnector';
@@ -123,7 +123,7 @@ export class Connectors {
         return this.getConnector(exchangeId).submitSubOrder(subOrderId, symbol, side, amount, price);
     }
 
-    async cancelSubOrder(order: SubOrder): Promise<ExchangeCancelOrderResponse> {
+    async cancelSubOrder(order: SubOrder): Promise<void> {
         return this.getConnector(order.exchange).cancelSubOrder(order);
     }
 

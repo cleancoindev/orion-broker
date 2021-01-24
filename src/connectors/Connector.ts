@@ -1,4 +1,4 @@
-import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from '../Model';
+import {Balances, Exchange, Side, SubOrder, Trade, Withdraw} from '../Model';
 import BigNumber from 'bignumber.js';
 
 export interface Connector {
@@ -6,7 +6,7 @@ export interface Connector {
 
     submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber): Promise<SubOrder>;
 
-    cancelSubOrder(subOrder: SubOrder): Promise<ExchangeCancelOrderResponse>;
+    cancelSubOrder(subOrder: SubOrder): Promise<void>;
 
     getBalances(): Promise<Balances>;
 
@@ -23,11 +23,6 @@ export interface Connector {
     getWithdrawLimit(currency: string): Promise<ExchangeWithdrawLimit>;
 
     destroy(): void;
-}
-
-export interface ExchangeCancelOrderResponse {
-    success: boolean;
-    filledAmount: BigNumber;
 }
 
 export interface ExchangeWithdrawLimit {

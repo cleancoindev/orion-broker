@@ -1,4 +1,4 @@
-import {Connector, ExchangeCancelOrderResponse, ExchangeWithdrawLimit, ExchangeWithdrawStatus} from './Connector';
+import {Connector, ExchangeWithdrawLimit, ExchangeWithdrawStatus} from './Connector';
 import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from '../Model';
 import BigNumber from 'bignumber.js';
 import ccxt from 'ccxt';
@@ -92,29 +92,20 @@ export class CCXTConnector implements Connector {
             exchange: this.exchange.id,
             exchangeOrderId: ccxtOrder.id,
             timestamp: ccxtOrder.timestamp || Date.now(),
-            status: Status.ACCEPTED, // todo: OPTIMIZATION some exchanges can return Status.FILLED right here - we need to be able to handle it
+            status: Status.ACCEPTED, // todo: OPTIMIZATION некоторые биржи могут вернуть Status.FILLED прямо здесь - неплохо бы уметь это обрабатывать
             sentToAggregator: false
         };
     }
 
     /**
      * https://github.com/ccxt/ccxt/wiki/Manual#canceling-orders
+     * @throws if error
      */
-    async cancelSubOrder(subOrder: SubOrder): Promise<ExchangeCancelOrderResponse> {
-        try {
-            const ccxtOrder: ccxt.Order = await this.ccxtExchange.cancelOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
-            log.debug(this.exchange.id + ' cancel order response: ', ccxtOrder);
-            // todo: KUCOIN return success result for cancel closed (filled) order
-            const filledAmount: BigNumber = parseFilledAmount(ccxtOrder.filled);
-            return {
-                success: true,
-                filledAmount: filledAmount,
-            };
-        } catch (e) {
-            // todo: retry if error not final
-            log.error(this.exchange.id + ' cancel order error:', e);
-            return {success: false, filledAmount: new BigNumber(0)};
-        }
+    async cancelSubOrder(subOrder: SubOrder): Promise<void> {
+        const ccxtOrder: ccxt.Order = await this.ccxtExchange.cancelOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
+        log.debug(this.exchange.id + ' cancel order response: ', ccxtOrder);
+        // NOTE: мы не можем полагаться на ответ cancelOrder, требуется следом сделать checkSubOrders, чтобы получить верный статус ордера
+        // например, bitmax при отмене уже исполненного ордера (в статусе closed) возвращает успешный результат с filled === undefined
     }
 
     /**
@@ -234,7 +225,7 @@ export class CCXTConnector implements Connector {
     async checkWithdraws(withdraws: Withdraw[]): Promise<ExchangeWithdrawStatus[]> {
         const result: ExchangeWithdrawStatus[] = [];
 
-        const transactions: ccxt.Transaction[] = await this.ccxtExchange.fetchWithdrawals(); // todo: paging
+        const transactions: ccxt.Transaction[] = await this.ccxtExchange.fetchWithdrawals(); // todo: предполагаем, что на этот запрос биржи возвращают все снятия. Если в бирже будет принудительный пейджинг, то тут потребуется доработка
         log.debug(this.exchange.id + ' checkWithdraws response: ', transactions);
 
         for (const withdraw of withdraws) {
