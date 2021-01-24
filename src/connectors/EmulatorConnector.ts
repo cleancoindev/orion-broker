@@ -53,6 +53,7 @@ export class EmulatorConnector implements Connector {
                 exchangeOrderId: subOrder.exchangeOrderId,
                 price: subOrder.price,
                 amount: subOrder.amount,
+                status: Status.FILLED
             });
         }
     }

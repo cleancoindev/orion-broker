@@ -56,6 +56,7 @@ function parseTrade(row: any): Trade {
         exchangeOrderId: row.exchangeOrderId,
         price: new BigNumber(row.price),
         amount: new BigNumber(row.amount),
+        status: Status.FILLED
     };
 }
 

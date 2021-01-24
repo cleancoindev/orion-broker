@@ -357,13 +357,26 @@ export class Broker {
                 throw new Error('Partially trade not supported yet ' + dbSubOrder.id);
             }
 
-            dbSubOrder.filledAmount = trade.amount;
-            dbSubOrder.status = Status.FILLED;
+            if (trade.status === Status.FILLED) {
 
-            await this.db.insertTrade(trade); // todo: insertTrade & updateSubOrder in transaction
-            await this.db.updateSubOrder(dbSubOrder);
+                dbSubOrder.filledAmount = trade.amount;
+                dbSubOrder.status = Status.FILLED;
 
-            log.log('Send suborder ' + dbSubOrder.id + ' filled status: ' + dbSubOrder.side + ' ' + dbSubOrder.amount + ' ' + dbSubOrder.symbol + ' on ' + dbSubOrder.exchange);
+                await this.db.insertTrade(trade); // todo: insertTrade & updateSubOrder in transaction
+                await this.db.updateSubOrder(dbSubOrder);
+
+            } else if (trade.status === Status.CANCELED) {
+
+                dbSubOrder.filledAmount = trade.amount;
+                dbSubOrder.status = Status.CANCELED;
+                await this.db.updateSubOrder(dbSubOrder);
+
+            } else {
+                throw new Error('Unexpected trade status ' + trade.status);
+            }
+
+            log.log('Send suborder ' + dbSubOrder.id + ' ' + trade.status + ' status: ' + dbSubOrder.side + ' ' + dbSubOrder.amount + ' ' + dbSubOrder.symbol + ' on ' + dbSubOrder.exchange);
+
             log.debug('onTrade', dbSubOrder);
 
             await this.brokerHub.sendSubOrderStatus(await this.onCheckSubOrder(dbSubOrder.id));

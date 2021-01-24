@@ -26,6 +26,12 @@ function fromNumber(x: number): BigNumber {
     return new BigNumber(x);
 }
 
+function parseFilledAmount(x: number): BigNumber {
+    let result = new BigNumber(x);
+    if (result.isNaN()) result = new BigNumber(0);
+    return result;
+}
+
 function fromStatus(status: string): Status {
     switch (status) {
         case 'open':
@@ -99,8 +105,7 @@ export class CCXTConnector implements Connector {
             const ccxtOrder: ccxt.Order = await this.ccxtExchange.cancelOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
             log.debug(this.exchange.id + ' cancel order response: ', ccxtOrder);
             // todo: KUCOIN return success result for cancel closed (filled) order
-            let filledAmount: BigNumber = fromNumber(ccxtOrder.filled);
-            if (filledAmount.isNaN()) filledAmount = new BigNumber(0);
+            const filledAmount: BigNumber = parseFilledAmount(ccxtOrder.filled);
             return {
                 success: true,
                 filledAmount: filledAmount,
@@ -141,12 +146,14 @@ export class CCXTConnector implements Connector {
             const ccxtOrder: ccxt.Order = await this.ccxtExchange.fetchOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
             log.debug(this.exchange.id + ' check order response: ', ccxtOrder);
             const newStatus = fromStatus(ccxtOrder.status);
-            if (newStatus === Status.FILLED) {
+            const amount = newStatus === Status.CANCELED ? parseFilledAmount(ccxtOrder.filled) : subOrder.amount;
+            if (newStatus === Status.FILLED || newStatus === Status.CANCELED) {
                 this.onTrade({
                     exchange: subOrder.exchange,
                     exchangeOrderId: subOrder.exchangeOrderId,
                     price: subOrder.price,
-                    amount: subOrder.amount,
+                    amount: amount,
+                    status: newStatus
                 });
             }
         }
