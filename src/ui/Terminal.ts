@@ -176,7 +176,7 @@ export class Terminal {
                     {
                         name: 'assetName',
                         fieldName: 'assetName',
-                        type: DataType.ASSET_NAME
+                        type: DataType.TOKEN_NAME
                     },
                 ],
                 asks: [],
