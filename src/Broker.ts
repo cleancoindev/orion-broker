@@ -281,8 +281,9 @@ export class Broker {
                 await this.deposit(amount, assetName);
             } else {
                 const remaining = amount.minus(assetBalance);
-                const {exchange, amountWithFee} = await this.getExchangeForWithdraw(remaining, assetName);
-                if (exchange) {
+                const exchangeForWithdraw = await this.getExchangeForWithdraw(remaining, assetName);
+                if (exchangeForWithdraw) {
+                    const {exchange, amountWithFee} = exchangeForWithdraw;
                     // NOTE: мы снимаем remainingWithFee так как большинство бирж вычитают свою комиссию из переданного амаунта
                     await this.exchangeWithdraw(exchange, amountWithFee, assetName);
                 } else {

@@ -154,6 +154,9 @@ export class CCXTConnector implements Connector {
         return this.ccxtExchange.hasWithdraw;
     }
 
+    /**
+     * @throws if error
+     */
     getWithdrawLimit(currency: string): Promise<ExchangeWithdrawLimit> {
         switch (this.exchange.id) {
             case 'kucoin':
@@ -165,7 +168,7 @@ export class CCXTConnector implements Connector {
         }
     }
 
-    private getKucoinWithdrawLimit = async (currency: string): Promise<ExchangeWithdrawLimit> => {
+    private async getKucoinWithdrawLimit(currency: string): Promise<ExchangeWithdrawLimit> {
         await this.ccxtExchange.loadMarkets();
         const cur: any = this.ccxtExchange.currencies[currency];
         const info: any = cur.info;
@@ -175,7 +178,7 @@ export class CCXTConnector implements Connector {
         };
     };
 
-    private getBinanceWithdrawLimit = async (currency: string): Promise<ExchangeWithdrawLimit> => {
+    private async getBinanceWithdrawLimit(currency: string): Promise<ExchangeWithdrawLimit> {
         // https://binance-docs.github.io/apidocs/spot/en/#all-coins-39-information-user_data
         const arr: any[] = await this.ccxtExchange.sapiGetCapitalConfigGetall();
         log.debug('binance sapiGetCapitalConfigGetall', arr);
