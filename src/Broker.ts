@@ -228,7 +228,10 @@ export class Broker {
             try {
                 const pendingTransactions: Transaction[] = await this.db.getPendingTransactions();
                 for (const tx of pendingTransactions) {
-                    const status = await this.orionBlockchain.getTransactionStatus(tx.transactionHash);
+                    let status = await this.orionBlockchain.getTransactionStatus(tx.transactionHash);
+                    if (status === 'NONE' && (Date.now() - tx.createTime > 10 * 60 * 1000)) { // 10 min
+                        status = 'FAIL';
+                    }
                     if (status !== tx.status) {
                         if (status === 'OK' || status === 'FAIL') {
                             await this.db.updateTransactionStatus(tx.transactionHash, status);
