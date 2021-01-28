@@ -73,9 +73,9 @@ export class EmulatorConnector implements Connector {
     }
 
     async getWithdrawLimit(currency: string): Promise<ExchangeWithdrawLimit> {
-        throw {
-            fee: new BigNumber(0.05),
-            min: new BigNumber(0.1),
+        return {
+            fee: currency === 'ETH' ? new BigNumber(0.05) : new BigNumber(6),
+            min: currency === 'ETH' ? new BigNumber(0.1) : new BigNumber(10),
         };
     }
 
