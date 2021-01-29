@@ -23,7 +23,7 @@ const MobileSidebar: FC = () => {
                          onClick={() => dispatch(togglePairSelector())}>
                         {currentPair.fromCurrency} <span
                         className={styles.slash}>/</span> {currentPair.toCurrency}
-                        <Icon icon="dropdown"/>
+                        <Icon icon="dropdown" />
                     </div>
                 )
             }

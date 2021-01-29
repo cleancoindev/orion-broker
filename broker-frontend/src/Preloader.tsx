@@ -8,6 +8,7 @@ import {App} from "./App";
 import {LoadingIcon} from "@orionprotocol/orion-ui-kit";
 import {getPairsInitialized} from "./redux/selectors";
 import {Api} from "./Api";
+import {Tokens} from './Tokens';
 
 export const Preloader: FC = () => {
     const dispatch = useDispatch();
@@ -61,6 +62,8 @@ export const Preloader: FC = () => {
         const numberFormat = await loadNumberFormat();
 
         Api.blockchainInfo = blockchainInfo;
+        Api.tokens = new Tokens(blockchainInfo.assetToAddress);
+        Api.prices = await Api.getPricesFromBlockchain();
         dispatch(setNumberFormat(numberFormat));
         dispatch(setPairsList(pairsList));
         dispatch(setCurrentPair(initPair));

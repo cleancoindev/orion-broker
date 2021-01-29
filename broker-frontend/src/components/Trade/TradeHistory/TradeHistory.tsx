@@ -56,17 +56,26 @@ function TradeHistorySubRow(index: number, item: TradeHistorySubRowProps) {
             <div className={styles.subTableCol}>
                 {item.subOrder.id}
             </div>
-            <div className={cn(styles.subTableCol, styles.subTableColRight, styles.colAmount)}>
+            <div className={cn(styles.subTableCol, styles.subTableColRight, styles.colHeader)}>
+                <div className={styles.colHeaderText}>
+                    <Trans id="amount">Amount</Trans>
+                </div>
                 {formatPairAmount(item.subOrder.amount, item.subOrder.pair, item.numberFormat)}
             </div>
-            <div className={cn(styles.subTableCol, styles.subTableColRight, styles.colPrice)}>
+            <div className={cn(styles.subTableCol, styles.subTableColRight, styles.colHeader)}>
+                <div className={styles.colHeaderText}>
+                    <Trans id="price">Price</Trans>
+                </div>
                 {formatPairPrice(item.subOrder.price, item.subOrder.pair, item.numberFormat)}
             </div>
             <div
                 className={cn(styles.subTableCol, styles.colStatus, getStatusClass(item.subOrder.status))}>
                 {statusText}
             </div>
-            <div className={cn(styles.subTableCol, styles.colExchange)}>
+            <div className={cn(styles.subTableCol, styles.colHeader)}>
+                <div className={styles.colHeaderText}>
+                    <Trans id="exchange">Exchange</Trans>
+                </div>
                 {capitalize(item.subOrder.exchange)}
             </div>
         </div>
@@ -150,7 +159,8 @@ function TradeHistoryRow(index: number, props: TradeHistoryRow, isOpen?: boolean
         <div className={styles.rowWrapper} key={index}>
             <div className={styles.tableRow} onClick={() => onClick!(index)}>
                 <div className={cn(styles.tableCol, styles.colSell, styles.colWhite)}>
-                    {capitalize(item.type)}
+                    {item.type.toLowerCase() === 'buy' && (<Trans id="buy">Buy</Trans>)}
+                    {item.type.toLowerCase() === 'sell' && (<Trans id="sell">Sell</Trans>)}
                 </div>
                 <div className={cn(styles.tableCol, styles.colCurrency)}>
                     {item.fromCurrency} / {item.toCurrency}
@@ -158,17 +168,26 @@ function TradeHistoryRow(index: number, props: TradeHistoryRow, isOpen?: boolean
                 <div className={cn(styles.tableCol, styles.colDate)}>
                     {dateString}
                 </div>
-                <div className={cn(styles.tableCol, styles.colAmount, styles.tableColRight)}>
+                <div className={cn(styles.tableCol, styles.colHeader, styles.tableColRight)}>
+                    <div className={styles.colHeaderText}>
+                        <Trans id="amount">Amount</Trans>
+                    </div>
                     {formatPairAmount(item.amount, item.pair, props.numberFormat)}
                 </div>
-                <div className={cn(styles.tableCol, styles.colPrice, styles.tableColRight)}>
+                <div className={cn(styles.tableCol, styles.colHeader, styles.tableColRight)}>
+                    <div className={styles.colHeaderText}>
+                        <Trans id="price">Price</Trans>
+                    </div>
                     {formatPairPrice(item.price, item.pair, props.numberFormat)}
                 </div>
                 <div
                     className={cn(styles.tableCol, styles.colStatus, getStatusClass(item.status))}>
                     {statusText}
                 </div>
-                <div className={cn(styles.tableCol, styles.colTotal, styles.tableColRight)}>
+                <div className={cn(styles.tableCol, styles.colHeader, styles.tableColRight)}>
+                    <div className={styles.colHeaderText}>
+                        <Trans id="total">Total</Trans>
+                    </div>
                     {formatPairTotal(item.total, item.pair, props.numberFormat)}
                 </div>
             </div>
@@ -302,7 +321,7 @@ export const TradeHistory: FC<Props> = (props) => {
                                     setFromCurrency(event.currentTarget.value)
                                 }}
                         >
-                            <option value="ALL">All</option>
+                            <option value="ALL">{orderStatusAll}</option>
                             {
                                 fromCurrencies.map(currency => <option key={currency} value={currency}>{currency}</option>)
                             }
@@ -316,7 +335,7 @@ export const TradeHistory: FC<Props> = (props) => {
                                     console.log(event.currentTarget.value)
                                     setToCurrency(event.currentTarget.value)
                                 }}>
-                            <option value="ALL">All</option>
+                            <option value="ALL">{orderStatusAll}</option>
                             {
                                 toCurrencies.map(currency => <option key={currency} value={currency}>{currency}</option>)
                             }

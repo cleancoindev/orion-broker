@@ -57,6 +57,7 @@ export interface Trade {
     exchangeOrderId: string;
     price: BigNumber;
     amount: BigNumber;
+    status: Status;
 }
 
 export interface BlockchainOrder {

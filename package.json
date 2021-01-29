@@ -45,7 +45,7 @@
     "@types/socket.io-client": "^1.4.34",
     "bignumber.js": "9.0.0",
     "blessed": "^0.1.81",
-    "ccxt": "^1.38.85",
+    "ccxt": "^1.40.50",
     "cryptr": "^6.0.2",
     "dotenv": "^8.2.0",
     "eth-sig-util": "^2.5.3",

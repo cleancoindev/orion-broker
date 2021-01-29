@@ -1,4 +1,4 @@
-import {Connector, ExchangeWithdrawStatus} from './Connector';
+import {Connector, ExchangeWithdrawLimit, ExchangeWithdrawStatus} from './Connector';
 import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from '../Model';
 import {v1 as uuid} from 'uuid';
 import BigNumber from 'bignumber.js';
@@ -7,6 +7,7 @@ export class EmulatorConnector implements Connector {
     readonly exchange: Exchange;
     private readonly balances: Balances;
     private onTrade: (trade: Trade) => void;
+    private cancelledSubOrderIds: number[] = [];
 
     constructor(exchange: Exchange) {
         this.exchange = exchange;
@@ -31,8 +32,8 @@ export class EmulatorConnector implements Connector {
         };
     }
 
-    async cancelSubOrder(subOrder: SubOrder): Promise<boolean> {
-        return true;
+    async cancelSubOrder(subOrder: SubOrder): Promise<void> {
+        this.cancelledSubOrderIds.push(subOrder.id);
     }
 
     async getBalances(): Promise<Balances> {
@@ -45,11 +46,13 @@ export class EmulatorConnector implements Connector {
 
     async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
         for (const subOrder of subOrders) {
+            const isCancelled = this.cancelledSubOrderIds.indexOf(subOrder.id) > -1;
             this.onTrade({
                 exchange: this.exchange.id,
                 exchangeOrderId: subOrder.exchangeOrderId,
                 price: subOrder.price,
-                amount: subOrder.amount,
+                amount: isCancelled ? (subOrder.amount.eq(14) ? subOrder.amount.multipliedBy(0.5) : new BigNumber(0)) : subOrder.amount,
+                status: isCancelled ? Status.CANCELED : Status.FILLED
             });
         }
     }
@@ -67,6 +70,13 @@ export class EmulatorConnector implements Connector {
 
     hasWithdraw(): boolean {
         return this.exchange.id !== 'bitmax';
+    }
+
+    async getWithdrawLimit(currency: string): Promise<ExchangeWithdrawLimit> {
+        return {
+            fee: currency === 'ETH' ? new BigNumber(0.05) : new BigNumber(6),
+            min: currency === 'ETH' ? new BigNumber(0.1) : new BigNumber(10),
+        };
     }
 
     async withdraw(currency: string, amount: BigNumber, address: string): Promise<string | undefined> {

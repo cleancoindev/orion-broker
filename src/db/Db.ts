@@ -56,6 +56,7 @@ function parseTrade(row: any): Trade {
         exchangeOrderId: row.exchangeOrderId,
         price: new BigNumber(row.price),
         amount: new BigNumber(row.amount),
+        status: Status.FILLED
     };
 }
 
@@ -212,9 +213,11 @@ export class Db {
 
     async insertTrade(trade: Trade): Promise<number> {
         return new Promise((resolve, reject) => {
-            (trade as any).timestamp = Date.now(); // todo
+            const tradeToSave: any = Object.assign({}, trade);
+            tradeToSave.timestamp = Date.now(); // todo
+            delete tradeToSave.status;
 
-            const t = mapObject(trade);
+            const t = mapObject(tradeToSave);
 
             this.db.run(`INSERT INTO trades (${t.fields})
                          VALUES (${t.quests})`, t.values, function (err) {
