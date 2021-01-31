@@ -147,8 +147,8 @@ export const DashboardTable: FC<DashboardTableProps> = (props) => {
         <div className={styles.root}>
             <div className={styles.info}>
                 <div className={styles.infoHeader}>
-                    <Trans id="exchange_balance">
-                        Exchange balances
+                    <Trans id="balances_of_exchanges">
+                        Balances of exchanges
                     </Trans>
                 </div>
             </div>
