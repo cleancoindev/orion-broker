@@ -6,7 +6,7 @@ export interface Connector {
 
     submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string): Promise<SendOrder>;
 
-    cancelSubOrder(subOrder: SubOrder): Promise<boolean>;
+    cancelSubOrder(subOrder: SubOrder): Promise<void>;
 
     getBalances(): Promise<Balances>;
 
@@ -22,7 +22,14 @@ export interface Connector {
 
     checkWithdraws(withdraws: Withdraw[]): Promise<ExchangeWithdrawStatus[]>;
 
+    getWithdrawLimit(currency: string): Promise<ExchangeWithdrawLimit>;
+
     destroy(): void;
+}
+
+export interface ExchangeWithdrawLimit {
+    min: BigNumber;
+    fee: BigNumber;
 }
 
 export interface ExchangeWithdrawStatus {

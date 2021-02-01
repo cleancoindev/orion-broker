@@ -1,13 +1,14 @@
-import React, {FC} from "react";
-import BigNumber from "bignumber.js";
+import React, {FC} from 'react';
+import BigNumber from 'bignumber.js';
 import {Doughnut} from 'react-chartjs-2';
-import {CURRENCY_DEFAULT_COLOR, formatNumber, formatUsd, getCurrencyColor, getUsdPrice} from "../../../Utils";
-import {Trans} from "@lingui/macro";
-import {useSelector} from "react-redux";
-import {getCurrencies, getPairs} from "../../../redux/selectors";
-import {CurrencyIcon} from "@orionprotocol/orion-ui-kit";
-import styles from "./DashboardTotalBalance.module.css";
+import {CURRENCY_DEFAULT_COLOR, formatNumber, formatUsd, getCurrencyColor, getUsdPrice} from '../../../Utils';
+import {Trans} from '@lingui/macro';
+import {useSelector} from 'react-redux';
+import {getCurrencies, getPairs} from '../../../redux/selectors';
+import {CurrencyIcon} from '@orionprotocol/orion-ui-kit';
+import styles from './DashboardTotalBalance.module.css';
 import {Dictionary} from '../../../../../broker-frontend/src/Model';
+import {Api} from '../../../Api';
 
 interface DashboardTotalBalanceItemProps {
     name: string;
@@ -21,11 +22,12 @@ function DashboardTotalBalanceItem(props: DashboardTotalBalanceItemProps) {
             <div className={styles.balanceRowName}>{props.name}</div>
             <div className={styles.balanceRowValue}>{formatNumber(props.value, 8)}</div>
         </div>
-    )
+    );
 }
 
 type Props = {
-    balances: Dictionary<Dictionary<BigNumber>>
+    balances: Dictionary<Dictionary<BigNumber>>;
+    inUsd: boolean;
 };
 
 const chartOptions = {
@@ -33,7 +35,7 @@ const chartOptions = {
     legend: {
         display: false
     }
-}
+};
 
 export const DashboardTotalBalance: FC<Props> = (props) => {
     const nameToPair = useSelector(getPairs);
@@ -55,14 +57,14 @@ export const DashboardTotalBalance: FC<Props> = (props) => {
         let balance = new BigNumber(0);
         const balances = props.balances[name];
         for (let exchange in balances) {
-            balance = balance.plus(balances[exchange])
+            balance = balance.plus(balances[exchange]);
         }
 
         if (balance.eq(0)) {
             continue;
         }
 
-        const usdPrice = getUsdPrice(name, nameToPair);
+        const usdPrice = props.inUsd ? getUsdPrice(name, nameToPair) : Api.prices[name];
         const balanceInUsd = balance.multipliedBy(usdPrice);
         balancesArr.push({
             name,
@@ -77,7 +79,7 @@ export const DashboardTotalBalance: FC<Props> = (props) => {
     const rows = [];
     for (let item of balancesArr) {
         chartData.datasets[0].data.push(item.balanceInUsd.toNumber());
-        rows.push(<DashboardTotalBalanceItem key={item.name} name={item.name} value={item.balance}/>)
+        rows.push(<DashboardTotalBalanceItem key={item.name} name={item.name} value={item.balance}/>);
     }
 
     chartData.datasets[0].backgroundColor = balancesArr.map(b => getCurrencyColor(b.name));
@@ -91,18 +93,21 @@ export const DashboardTotalBalance: FC<Props> = (props) => {
     return (
         <div className={styles.root}>
             <div className={styles.header}>
-                <Trans id="total_balance">
-                    Total Balance
-                </Trans>
+                {props.inUsd ?
+                    <Trans id="total_balance">
+                        Total Balance
+                    </Trans> :
+                    <Trans id="total_profit">
+                        Total Profit
+                    </Trans>
+                }
             </div>
 
             <div className={styles.balanceContainer}>
                 <Doughnut data={chartData} options={chartOptions} width={222} height={222}/>
-                <div className={styles.balanceLabel}>{formatUsd(totalUsd)} <span
+                <div className={styles.balanceLabel}>~ {formatUsd(totalUsd)} <span
                     className={styles.currency}>
-                        <Trans id="usd">
-                            USD
-                        </Trans>
+                    {props.inUsd ? 'USD' : 'ORN'}
                     </span>
                 </div>
             </div>
@@ -110,4 +115,4 @@ export const DashboardTotalBalance: FC<Props> = (props) => {
             {rows}
         </div>
     );
-}
+};

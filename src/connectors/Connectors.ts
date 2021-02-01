@@ -113,16 +113,24 @@ export class Connectors {
         return result;
     }
 
+    getConnector(exchangeId: string): Connector {
+        const connector = this.connectors[exchangeId];
+        if (!connector) throw new Error('Cant find exchange ' + exchangeId);
+        return connector;
+    }
+
+    async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber): Promise<SubOrder> {
+        return this.getConnector(exchangeId).submitSubOrder(subOrderId, symbol, side, amount, price);
+    }
+
     async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type = 'limit'): Promise<SendOrder> {
         const connector = this.connectors[exchangeId];
         if (!connector) throw new Error('Cant find exchange ' + exchangeId);
         return connector.submitSubOrder(subOrderId, symbol, side, amount, price, type);
     }
 
-    async cancelSubOrder(order: SubOrder): Promise<boolean> {
-        const connector = this.connectors[order.exchange];
-        if (!connector) throw new Error('Cant find exchange ' + order.exchange);
-        return connector.cancelSubOrder(order);
+    async cancelSubOrder(order: SubOrder): Promise<void> {
+        return this.getConnector(order.exchange).cancelSubOrder(order);
     }
 
     async getBalances(): Promise<Dictionary<ExchangeResolve<Balances>>> {
@@ -178,15 +186,11 @@ export class Connectors {
     }
 
     hasWithdraw(exchange: string): boolean {
-        const connector = this.connectors[exchange];
-        if (!connector) throw new Error('Cant find exchange ' + exchange);
-        return connector.hasWithdraw();
+        return this.getConnector(exchange).hasWithdraw();
     }
 
     async withdraw(exchange: string, currency: string, amount: BigNumber, address: string): Promise<string | undefined> {
-        const connector = this.connectors[exchange];
-        if (!connector) throw new Error('Cant find exchange ' + exchange);
-        return connector.withdraw(currency, amount, address);
+        return this.getConnector(exchange).withdraw(currency, amount, address);
     }
 
     setOnTradeListener(onTrade: (trade: Trade) => void): void {

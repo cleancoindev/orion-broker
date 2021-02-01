@@ -126,6 +126,7 @@
 
 .tableCol {
     width: 14%;
+    text-transform: capitalize;
 }
 
 .tableClose {
@@ -261,6 +262,10 @@
     margin-right: 23px;
 }
 
+.colHeaderText {
+    display: none
+}
+
 @media (max-width: 1200px) {
     .toolbarMobileRow {
         width: 100%;
@@ -343,7 +348,7 @@
         position: absolute;
         width: auto;
         right: 0;
-        top: 60px;
+        top: 36px;
         max-width: 120px;
         text-align: right;
     }
@@ -352,7 +357,7 @@
         position: absolute;
         width: auto;
         right: 0;
-        top: 32px;
+        top: 0;
     }
 
     .tableClose {
@@ -367,36 +372,11 @@
         margin-bottom: 8px;
     }
 
-    .colAmount:before {
-        content: 'Amount';
-        color: var(--color-text);
-        width: 33%;
-        display: inline-block;
-    }
-
     .colPrice {
         margin-bottom: 8px;
     }
 
-    .colPrice:before {
-        content: 'Price';
-        color: var(--color-text);
-        width: 33%;
-        display: inline-block;
-    }
-
-    .colTotal {
-    }
-
-    .colTotal:before {
-        content: 'Total';
-        color: var(--color-text);
-        width: 33%;
-        display: inline-block;
-    }
-
-    .colExchange:before {
-        content: 'Exchange';
+    .colHeaderText {
         color: var(--color-text);
         width: 33%;
         display: inline-block;
@@ -404,5 +384,12 @@
 
     .toolbarMobileRow:first-child {
         margin-top: 0;
+    }
+}
+
+@media (max-width: 800px) {
+    .scrollContainer {
+        height: 100%;
+        max-height: 400px;
     }
 }

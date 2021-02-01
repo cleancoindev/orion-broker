@@ -36,7 +36,7 @@ function DashboardTableRow(index: number, props: any) {
 
             <div className={styles.colInOrder}>
                 <div className={styles.colText}>
-                    Total
+                    <Trans id="Total">Total</Trans>
                 </div>
                 {formatNumber(props.total, 8)}
             </div>
@@ -57,6 +57,7 @@ export const DashboardTable: FC<DashboardTableProps> = (props) => {
     const [shouldHideZero, setShouldHideZero] = useState(false);
     const [textFilter, setTextFilter] = useState('');
     const headerToken = translate('token', 'Token');
+    const totalText = translate('total', 'Total');
 
     const onSearch = (e: SyntheticEvent<HTMLInputElement>) => {
         setTextFilter(e.currentTarget.value.toLocaleLowerCase());
@@ -131,7 +132,7 @@ export const DashboardTable: FC<DashboardTableProps> = (props) => {
     headers.push(
         {
             className: styles.headerColRight,
-            text: 'Total'
+            text: totalText
         }
     )
 
@@ -146,8 +147,8 @@ export const DashboardTable: FC<DashboardTableProps> = (props) => {
         <div className={styles.root}>
             <div className={styles.info}>
                 <div className={styles.infoHeader}>
-                    <Trans id="exchange_balance">
-                        Exchange balances
+                    <Trans id="balances_of_exchanges">
+                        Balances of exchanges
                     </Trans>
                 </div>
             </div>

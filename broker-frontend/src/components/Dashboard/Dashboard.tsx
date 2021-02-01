@@ -51,7 +51,7 @@ export default function Dashboard(props: DashboardProps) {
             <LoadingIcon/> :
             <div className={styles.root}>
                 <div className={styles.left}>
-                    <DashboardTotalBalance balances={balances}/>
+                    <DashboardTotalBalance balances={balances} inUsd={true}/>
                 </div>
                 <div className={styles.right}>
                     <DashboardTable balances={balances} onSetCurrentPair={props.onSetCurrentPair}/>

@@ -82,6 +82,7 @@ export interface ITrade {
     exchangeOrderId: string;
     price: BigNumber;
     amount: BigNumber;
+    status: Status;
 }
 
 export interface BlockchainOrder {

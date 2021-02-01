@@ -6,7 +6,7 @@ export interface BrokerHub {
 
     onCreateSubOrder: (data: CreateSubOrder) => Promise<SubOrderStatus>;
 
-    onCancelSubOrder: (id: number) => Promise<SubOrderStatus>;
+    onCancelSubOrder: (id: number) => Promise<SubOrderStatus | null>;
 
     onCheckSubOrder: (id: number) => Promise<SubOrderStatus>;
 

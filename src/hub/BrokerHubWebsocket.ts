@@ -37,7 +37,7 @@ export class BrokerHubWebsocket implements BrokerHub {
 
     onCreateSubOrder: (data: CreateSubOrder) => Promise<SubOrderStatus>;
 
-    onCancelSubOrder: (id: number) => Promise<SubOrderStatus>;
+    onCancelSubOrder: (id: number) => Promise<SubOrderStatus | null>;
 
     onCheckSubOrder: (id: number) => Promise<SubOrderStatus>;
 
@@ -140,7 +140,9 @@ export class BrokerHubWebsocket implements BrokerHub {
                 log.debug('Received cancel_suborder after parse', subOrderId);
                 log.log('Receive cancel suborder ' + subOrderId);
                 const subOrderStatus = await this.onCancelSubOrder(subOrderId);
-                await this.sendSubOrderStatus(subOrderStatus);
+                if (subOrderStatus) {
+                    await this.sendSubOrderStatus(subOrderStatus);
+                }
             } catch (error) {
                 log.error('Cancel suborder error:', error);
             }

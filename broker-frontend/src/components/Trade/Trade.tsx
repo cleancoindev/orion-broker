@@ -29,17 +29,17 @@ export default function Trade() {
 
                     orders.push(order);
                     if (order.status === "FILLED") {
-                        const profit = order.total.multipliedBy(0.02);
-                        if (!newProfits[order.toCurrency]) {
-                            newProfits[order.toCurrency] = {};
+                        const profit = order.amount.multipliedBy(0.2 / 100);
+                        if (!newProfits[order.fromCurrency]) {
+                            newProfits[order.fromCurrency] = {};
                         }
 
-                        if (!newProfits[order.toCurrency][order.exchange]) {
-                            newProfits[order.toCurrency] = {
+                        if (!newProfits[order.fromCurrency][order.exchange]) {
+                            newProfits[order.fromCurrency] = {
                                 [order.exchange]: new BigNumber(0),
                             }
                         }
-                        newProfits[order.toCurrency][order.exchange] = newProfits[order.toCurrency][order.exchange].plus(profit);
+                        newProfits[order.fromCurrency][order.exchange] = newProfits[order.fromCurrency][order.exchange].plus(profit);
                     }
                 }
 
@@ -62,7 +62,7 @@ export default function Trade() {
         <div className={cn(styles.root, styles[currentTradeTab])}>
             <div className={styles.colLeft}>
                 <div className={styles.tradeBuySell}>
-                    <DashboardTotalBalance balances={profits} />
+                    <DashboardTotalBalance balances={profits} inUsd={false}/>
                 </div>
             </div>
             <div className={styles.colMiddle}>

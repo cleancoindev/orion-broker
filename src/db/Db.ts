@@ -6,6 +6,10 @@ import {createConnection, Connection, Repository, In, EntityManager} from 'typeo
 
 import fs from 'fs';
 
+export interface DbSubOrder extends SubOrder {
+    filledAmount: BigNumber;
+}
+
 function mapValue(x: any): any {
     if (typeof x === 'number') {
         return x;
@@ -29,6 +33,53 @@ function mapObject(object: any) {
     const quests = fields.map(f => '?');
     const update = fields.map(f => f + '=?');
     return {fields: fields.join(','), quests: quests.join(','), values: values, update: update.join(',')};
+}
+
+function parseSubOrder(row: any): DbSubOrder {
+    return {
+        id: row.id,
+        symbol: row.symbol,
+        side: row.side,
+        price: new BigNumber(row.price),
+        amount: new BigNumber(row.amount),
+        exchange: row.exchange,
+        exchangeOrderId: row.exchangeOrderId,
+        timestamp: row.timestamp,
+        status: Status[row.status] as Status,
+        filledAmount: new BigNumber(row.filledAmount),
+        sentToAggregator: row.sentToAggregator == 1
+    };
+}
+
+function parseTrade(row: any): Trade {
+    return {
+        exchange: row.exchange,
+        exchangeOrderId: row.exchangeOrderId,
+        price: new BigNumber(row.price),
+        amount: new BigNumber(row.amount),
+        status: Status.FILLED
+    };
+}
+
+function parseWithdraw(row: any): Withdraw {
+    return {
+        exchangeWithdrawId: row.exchangeWithdrawId,
+        exchange: row.exchange,
+        currency: row.currency,
+        amount: new BigNumber(row.amount),
+        status: row.status
+    };
+}
+
+function parseTransaction(row: any): Transaction {
+    return {
+        transactionHash: row.transactionHash,
+        method: row.method,
+        asset: row.asset,
+        amount: new BigNumber(row.amount),
+        createTime: row.createTime,
+        status: row.status
+    };
 }
 
 export class Db {
@@ -63,7 +114,6 @@ export class Db {
             synchronize: false,
             logging: false,
         });
-
     }
 
     async close(): Promise<void> {
@@ -79,6 +129,22 @@ export class Db {
     }
 
     async insertTrade(trade: Trade): Promise<number> {
+        return new Promise((resolve, reject) => {
+            const tradeToSave: any = Object.assign({}, trade);
+            tradeToSave.timestamp = Date.now(); // todo
+            delete tradeToSave.status;
+
+            const t = mapObject(tradeToSave);
+
+            this.db.run(`INSERT INTO trades (${t.fields})
+                         VALUES (${t.quests})`, t.values, function (err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(this.lastID);
+                }
+            });
+        });
         const {id} = await this.db.getRepository(Trade).create(trade);
         return id;
     }
