@@ -35,7 +35,7 @@ export class SettingsManager {
         for (const exchangeId in this.settings.exchanges) {
             const exchange = this.settings.exchanges[exchangeId];
             exchanges[exchangeId] = {
-                key: exchange.key,
+                ...exchange,
                 secret: this.cryptr.encrypt(exchange.secret),
                 password: this.cryptr.encrypt(exchange.password),
             };

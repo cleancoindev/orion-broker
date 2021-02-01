@@ -13,6 +13,7 @@ export enum DataType {
     EXCHANGE_PASSWORD,
     URL,
     BOOL,
+    ASSET_PAIR
 }
 
 export interface AskConfig {
@@ -100,6 +101,11 @@ function validateInput(input: string, type: DataType): string {
         case DataType.BOOL:
             if (['on', 'off'].indexOf(input) === -1) {
                 return '"on" or "off';
+            }
+            return '';
+        case DataType.ASSET_PAIR:
+            if (input.split('-').filter(asset=>/[A-Z]{,6}/).length !== 2) {
+                return 'Invalid asset pair';
             }
             return '';
     }

@@ -67,6 +67,7 @@ export interface SendOrder {
 export interface SubOrder {
     id: number;
     symbol: string; // 'BTC-ETH'
+    symbolAlias: string; // 'WBTC-ETH'
     side: Side;
     price: BigNumber;
     amount: BigNumber;
