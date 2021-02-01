@@ -190,7 +190,7 @@ export class Broker {
     }
 
     async onCancelSubOrder(id: number): Promise<SubOrderStatus | null> {
-        const dbSubOrder: DbSubOrder = await this.db.getSubOrderById(id);
+        const dbSubOrder: SubOrder = await this.db.getSubOrderById(id);
 
         if (!dbSubOrder) throw new Error('Cant find suborder ' + dbSubOrder.id);
 
@@ -407,21 +407,21 @@ export class Broker {
                 throw new Error(`Suborder ${trade.exchangeOrderId} in ${trade.exchange} not found`);
             }
 
-            if (trade.status !== Status.FILLED && trade.status !== Status.CANCELED) {
+            if (trade.status !== 'ok' && trade.status !== 'canceled') {
                 throw new Error('Unexpected trade status ' + trade.status);
             }
 
-            if (trade.status === Status.FILLED && !dbSubOrder.amount.eq(trade.amount)) {
-                throw new Error('Partially trade not supported yet ' + dbSubOrder.id);
-            }
-
-            dbSubOrder.filledAmount = trade.amount;
-            dbSubOrder.status = trade.status;
-
-            if (dbSubOrder.filledAmount.gt(0)) {
-                await this.db.insertTrade(trade); // todo: insertTrade & updateSubOrder in transaction
-            }
-            await this.db.updateSubOrder(dbSubOrder);
+            // if (trade.status === Status.FILLED && !dbSubOrder.amount.eq(trade.amount)) {
+            //     throw new Error('Partially trade not supported yet ' + dbSubOrder.id);
+            // }
+            //
+            // dbSubOrder.filledAmount = trade.amount;
+            // dbSubOrder.status = trade.status;
+            //
+            // if (dbSubOrder.filledAmount.gt(0)) {
+            //     await this.db.insertTrade(trade); // todo: insertTrade & updateSubOrder in transaction
+            // }
+            // await this.db.updateSubOrder(dbSubOrder);
 
             dbSubOrder.orderType === OrderType.SUB ? await this.processSubOrderTrade(dbSubOrder, trade) : await this.processSwapOrderTrade(dbSubOrder, trade);
 

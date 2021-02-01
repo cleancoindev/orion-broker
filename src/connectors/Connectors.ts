@@ -119,15 +119,15 @@ export class Connectors {
         return connector;
     }
 
-    async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber): Promise<SubOrder> {
-        return this.getConnector(exchangeId).submitSubOrder(subOrderId, symbol, side, amount, price);
+    async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type = 'limit'): Promise<SendOrder> {
+        return this.getConnector(exchangeId).submitSubOrder(subOrderId, symbol, side, amount, price, type);
     }
 
-    async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type = 'limit'): Promise<SendOrder> {
-        const connector = this.connectors[exchangeId];
-        if (!connector) throw new Error('Cant find exchange ' + exchangeId);
-        return connector.submitSubOrder(subOrderId, symbol, side, amount, price, type);
-    }
+    // async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type = 'limit'): Promise<SendOrder> {
+    //     const connector = this.connectors[exchangeId];
+    //     if (!connector) throw new Error('Cant find exchange ' + exchangeId);
+    //     return connector.submitSubOrder(subOrderId, symbol, side, amount, price, type);
+    // }
 
     async cancelSubOrder(order: SubOrder): Promise<void> {
         return this.getConnector(order.exchange).cancelSubOrder(order);
