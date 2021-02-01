@@ -40,6 +40,13 @@ export interface CreateSubOrder {
     exchange: string;
     price: BigNumber;
     amount: BigNumber;
+    currentDiv?: BigNumber;
+    sellPrice?: BigNumber;
+    buyPrice?: BigNumber;
+}
+
+export function isSwapOrder(order: CreateSubOrder): boolean {
+    return order.hasOwnProperty('currentDiv') && order.hasOwnProperty('sellPrice') && order.hasOwnProperty('buyPrice');
 }
 
 export interface CancelSubOrder {

@@ -1,5 +1,5 @@
 import {Connector, ExchangeWithdrawStatus} from './Connector';
-import {Balances, Dictionary, Exchange, Side, SubOrder, Trade, Withdraw} from '../Model';
+import {Balances, Dictionary, Exchange, Side, SubOrder, Trade, Withdraw, SendOrder} from '../Model';
 import BigNumber from 'bignumber.js';
 import {EmulatorConnector} from './EmulatorConnector';
 import {CCXTConnector} from './CCXTConnector';
@@ -113,10 +113,10 @@ export class Connectors {
         return result;
     }
 
-    async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber): Promise<SubOrder> {
+    async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type = 'limit'): Promise<SendOrder> {
         const connector = this.connectors[exchangeId];
         if (!connector) throw new Error('Cant find exchange ' + exchangeId);
-        return connector.submitSubOrder(subOrderId, symbol, side, amount, price);
+        return connector.submitSubOrder(subOrderId, symbol, side, amount, price, type);
     }
 
     async cancelSubOrder(order: SubOrder): Promise<boolean> {
@@ -129,18 +129,33 @@ export class Connectors {
         return this.execute((connector: Connector) => connector.getBalances(), this.exchangesIds);
     }
 
-    async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
+    // async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
+    //     const byExchanges = {};
+    //     for (const subOrder of subOrders) {
+    //         if (!byExchanges[subOrder.exchange]) {
+    //             byExchanges[subOrder.exchange] = [];
+    //         }
+    //         byExchanges[subOrder.exchange].push(subOrder);
+    //     }
+    //
+    //     for (const exchange in byExchanges) {
+    //         const connector = this.connectors[exchange];
+    //         await connector.checkSubOrders(byExchanges[exchange]);
+    //     }
+    // }
+
+    async checkTrades(trades: Trade[]): Promise<void> {
         const byExchanges = {};
-        for (const subOrder of subOrders) {
-            if (!byExchanges[subOrder.exchange]) {
-                byExchanges[subOrder.exchange] = [];
+        for (const trade of trades) {
+            if (!byExchanges[trade.exchange]) {
+                byExchanges[trade.exchange] = [];
             }
-            byExchanges[subOrder.exchange].push(subOrder);
+            byExchanges[trade.exchange].push(trade);
         }
 
         for (const exchange in byExchanges) {
             const connector = this.connectors[exchange];
-            await connector.checkSubOrders(byExchanges[exchange]);
+            await connector.checkTrades(byExchanges[exchange]);
         }
     }
 

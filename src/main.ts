@@ -15,6 +15,7 @@ import express from 'express';
 import BigNumber from 'bignumber.js';
 import {Tokens} from './Tokens';
 import fetch from 'node-fetch';
+import 'reflect-metadata';
 
 export let tokensDecimals: Dictionary<number>;
 export let minWithdrawFromExchanges: Dictionary<number>;

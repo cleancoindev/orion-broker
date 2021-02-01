@@ -1,5 +1,4 @@
-import {BlockchainOrder, Dictionary, Liability, parseLiability, Side, Trade, Transaction} from './Model';
-import {DbSubOrder} from './db/Db';
+import {BlockchainOrder, Dictionary, Liability, parseLiability, Side, Trade, Transaction, SubOrder} from './Model';
 import BigNumber from 'bignumber.js';
 import {log} from './log';
 import fetch from 'node-fetch';
@@ -151,7 +150,7 @@ export class OrionBlockchain {
         return side === 'buy' ? 0 : 1;
     }
 
-    private createBlockchainOrder(subOrder: DbSubOrder, trade: Trade): BlockchainOrder {
+    private createBlockchainOrder(subOrder: SubOrder, trade: Trade): BlockchainOrder {
         const assets = tokens.symbolToAddresses(subOrder.symbol);
         const buySide = this.counterSide(subOrder.side);
         const matcherFeeAsset = tokens.nameToAddress['ORN'];
@@ -177,7 +176,7 @@ export class OrionBlockchain {
         };
     }
 
-    public async signTrade(subOrder: DbSubOrder, trade: Trade): Promise<BlockchainOrder> {
+    public async signTrade(subOrder: SubOrder, trade: Trade): Promise<BlockchainOrder> {
         const bo = this.createBlockchainOrder(subOrder, trade);
         bo.id = hashOrder(bo);
         bo.signature = this.signOrder(bo);

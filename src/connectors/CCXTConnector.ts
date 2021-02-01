@@ -1,5 +1,5 @@
 import {Connector, ExchangeWithdrawStatus} from './Connector';
-import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from '../Model';
+import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw, SendOrder} from '../Model';
 import BigNumber from 'bignumber.js';
 import ccxt from 'ccxt';
 import {log} from '../log';
@@ -66,10 +66,10 @@ export class CCXTConnector implements Connector {
      * https://github.com/ccxt/ccxt/wiki/Manual#limit-orders
      * @throws if error
      */
-    async submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber): Promise<SubOrder> {
+    async submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string): Promise<SendOrder> {
         const ccxtOrder: ccxt.Order = await this.ccxtExchange.createOrder(
             toSymbol(symbol),
-            'limit',
+            type,
             side,
             toNumber(amount),
             toNumber(price),
@@ -77,17 +77,22 @@ export class CCXTConnector implements Connector {
         );
         log.debug(this.exchange.id + ' submit order response: ', ccxtOrder);
 
+        // return {
+        //     id: subOrderId,
+        //     symbol: symbol,
+        //     side: side,
+        //     price: price,
+        //     amount: amount,
+        //     exchange: this.exchange.id,
+        //     exchangeOrderId: ccxtOrder.id,
+        //     timestamp: ccxtOrder.timestamp || Date.now(),
+        //     status: Status.ACCEPTED, // todo: OPTIMIZATION some exchanges can return Status.FILLED right here - we need to be able to handle it
+        //     sentToAggregator: false
+        // };
         return {
-            id: subOrderId,
-            symbol: symbol,
-            side: side,
-            price: price,
-            amount: amount,
-            exchange: this.exchange.id,
             exchangeOrderId: ccxtOrder.id,
             timestamp: ccxtOrder.timestamp || Date.now(),
             status: Status.ACCEPTED, // todo: OPTIMIZATION some exchanges can return Status.FILLED right here - we need to be able to handle it
-            sentToAggregator: false
         };
     }
 
@@ -127,23 +132,40 @@ export class CCXTConnector implements Connector {
         this.onTrade = onTrade;
     }
 
+    // /**
+    //  * https://github.com/ccxt/ccxt/wiki/Manual#querying-orders
+    //  * https://github.com/ccxt/ccxt/wiki/Manual#personal-trades
+    //  * @throws if error
+    //  */
+    // async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
+    //     for (const subOrder of subOrders) {
+    //         const ccxtOrder: ccxt.Order = await this.ccxtExchange.fetchOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
+    //         log.debug(this.exchange.id + ' check order response: ', ccxtOrder);
+    //         const newStatus = fromStatus(ccxtOrder.status);
+    //         if (newStatus === Status.FILLED) {
+    //             this.onTrade({
+    //                 exchange: subOrder.exchange,
+    //                 exchangeOrderId: subOrder.exchangeOrderId,
+    //                 price: subOrder.price,
+    //                 amount: subOrder.amount,
+    //             });
+    //         }
+    //     }
+    // }
+
+
     /**
      * https://github.com/ccxt/ccxt/wiki/Manual#querying-orders
      * https://github.com/ccxt/ccxt/wiki/Manual#personal-trades
      * @throws if error
      */
-    async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
-        for (const subOrder of subOrders) {
-            const ccxtOrder: ccxt.Order = await this.ccxtExchange.fetchOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
+    async checkTrades(trades: Trade[]): Promise<void> {
+        for (const trade of trades) {
+            const ccxtOrder: ccxt.Order = await this.ccxtExchange.fetchOrder(trade.exchangeOrderId, toSymbol(trade.symbolAlias));
             log.debug(this.exchange.id + ' check order response: ', ccxtOrder);
             const newStatus = fromStatus(ccxtOrder.status);
             if (newStatus === Status.FILLED) {
-                this.onTrade({
-                    exchange: subOrder.exchange,
-                    exchangeOrderId: subOrder.exchangeOrderId,
-                    price: subOrder.price,
-                    amount: subOrder.amount,
-                });
+                this.onTrade(trade);
             }
         }
     }
