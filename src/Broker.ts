@@ -116,17 +116,31 @@ export class Broker {
         const
             isSwap = isSwapOrder(request),
             dbSubOrder = new SubOrder(),
-            [srcAsset, dstAsset]: string[] = dbSubOrder.symbol.split('-'),
+            reqSymbol = request.symbol || request.pair,
+            [srcAsset, dstAsset]: string[] = reqSymbol.split('-'),
             symbol: string = [srcAsset, isSwap ? 'USDT' : dstAsset].join('-'),
             symbolAlias: string = this.symbolAlias(symbol, dbSubOrder.exchange),
             amount: BigNumber = dbSubOrder.amount,
             price: BigNumber = isSwap ? dbSubOrder.sellPrice : dbSubOrder.price,
-            side: Side = isSwap ? 'sell' : dbSubOrder.side
+            side: Side = isSwap ? 'sell' : dbSubOrder.side,
+            allBalances = await this.connector.getBalances(),
+            targetBalances: ExchangeResolve<Balances> = allBalances[request.exchange],
+            {result: balances} = targetBalances,
+            srcBalance: BigNumber = balances[srcAsset]
         ;
+
+        if (srcBalance.isZero() && isSwap) {
+            return {
+                id: request.id,
+                status: Status.CANCELED,
+                filledAmount: '0'
+            };
+        }
+
 
         Object.assign(dbSubOrder, {
             id: request.id,
-            symbol: request.symbol,
+            symbol: reqSymbol,
             side: request.side,
             price: request.price,
             amount: request.amount,

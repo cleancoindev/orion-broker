@@ -36,7 +36,8 @@ export interface BalancesRequest {
 export interface CreateSubOrder {
     id: number;
     side: Side;
-    symbol: string;
+    symbol?: string;
+    pair?: string;
     exchange: string;
     price: BigNumber;
     amount: BigNumber;
