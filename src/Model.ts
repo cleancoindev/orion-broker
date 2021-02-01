@@ -261,9 +261,6 @@ export class Withdraw {
     @Column('decimal', { precision: 18, scale: 8 })
     amount: BigNumber;
 
-    @Column({ type: 'datetime' })
-    createTime: number;
-
     @Column({ length: 255 })
     status: 'pending' | 'ok' | 'failed' | 'canceled';
 }
