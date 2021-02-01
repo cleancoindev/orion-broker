@@ -85,17 +85,11 @@ export class Broker {
             };
         }
 
-        // const
-        //     // trades: Trade[] = dbSubOrder.exchangeOrderId ? (await this.db.getSubOrderTrades(dbSubOrder.exchange, dbSubOrder.exchangeOrderId)) : [],
-        //     traderAmount = dbSubOrder.filledAmount.multipliedBy(dbSubOrder.price),
-        //     amount = dbSubOrder.type === OrderType.SUB ? dbSubOrder.trades[0].amount : traderAmount;
-        // ;
-
         if (dbSubOrder.trades.length > 1 && dbSubOrder.orderType === OrderType.SUB) {
             throw new Error('Cant support multiple trades yet ' + dbSubOrder.id);
         }
-
-        const blockchainOrder: BlockchainOrder = dbSubOrder.trades.length === 0 ? undefined : (await this.orionBlockchain.signTrade(dbSubOrder, dbSubOrder.trades[0]));
+        
+        const blockchainOrder: BlockchainOrder = dbSubOrder.status !== Status.FILLED ? undefined : (await this.orionBlockchain.signTrade(dbSubOrder, dbSubOrder.trades[0]));
 
         return {
             id: id,
@@ -460,7 +454,7 @@ export class Broker {
 
         // upTrade.amount = trade.amount;
         // upTrade.price = trade.price;
-        trade.status = 'ok';
+        // trade.status = 'ok';
 
         dbSubOrder.filledAmount = trade.amount;
         dbSubOrder.status = Status.FILLED;
@@ -524,7 +518,7 @@ export class Broker {
         }
         // upTrade.amount = trade.amount;
         // upTrade.price = trade.price;
-        trade.status = 'ok';
+        // trade.status = 'ok';
         // await this.db.getRepository(Trade).save(trade);
         // await this.db.getRepository(SubOrder).save(dbSubOrder);
 
