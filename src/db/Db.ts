@@ -1,14 +1,8 @@
 import {Status, SubOrder, Trade, Transaction, Withdraw} from '../Model';
-import BigNumber from 'bignumber.js';
-import sqlite3 from 'sqlite3';
 import {log} from '../log';
 import {createConnection, Connection, Repository, In, EntityManager} from 'typeorm';
 
 import fs from 'fs';
-
-// export interface DbSubOrder extends SubOrder {
-//     filledAmount: BigNumber;
-// }
 
 function mapValue(x: any): any {
     if (typeof x === 'number') {
@@ -35,55 +29,7 @@ function mapObject(object: any) {
     return {fields: fields.join(','), quests: quests.join(','), values: values, update: update.join(',')};
 }
 
-// function parseSubOrder(row: any): DbSubOrder {
-//     return {
-//         id: row.id,
-//         symbol: row.symbol,
-//         side: row.side,
-//         price: new BigNumber(row.price),
-//         amount: new BigNumber(row.amount),
-//         exchange: row.exchange,
-//         exchangeOrderId: row.exchangeOrderId,
-//         timestamp: row.timestamp,
-//         status: Status[row.status] as Status,
-//         filledAmount: new BigNumber(row.filledAmount),
-//         sentToAggregator: row.sentToAggregator == 1
-//     };
-// }
-//
-// function parseTrade(row: any): Trade {
-//     return {
-//         exchange: row.exchange,
-//         exchangeOrderId: row.exchangeOrderId,
-//         price: new BigNumber(row.price),
-//         amount: new BigNumber(row.amount),
-//         status: Status.FILLED
-//     };
-// }
-//
-// function parseWithdraw(row: any): Withdraw {
-//     return {
-//         exchangeWithdrawId: row.exchangeWithdrawId,
-//         exchange: row.exchange,
-//         currency: row.currency,
-//         amount: new BigNumber(row.amount),
-//         status: row.status
-//     };
-// }
-//
-// function parseTransaction(row: any): Transaction {
-//     return {
-//         transactionHash: row.transactionHash,
-//         method: row.method,
-//         asset: row.asset,
-//         amount: new BigNumber(row.amount),
-//         createTime: row.createTime,
-//         status: row.status
-//     };
-// }
-
 export class Db {
-    // private db: sqlite3.Database;
     private db: Connection;
 
     constructor(private isInMemory: boolean = false) {
@@ -91,27 +37,29 @@ export class Db {
 
     async init() {
         let databaseExists = false;
+        const dbPath = './data/broker.db';
         if (!this.isInMemory) {
-            databaseExists = fs.existsSync('./data/broker.db');
+            databaseExists = fs.existsSync(dbPath);
         }
 
-        await this.connectToDatabase();
+        await this.connectToDatabase(dbPath, !databaseExists);
 
         if (!databaseExists) {
             await this.createTables();
         }
     }
 
-    async connectToDatabase(): Promise<void> {
+    async connectToDatabase(dbPath: string, synchronize: boolean): Promise<void> {
         this.db = await createConnection({
             migrationsRun: true,
             type: 'sqlite',
-            database: './data/broker.db',
+            database: dbPath,
             migrations: [
-                'src/migration/**/*.ts'
+                // './src/db/migrations/**/*.ts'
+                './dist/db/migrations/**/*.js'
             ],
-            entities: [SubOrder, Trade],
-            synchronize: false,
+            entities: [SubOrder, Trade, Transaction, Withdraw],
+            synchronize,
             logging: false,
         });
     }
@@ -129,22 +77,6 @@ export class Db {
     }
 
     async insertTrade(trade: Trade): Promise<number> {
-        // return new Promise((resolve, reject) => {
-        //     const tradeToSave: any = Object.assign({}, trade);
-        //     tradeToSave.timestamp = Date.now(); // todo
-        //     delete tradeToSave.status;
-        //
-        //     const t = mapObject(tradeToSave);
-        //
-        //     this.db.run(`INSERT INTO trades (${t.fields})
-        //                  VALUES (${t.quests})`, t.values, function (err) {
-        //         if (err) {
-        //             reject(err);
-        //         } else {
-        //             resolve(this.lastID);
-        //         }
-        //     });
-        // });
         const {id} = await this.db.getRepository(Trade).create(trade);
         return id;
     }
@@ -242,7 +174,8 @@ export class Db {
         return this.db.getRepository(Trade).find({
             where: {
                 status: 'pending'
-            }
+            },
+            relations : ['order']
         });
     }
 

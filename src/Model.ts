@@ -6,7 +6,6 @@ import {
     Column,
     Entity,
     OneToMany,
-    JoinColumn,
     ManyToOne,
     Index
 } from 'typeorm';
@@ -225,7 +224,7 @@ export class Trade {
     order: SubOrder;
 }
 
-@Entity()
+@Entity({name:'transactions'})
 export class Transaction {
 
     @PrimaryColumn({ type: 'varchar', length: 255 })
@@ -247,7 +246,7 @@ export class Transaction {
     status: 'PENDING' | 'OK' | 'FAIL';
 }
 
-@Entity()
+@Entity({name:'withdraws'})
 export class Withdraw {
 
     @PrimaryColumn({ type: 'varchar', length: 255 })
