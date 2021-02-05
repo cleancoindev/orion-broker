@@ -72,29 +72,17 @@ export class CCXTConnector implements Connector {
      * https://github.com/ccxt/ccxt/wiki/Manual#limit-orders
      * @throws if error
      */
-    async submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string): Promise<SendOrder> {
+    async submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string, params: any): Promise<SendOrder> {
         const ccxtOrder: ccxt.Order = await this.ccxtExchange.createOrder(
             toSymbol(symbol),
             type,
             side,
             toNumber(amount),
             toNumber(price),
-            {'clientOrderId': subOrderId}
+            {timeInForce: 'GTC' , ...params, clientOrderId: subOrderId}
         );
         log.debug(this.exchange.id + ' submit order response: ', ccxtOrder);
 
-        // return {
-        //     id: subOrderId,
-        //     symbol: symbol,
-        //     side: side,
-        //     price: price,
-        //     amount: amount,
-        //     exchange: this.exchange.id,
-        //     exchangeOrderId: ccxtOrder.id,
-        //     timestamp: ccxtOrder.timestamp || Date.now(),
-        //     status: Status.ACCEPTED, // todo: OPTIMIZATION some exchanges can return Status.FILLED right here - we need to be able to handle it
-        //     sentToAggregator: false
-        // };
         return {
             exchangeOrderId: ccxtOrder.id,
             timestamp: ccxtOrder.timestamp || Date.now(),
@@ -133,29 +121,6 @@ export class CCXTConnector implements Connector {
     setOnTradeListener(onTrade: (trade: Trade) => void): void {
         this.onTrade = onTrade;
     }
-
-    // /**
-    //  * https://github.com/ccxt/ccxt/wiki/Manual#querying-orders
-    //  * https://github.com/ccxt/ccxt/wiki/Manual#personal-trades
-    //  * @throws if error
-    //  */
-    // async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
-    //     for (const subOrder of subOrders) {
-    //         const ccxtOrder: ccxt.Order = await this.ccxtExchange.fetchOrder(subOrder.exchangeOrderId, toSymbol(subOrder.symbol));
-    //         log.debug(this.exchange.id + ' check order response: ', ccxtOrder);
-    //         const newStatus = fromStatus(ccxtOrder.status);
-    //         const amount = newStatus === Status.CANCELED ? parseFilledAmount(ccxtOrder.filled) : subOrder.amount;
-    //         if (newStatus === Status.FILLED || newStatus === Status.CANCELED) {
-    //             this.onTrade({
-    //                 exchange: subOrder.exchange,
-    //                 exchangeOrderId: subOrder.exchangeOrderId,
-    //                 price: subOrder.price,
-    //                 amount: amount,
-    //                 status:
-    //             });
-    //         }
-    //     }
-    // }
 
     /**
      * https://github.com/ccxt/ccxt/wiki/Manual#querying-orders

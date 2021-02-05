@@ -72,12 +72,20 @@ export class Db {
         return this.db.synchronize();
     }
 
-    getRepository(T): Repository<any> {
+    getRepository(T): Repository<typeof T> {
         return this.db.getRepository(T);
     }
 
+    getOrderRepository() : Repository<SubOrder> {
+        return this.db.getRepository(SubOrder);
+    }
+
+    getTradeRepository() : Repository<Trade> {
+        return this.db.getRepository(Trade);
+    }
+
     async insertTrade(trade: Trade): Promise<number> {
-        const {id} = await this.db.getRepository(Trade).create(trade);
+        const {id} = await this.db.getRepository(Trade).save(trade);
         return id;
     }
 
@@ -100,25 +108,17 @@ export class Db {
         });
     }
 
-    async getTransactionManager(): Promise<EntityManager> {
-        return new Promise((resolve, reject) => {
-            try {
-                this.db.transaction(async entityManager => {
-                    resolve(entityManager);
-                });
-            } catch (e) {
-                reject(e);
-            }
-        });
-    }
-
     async insertSubOrder(subOrder: SubOrder): Promise<number> {
-        const {id} = await this.db.getRepository(SubOrder).create(subOrder);
+        const {id} = await this.db.getRepository(SubOrder).save(subOrder);
         return id;
     }
 
     async updateSubOrder(subOrder: SubOrder): Promise<SubOrder> {
         return this.db.getRepository(SubOrder).save(subOrder);
+    }
+
+    async updateTrade(trade: Trade): Promise<Trade> {
+        return this.db.getRepository(Trade).save(trade);
     }
 
     async getSubOrder(exchange: string, exchangeOrderId: string): Promise<SubOrder | undefined> {

@@ -1,7 +1,7 @@
 import {Connector, ExchangeWithdrawLimit, ExchangeWithdrawStatus} from './Connector';
 // import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from '../Model';
 // import {Connector, ExchangeWithdrawStatus} from './Connector';
-import {Balances, Exchange, SendOrder, Side, Status, SubOrder, Withdraw, Trade} from '../Model';
+import {Balances, Exchange, OrderType, SendOrder, Side, Status, SubOrder, Trade, Withdraw} from '../Model';
 import {v1 as uuid} from 'uuid';
 import BigNumber from 'bignumber.js';
 
@@ -19,7 +19,7 @@ export class EmulatorConnector implements Connector {
     destroy(): void {
     }
 
-    async submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string): Promise<SendOrder> {
+    async submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string, params: any): Promise<SendOrder> {
         return {
             exchangeOrderId: uuid().toString(),
             timestamp: Date.now(),
@@ -56,7 +56,8 @@ export class EmulatorConnector implements Connector {
         for (const trade of trades) {
             const
                 isCancelled = this.cancelledSubOrderIds.indexOf(trade.order.id) > -1,
-                amount = isCancelled ? (trade.amount.eq(14) ? trade.amount.multipliedBy(0.5) : new BigNumber(0)) : trade.amount,
+                // amount = isCancelled ? (trade.amount.eq(14) ? trade.amount.multipliedBy(0.5) : new BigNumber(0)) : trade.amount,
+                amount = trade.side === (trade.symbol ==='USDT-DAI' ? 'sell' : 'buy') && trade.order.orderType === OrderType.SWAP && trade.type === 'limit' ? trade.amount.multipliedBy(0.5) :  trade.amount,
                 status = isCancelled ? 'canceled' : 'ok'
             ;
 

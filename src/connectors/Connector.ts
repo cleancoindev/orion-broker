@@ -4,15 +4,13 @@ import BigNumber from 'bignumber.js';
 export interface Connector {
     exchange: Exchange;
 
-    submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string): Promise<SendOrder>;
+    submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string, params : any ): Promise<SendOrder>;
 
     cancelSubOrder(subOrder: SubOrder): Promise<void>;
 
     getBalances(): Promise<Balances>;
 
     setOnTradeListener(onTrade: (trade: Trade) => void): void;
-
-    // checkSubOrders(subOrders: SubOrder[]): Promise<void>;
 
     checkTrades(trades: Trade[]): Promise<void>;
 

@@ -9,7 +9,7 @@ export interface ExchangeConfig {
     secret: string;
     key: string;
     password: string;
-    aliases?: Dictionary<string> 
+    aliases?: Dictionary<string>
 }
 
 export interface ExchangeResolve<T> {
@@ -120,15 +120,9 @@ export class Connectors {
         return connector;
     }
 
-    async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type = 'limit'): Promise<SendOrder> {
-        return this.getConnector(exchangeId).submitSubOrder(subOrderId, symbol, side, amount, price, type);
+    async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type = 'limit', params = {}): Promise<SendOrder> {
+        return this.getConnector(exchangeId).submitSubOrder(subOrderId, symbol, side, amount, price, type, params);
     }
-
-    // async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type = 'limit'): Promise<SendOrder> {
-    //     const connector = this.connectors[exchangeId];
-    //     if (!connector) throw new Error('Cant find exchange ' + exchangeId);
-    //     return connector.submitSubOrder(subOrderId, symbol, side, amount, price, type);
-    // }
 
     async cancelSubOrder(order: SubOrder): Promise<void> {
         return this.getConnector(order.exchange).cancelSubOrder(order);
@@ -137,21 +131,6 @@ export class Connectors {
     async getBalances(): Promise<Dictionary<ExchangeResolve<Balances>>> {
         return this.execute((connector: Connector) => connector.getBalances(), this.exchangesIds);
     }
-
-    // async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
-    //     const byExchanges = {};
-    //     for (const subOrder of subOrders) {
-    //         if (!byExchanges[subOrder.exchange]) {
-    //             byExchanges[subOrder.exchange] = [];
-    //         }
-    //         byExchanges[subOrder.exchange].push(subOrder);
-    //     }
-    //
-    //     for (const exchange in byExchanges) {
-    //         const connector = this.connectors[exchange];
-    //         await connector.checkSubOrders(byExchanges[exchange]);
-    //     }
-    // }
 
     async checkTrades(trades: Trade[]): Promise<void> {
         const byExchanges = {};

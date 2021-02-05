@@ -135,33 +135,63 @@ export function parseLiability(data: any): Liability {
     };
 }
 
-@Entity({name:'subOrders'})
+@Entity({name: 'subOrders'})
 export class SubOrder {
-    @PrimaryGeneratedColumn()
+    @PrimaryColumn()
     id: number;
 
-    @Column({ length: 255 })
+    @Column({length: 255})
     symbol: string;
 
-    @Column({ length: 255 })
+    @Column({length: 255})
     exchange: string;
 
-    @Column('decimal', { precision: 18, scale: 8 })
+    @Column('decimal', {
+        precision: 18, scale: 8, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string  => value.toString()
+        }
+    })
     price: BigNumber;
 
-    @Column('decimal', { precision: 18, scale: 8, nullable: true })
-    currentDev: BigNumber;
+    @Column('decimal', {
+        precision: 18, scale: 8, nullable: true, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string | undefined => value ? value.toString() : undefined
+        }
+    })
+    currentDev!: BigNumber;
 
-    @Column('decimal', { precision: 18, scale: 8, nullable: true })
-    sellPrice: BigNumber;
+    @Column('decimal', {
+        precision: 18, scale: 8, nullable: true, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string | undefined => value ? value.toString() : undefined
+        }
+    })
+    sellPrice!: BigNumber;
 
-    @Column('decimal', { precision: 18, scale: 8, nullable: true })
-    buyPrice: BigNumber;
+    @Column('decimal', {
+        precision: 18, scale: 8, nullable: true, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string | undefined => value ? value.toString() : undefined
+        }
+    })
+    buyPrice!: BigNumber;
 
-    @Column('decimal', { precision: 18, scale: 8 })
+    @Column('decimal', {
+        precision: 18, scale: 8, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string => value.toString()
+        }
+    })
     amount: BigNumber;
 
-    @Column('decimal', { precision: 18, scale: 8, nullable: true })
+    @Column('decimal', {
+        precision: 18, scale: 8, nullable: true, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string => value.toString()
+        }
+    })
     filledAmount: BigNumber;
 
     @Column()
@@ -176,35 +206,45 @@ export class SubOrder {
     @Column({default: false})
     sentToAggregator: boolean;
 
-    @Column({ type: 'datetime' })
+    @Column({type: 'datetime'})
     timestamp: number;
 
-    @OneToMany(type => Trade, trade => trade.order )
+    @OneToMany(type => Trade, trade => trade.order)
     trades: Trade[];
 }
 
-@Entity({name:'trades'})
-@Index(['exchange', 'exchangeOrderId'], { unique: true })
+@Entity({name: 'trades'})
+@Index(['exchange', 'exchangeOrderId'], {unique: true})
 export class Trade {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column({ length: 255 })
+    @Column({length: 255})
     exchange: string;
 
-    @Column({ length: 255 })
+    @Column({length: 255})
     exchangeOrderId: string;
 
-    @Column({ length: 255 })
+    @Column({length: 255})
     symbol: string;
 
-    @Column({ length: 255 })
+    @Column({length: 255})
     symbolAlias: string;
 
-    @Column('decimal', { precision: 18, scale: 8 })
+    @Column('decimal', {
+        precision: 18, scale: 8, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string => value.toString()
+        }
+    })
     price: BigNumber;
 
-    @Column('decimal', { precision: 18, scale: 8 })
+    @Column('decimal', {
+        precision: 18, scale: 8, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string => value.toString()
+        }
+    })
     amount: BigNumber;
 
     @Column()
@@ -216,7 +256,7 @@ export class Trade {
     @Column()
     status: TradeStatus;
 
-    @Column({ type: 'datetime' })
+    @Column({type: 'datetime'})
     timestamp: number;
 
     @ManyToOne(type => SubOrder, order => order.trades)
@@ -224,43 +264,53 @@ export class Trade {
     order: SubOrder;
 }
 
-@Entity({name:'transactions'})
+@Entity({name: 'transactions'})
 export class Transaction {
 
-    @PrimaryColumn({ type: 'varchar', length: 255 })
+    @PrimaryColumn({type: 'varchar', length: 255})
     transactionHash: string;
 
-    @Column({ length: 255 })
+    @Column({length: 255})
     method: 'deposit' | 'depositAsset' | 'withdraw' | 'approve' | 'lockStake' | 'requestReleaseStake';
 
-    @Column({ length: 255 })
+    @Column({length: 255})
     asset: string;
 
-    @Column('decimal', { precision: 18, scale: 8 })
+    @Column('decimal', {
+        precision: 18, scale: 8, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string => value.toString()
+        }
+    })
     amount: BigNumber;
 
-    @Column({ type: 'datetime' })
+    @Column({type: 'datetime'})
     createTime: number;
 
-    @Column({ length: 255 })
+    @Column({length: 255})
     status: 'PENDING' | 'OK' | 'FAIL';
 }
 
-@Entity({name:'withdraws'})
+@Entity({name: 'withdraws'})
 export class Withdraw {
 
-    @PrimaryColumn({ type: 'varchar', length: 255 })
+    @PrimaryColumn({type: 'varchar', length: 255})
     exchangeWithdrawId: string;
 
-    @Column({ length: 255 })
+    @Column({length: 255})
     exchange: string;
 
-    @Column({ length: 255 })
+    @Column({length: 255})
     currency: string;
 
-    @Column('decimal', { precision: 18, scale: 8 })
+    @Column('decimal', {
+        precision: 18, scale: 8, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string => value.toString()
+        }
+    })
     amount: BigNumber;
 
-    @Column({ length: 255 })
+    @Column({length: 255})
     status: 'pending' | 'ok' | 'failed' | 'canceled';
 }
