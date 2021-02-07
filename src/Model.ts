@@ -130,7 +130,7 @@ export function parseLiability(data: any): Liability {
     return {
         assetName: data.assetName,
         assetAddress: data.assetAddress,
-        timestamp: data.timestamp,
+        timestamp: Number(data.timestamp),
         outstandingAmount: new BigNumber(data.outstandingAmount),
     };
 }
