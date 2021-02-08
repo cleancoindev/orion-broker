@@ -1,5 +1,14 @@
 import BigNumber from 'bignumber.js';
 import {ExchangeConfig} from './connectors/Connectors';
+import {
+    PrimaryGeneratedColumn,
+    PrimaryColumn,
+    Column,
+    Entity,
+    OneToMany,
+    ManyToOne,
+    Index
+} from 'typeorm';
 
 export interface Dictionary<T> {
     [key: string]: T;
@@ -29,7 +38,16 @@ export enum Status {
     REJECTED = 'REJECTED',
 }
 
+export enum OrderType {
+    SUB = 'SUB',
+    SWAP = 'SWAP'
+}
+
+export type TradeType = 'limit' | 'market';
+
 export type Side = 'buy' | 'sell';
+
+export type TradeStatus = 'pending' | 'ok' | 'failed' | 'canceled';
 
 export interface Exchange {
     id: string;
@@ -39,9 +57,16 @@ export interface Exchange {
     balances: Balances;
 }
 
+export interface SendOrder {
+    exchangeOrderId: string;
+    timestamp: number;
+    status: Status;
+}
+
 export interface SubOrder {
     id: number;
     symbol: string; // 'BTC-ETH'
+    symbolAlias: string; // 'WBTC-ETH'
     side: Side;
     price: BigNumber;
     amount: BigNumber;
@@ -52,7 +77,7 @@ export interface SubOrder {
     sentToAggregator: boolean;
 }
 
-export interface Trade {
+export interface ITrade {
     exchange: string;
     exchangeOrderId: string;
     price: BigNumber;
@@ -108,4 +133,184 @@ export function parseLiability(data: any): Liability {
         timestamp: Number(data.timestamp),
         outstandingAmount: new BigNumber(data.outstandingAmount),
     };
+}
+
+@Entity({name: 'subOrders'})
+export class SubOrder {
+    @PrimaryColumn()
+    id: number;
+
+    @Column({length: 255})
+    symbol: string;
+
+    @Column({length: 255})
+    exchange: string;
+
+    @Column('decimal', {
+        precision: 18, scale: 8, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string  => value.toString()
+        }
+    })
+    price: BigNumber;
+
+    @Column('decimal', {
+        precision: 18, scale: 8, nullable: true, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string | undefined => value ? value.toString() : undefined
+        }
+    })
+    currentDev!: BigNumber;
+
+    @Column('decimal', {
+        precision: 18, scale: 8, nullable: true, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string | undefined => value ? value.toString() : undefined
+        }
+    })
+    sellPrice!: BigNumber;
+
+    @Column('decimal', {
+        precision: 18, scale: 8, nullable: true, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string | undefined => value ? value.toString() : undefined
+        }
+    })
+    buyPrice!: BigNumber;
+
+    @Column('decimal', {
+        precision: 18, scale: 8, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string => value.toString()
+        }
+    })
+    amount: BigNumber;
+
+    @Column('decimal', {
+        precision: 18, scale: 8, nullable: true, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string => value.toString()
+        }
+    })
+    filledAmount: BigNumber;
+
+    @Column()
+    side: Side;
+
+    @Column()
+    orderType: OrderType;
+
+    @Column()
+    status: Status;
+
+    @Column({default: false})
+    sentToAggregator: boolean;
+
+    @Column({type: 'datetime'})
+    timestamp: number;
+
+    @OneToMany(type => Trade, trade => trade.order)
+    trades: Trade[];
+}
+
+@Entity({name: 'trades'})
+@Index(['exchange', 'exchangeOrderId'], {unique: true})
+export class Trade {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({length: 255})
+    exchange: string;
+
+    @Column({length: 255})
+    exchangeOrderId: string;
+
+    @Column({length: 255})
+    symbol: string;
+
+    @Column({length: 255})
+    symbolAlias: string;
+
+    @Column('decimal', {
+        precision: 18, scale: 8, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string => value.toString()
+        }
+    })
+    price: BigNumber;
+
+    @Column('decimal', {
+        precision: 18, scale: 8, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string => value.toString()
+        }
+    })
+    amount: BigNumber;
+
+    @Column()
+    side: Side;
+
+    @Column()
+    type: TradeType;
+
+    @Column()
+    status: TradeStatus;
+
+    @Column({type: 'datetime'})
+    timestamp: number;
+
+    @ManyToOne(type => SubOrder, order => order.trades)
+        // @JoinColumn({ name: "orderId"})
+    order: SubOrder;
+}
+
+@Entity({name: 'transactions'})
+export class Transaction {
+
+    @PrimaryColumn({type: 'varchar', length: 255})
+    transactionHash: string;
+
+    @Column({length: 255})
+    method: 'deposit' | 'depositAsset' | 'withdraw' | 'approve' | 'lockStake' | 'requestReleaseStake';
+
+    @Column({length: 255})
+    asset: string;
+
+    @Column('decimal', {
+        precision: 18, scale: 8, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string => value.toString()
+        }
+    })
+    amount: BigNumber;
+
+    @Column({type: 'datetime'})
+    createTime: number;
+
+    @Column({length: 255})
+    status: 'PENDING' | 'OK' | 'FAIL';
+}
+
+@Entity({name: 'withdraws'})
+export class Withdraw {
+
+    @PrimaryColumn({type: 'varchar', length: 255})
+    exchangeWithdrawId: string;
+
+    @Column({length: 255})
+    exchange: string;
+
+    @Column({length: 255})
+    currency: string;
+
+    @Column('decimal', {
+        precision: 18, scale: 8, transformer: {
+            from: (value: string): BigNumber => new BigNumber(value),
+            to: (value: BigNumber): string => value.toString()
+        }
+    })
+    amount: BigNumber;
+
+    @Column({length: 255})
+    status: 'pending' | 'ok' | 'failed' | 'canceled';
 }

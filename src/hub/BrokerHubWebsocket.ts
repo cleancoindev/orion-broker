@@ -5,21 +5,29 @@ import {
     BrokerHubRegisterRequest,
     CreateSubOrder,
     SubOrderStatus,
-    SubOrderStatusAccepted
+    SubOrderStatusAccepted,
+    isSwapOrder
 } from './BrokerHub';
 import {Settings} from '../Settings';
-import {Dictionary, Status} from '../Model';
+import {Dictionary, Status, OrderType} from '../Model';
 import BigNumber from 'bignumber.js';
 import io from 'socket.io-client';
 
 export function parseCreateSubOrder(request: any): CreateSubOrder {
     return {
         id: request.id,
-        side: request.side,
+        side: request.hasOwnProperty('sellPrice') ? 'sell' : 'buy',
         symbol: request.symbol,
+        pair: request.pair,
         exchange: request.exchange.toLowerCase(),
         price: new BigNumber(request.price),
         amount: new BigNumber(request.amount),
+        ...isSwapOrder(request) ? {
+            sellPrice: new BigNumber(request.sellPrice),
+            buyPrice: new BigNumber(request.buyPrice),
+            currentDev: new BigNumber(request.currentDev),
+            orderType: OrderType.SWAP
+        } : {orderType: OrderType.SUB}
     };
 }
 

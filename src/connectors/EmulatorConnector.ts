@@ -1,5 +1,7 @@
 import {Connector, ExchangeWithdrawLimit, ExchangeWithdrawStatus} from './Connector';
-import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from '../Model';
+// import {Balances, Exchange, Side, Status, SubOrder, Trade, Withdraw} from '../Model';
+// import {Connector, ExchangeWithdrawStatus} from './Connector';
+import {Balances, Exchange, OrderType, SendOrder, Side, Status, SubOrder, Trade, Withdraw} from '../Model';
 import {v1 as uuid} from 'uuid';
 import BigNumber from 'bignumber.js';
 
@@ -17,18 +19,11 @@ export class EmulatorConnector implements Connector {
     destroy(): void {
     }
 
-    async submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber): Promise<SubOrder> {
+    async submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string, params: any): Promise<SendOrder> {
         return {
-            id: subOrderId,
-            exchange: this.exchange.id,
             exchangeOrderId: uuid().toString(),
-            symbol: symbol,
-            side: side,
-            price: price,
-            amount: amount,
             timestamp: Date.now(),
-            status: Status.ACCEPTED,
-            sentToAggregator: false
+            status: Status.ACCEPTED
         };
     }
 
@@ -44,16 +39,29 @@ export class EmulatorConnector implements Connector {
         this.onTrade = onTrade;
     }
 
-    async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
-        for (const subOrder of subOrders) {
-            const isCancelled = this.cancelledSubOrderIds.indexOf(subOrder.id) > -1;
-            this.onTrade({
-                exchange: this.exchange.id,
-                exchangeOrderId: subOrder.exchangeOrderId,
-                price: subOrder.price,
-                amount: isCancelled ? (subOrder.amount.eq(14) ? subOrder.amount.multipliedBy(0.5) : new BigNumber(0)) : subOrder.amount,
-                status: isCancelled ? Status.CANCELED : Status.FILLED
-            });
+    // async checkSubOrders(subOrders: SubOrder[]): Promise<void> {
+    //     for (const subOrder of subOrders) {
+    //         const isCancelled = this.cancelledSubOrderIds.indexOf(subOrder.id) > -1;
+    //         this.onTrade({
+    //             exchange: this.exchange.id,
+    //             exchangeOrderId: subOrder.exchangeOrderId,
+    //             price: subOrder.price,
+    //             amount: isCancelled ? (subOrder.amount.eq(14) ? subOrder.amount.multipliedBy(0.5) : new BigNumber(0)) : subOrder.amount,
+    //             status: isCancelled ? Status.CANCELED : Status.FILLED
+    //         });
+    //     }
+    // }
+
+    async checkTrades(trades: Trade[]): Promise<void> {
+        for (const trade of trades) {
+            const
+                isCancelled = this.cancelledSubOrderIds.indexOf(trade.order.id) > -1,
+                // amount = isCancelled ? (trade.amount.eq(14) ? trade.amount.multipliedBy(0.5) : new BigNumber(0)) : trade.amount,
+                amount = trade.side === (trade.symbol ==='USDT-DAI' ? 'sell' : 'buy') && trade.order.orderType === OrderType.SWAP && trade.type === 'limit' ? trade.amount.multipliedBy(0.5) :  trade.amount,
+                status = isCancelled ? 'canceled' : 'ok'
+            ;
+
+            this.onTrade(Object.assign(trade, {amount, status}));
         }
     }
 

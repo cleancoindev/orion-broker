@@ -1,7 +1,20 @@
-import {BrokerHub, CreateSubOrder, SubOrderStatus, SubOrderStatusAccepted,} from './hub/BrokerHub';
-import {Db, DbSubOrder} from './db/Db';
+import {BrokerHub, CreateSubOrder, SubOrderStatus, SubOrderStatusAccepted} from './hub/BrokerHub';
+import {Db} from './db/Db';
 import {log} from './log';
-import {Balances, BlockchainOrder, Dictionary, Liability, Status, SubOrder, Trade, Transaction} from './Model';
+import {
+    Balances,
+    BlockchainOrder,
+    Dictionary,
+    Liability,
+    OrderType,
+    SendOrder,
+    Side,
+    Status,
+    SubOrder,
+    Trade,
+    Transaction,
+    Withdraw
+} from './Model';
 import BigNumber from 'bignumber.js';
 import {WebUI} from './ui/WebUI';
 import {Connectors, ExchangeResolve} from './connectors/Connectors';
@@ -41,7 +54,7 @@ export class Broker {
     async onSubOrderStatusAccepted(data: SubOrderStatusAccepted): Promise<void> {
         const id = data.id;
 
-        const dbSubOrder: DbSubOrder = await this.db.getSubOrderById(id);
+        const dbSubOrder: SubOrder = await this.db.getSubOrderById(id);
 
         if (!dbSubOrder) {
             throw new Error(`Suborder ${id} not found`);
@@ -62,7 +75,7 @@ export class Broker {
     };
 
     async onCheckSubOrder(id: number): Promise<SubOrderStatus> {
-        const dbSubOrder: DbSubOrder = await this.db.getSubOrderById(id);
+        const dbSubOrder: SubOrder = await this.db.getSubOrderById(id);
 
         if (!dbSubOrder) {
             return {
@@ -72,13 +85,11 @@ export class Broker {
             };
         }
 
-        const trades: Trade[] = dbSubOrder.exchangeOrderId ? (await this.db.getSubOrderTrades(dbSubOrder.exchange, dbSubOrder.exchangeOrderId)) : [];
-
-        if (trades.length > 1) {
+        if (dbSubOrder.trades.length > 1 && dbSubOrder.orderType === OrderType.SUB) {
             throw new Error('Cant support multiple trades yet ' + dbSubOrder.id);
         }
 
-        const blockchainOrder: BlockchainOrder = trades.length === 0 ? undefined : (await this.orionBlockchain.signTrade(dbSubOrder, trades[0]));
+        const blockchainOrder: BlockchainOrder = dbSubOrder.status !== Status.FILLED ? undefined : (await this.orionBlockchain.signTrade(dbSubOrder, dbSubOrder.trades[0]));
 
         return {
             id: id,
@@ -96,45 +107,101 @@ export class Broker {
             return this.onCheckSubOrder(request.id);
         }
 
-        const dbSubOrder: DbSubOrder = {
+        const
+            isSwap = request.orderType === OrderType.SWAP,
+            dbSubOrder = new SubOrder(),
+            reqSymbol = request.symbol || request.pair,
+            [srcAsset, dstAsset]: string[] = reqSymbol.split('-'),
+            isRevert  = srcAsset === 'DAI',
+            pair: string[] = [srcAsset, isSwap ? 'USDT' : dstAsset],
+            symbol: string = (isRevert ? pair.reverse() : pair).join('-'),
+            symbolAlias: string = this.symbolAlias(symbol, dbSubOrder.exchange),
+            amount: BigNumber = request.amount,
+            sellPrice: BigNumber = isSwap ? request.sellPrice : request.price,
+            price = isRevert ? new BigNumber(1).dividedBy(sellPrice) : sellPrice,
+            side: Side = isSwap ? 'sell' : request.side || 'sell',
+            allBalances = await this.connector.getBalances(),
+            targetBalances: ExchangeResolve<Balances> = allBalances[request.exchange],
+            {result: balances} = targetBalances,
+            srcBalance: BigNumber = balances[srcAsset],
+            timeInForce = isSwap ? 'IOC' : 'GTC'
+        ;
+
+        if (srcBalance.isZero() && isSwap) {
+            return {
+                id: request.id,
+                status: Status.CANCELED,
+                filledAmount: '0'
+            };
+        }
+
+
+        Object.assign(dbSubOrder, {
             id: request.id,
-            symbol: request.symbol,
-            side: request.side,
+            symbol: reqSymbol,
+            side: side,
             price: request.price,
             amount: request.amount,
             exchange: request.exchange,
             timestamp: Date.now(),
             status: Status.PREPARE,
+            orderType: request.orderType,
             filledAmount: new BigNumber(0),
-            sentToAggregator: false
-        };
+            sentToAggregator: false,
+            ...isSwap ? {
+                currentDev: request.currentDev,
+                sellPrice: request.sellPrice,
+                buyPrice: request.sellPrice
+            } : null
+        });
+
         await this.db.insertSubOrder(dbSubOrder);
         log.debug(`Suborder ${request.id} inserted`);
 
-        let subOrder: SubOrder = null;
+        let sendOrder: SendOrder = null;
 
         try {
-            subOrder = await this.connector.submitSubOrder(request.exchange, dbSubOrder.id, dbSubOrder.symbol, dbSubOrder.side, dbSubOrder.amount, dbSubOrder.price);
+            sendOrder = await this.connector.submitSubOrder(dbSubOrder.exchange, dbSubOrder.id, symbolAlias, dbSubOrder.side, amount, price, 'limit', {timeInForce});
         } catch (e) {
             log.error('Submit order error:', e);
         }
 
-        if (subOrder === null) {
+        if (sendOrder === null) {
             dbSubOrder.status = Status.REJECTED;
         } else {
-            dbSubOrder.exchangeOrderId = subOrder.exchangeOrderId;
             dbSubOrder.status = Status.ACCEPTED;
+            const trade: Trade = new Trade();
+            trade.exchange = dbSubOrder.exchange;
+            trade.exchangeOrderId = sendOrder.exchangeOrderId;
+            trade.order = dbSubOrder;
+            trade.symbol = symbol;
+            trade.symbolAlias = symbolAlias;
+            trade.price = price;
+            trade.amount = amount;
+            trade.side = side;
+            trade.timestamp = sendOrder.timestamp;
+            trade.type = 'limit';
+            trade.status = 'pending';
+            await this.db.insertTrade(trade);
         }
 
-        await this.db.updateSubOrder(dbSubOrder);
+        await this.db.getOrderRepository().update(dbSubOrder.id, {status: dbSubOrder.status});
         log.debug('Suborder updated ', JSON.stringify(dbSubOrder));
 
         this.webUI.sendToFrontend(dbSubOrder);
         return this.onCheckSubOrder(dbSubOrder.id);
     };
 
+    symbolAlias(symbol: string, exchangeId: string): string {
+        const
+            exchange = this.settings.exchanges[exchangeId],
+            symbolAliases = exchange && exchange['aliases'] ? exchange['aliases'] : {}
+        ;
+        return symbolAliases[symbol] ? symbolAliases[symbol] : symbol;
+    }
+
     async onCancelSubOrder(id: number): Promise<SubOrderStatus | null> {
-        const dbSubOrder: DbSubOrder = await this.db.getSubOrderById(id);
+        const dbSubOrder: SubOrder = await this.db.getSubOrderById(id);
 
         if (!dbSubOrder) throw new Error('Cant find suborder ' + dbSubOrder.id);
 
@@ -195,9 +262,9 @@ export class Broker {
                     await this.brokerHub.sendSubOrderStatus(await this.onCheckSubOrder(subOrder.id));
                 }
 
-                const openSubOrders = await this.db.getSubOrdersToCheck();
-                if (openSubOrders.length) {
-                    await this.connector.checkSubOrders(openSubOrders);
+                const pendingTrades = await this.db.getTradesToCheck();
+                if (pendingTrades.length) {
+                    await this.connector.checkTrades(pendingTrades);
                 }
             } catch (e) {
                 log.error('Suborders check error:', e);
@@ -341,27 +408,17 @@ export class Broker {
 
     async onTrade(trade: Trade): Promise<void> {
         try {
-            const dbSubOrder: DbSubOrder = await this.db.getSubOrder(trade.exchange, trade.exchangeOrderId);
+            const dbSubOrder: SubOrder = await this.db.getSubOrder(trade.exchange, trade.exchangeOrderId);
 
             if (!dbSubOrder) {
                 throw new Error(`Suborder ${trade.exchangeOrderId} in ${trade.exchange} not found`);
             }
 
-            if (trade.status !== Status.FILLED && trade.status !== Status.CANCELED) {
+            if (trade.status !== 'ok' && trade.status !== 'canceled') {
                 throw new Error('Unexpected trade status ' + trade.status);
             }
 
-            if (trade.status === Status.FILLED && !dbSubOrder.amount.eq(trade.amount)) {
-                throw new Error('Partially trade not supported yet ' + dbSubOrder.id);
-            }
-
-            dbSubOrder.filledAmount = trade.amount;
-            dbSubOrder.status = trade.status;
-
-            if (dbSubOrder.filledAmount.gt(0)) {
-                await this.db.insertTrade(trade); // todo: insertTrade & updateSubOrder in transaction
-            }
-            await this.db.updateSubOrder(dbSubOrder);
+            dbSubOrder.orderType === OrderType.SUB ? await this.processSubOrderTrade(dbSubOrder, trade) : await this.processSwapOrderTrade(dbSubOrder, trade);
 
             log.log('Send suborder ' + dbSubOrder.id + ' ' + trade.status + ' status: ' + dbSubOrder.side + ' ' + dbSubOrder.filledAmount + ' ' + dbSubOrder.symbol + ' on ' + dbSubOrder.exchange);
 
@@ -374,13 +431,90 @@ export class Broker {
         }
     }
 
+    async processSubOrderTrade(dbSubOrder: SubOrder, trade: Trade): Promise<void> {
+        if (trade.status === 'ok'  && !new BigNumber(dbSubOrder.amount).eq(trade.amount)) {
+            throw new Error('Partially trade not supported yet ' + dbSubOrder.id);
+        }
+
+        dbSubOrder.filledAmount = trade.amount;
+        dbSubOrder.status = Status.FILLED;
+
+        await this.db.getOrderRepository().update(dbSubOrder.id, {filledAmount: trade.amount, status: dbSubOrder.status});
+        await this.db.getTradeRepository().update(trade.id, {amount: trade.amount, status: trade.status});
+
+    }
+
+    async processSwapOrderTrade(dbSubOrder: SubOrder, trade: Trade) {
+        const
+            [srcAsset, dstAsset]: string[] = dbSubOrder.symbol.split('-'),
+            isSellOrder = dbSubOrder.trades.length === 1,
+            revert = dstAsset === 'DAI' ? true : false,
+            executedAmount = dbSubOrder.trades.find((sellTrade: Trade) => sellTrade.side === 'sell').amount,
+            traderAmount = executedAmount.multipliedBy(dbSubOrder.price),
+            actualAmount = traderAmount.dividedBy(dbSubOrder.buyPrice),
+            filledAmount = dbSubOrder.trades.filter(buyTrade => buyTrade.side === 'buy' && buyTrade.id !== trade.id)
+                .reduce((total: BigNumber, current: Trade) => total.plus(current.amount), new BigNumber(0)).plus(trade.amount),
+            missedAmount = (revert ? executedAmount : traderAmount).minus(filledAmount),
+            amount = isSellOrder ? !revert ? actualAmount.lte(traderAmount) ? traderAmount : actualAmount.plus(traderAmount).dividedBy(2) : executedAmount : missedAmount,
+            symbol = (revert ? ['USDT', dstAsset] : [dstAsset, 'USDT']).join('-'),
+            symbolAlias = this.symbolAlias(symbol, dbSubOrder.exchange),
+            side = revert ? 'sell' : 'buy',
+            divPrice = dbSubOrder.buyPrice.multipliedBy(dbSubOrder.currentDev.plus(1)),
+            price = revert ? new BigNumber(1).dividedBy(divPrice) : divPrice,
+            type = isSellOrder ? 'limit' : 'market',
+            filled = missedAmount.eq(0),
+            timeInForce = isSellOrder ? 'IOC' : 'GTC',
+            buyTrade: Trade = new Trade()
+        ;
+
+        let sendOrder: SendOrder = null;
+        if (isSellOrder || (dbSubOrder.trades.length === 2 && !filled)) {
+            try {
+                sendOrder = await this.connector.submitSubOrder(dbSubOrder.exchange, dbSubOrder.id, symbolAlias, side, amount, price, type, {timeInForce});
+            } catch (e) {
+                log.error(e);
+            }
+        } else {
+            dbSubOrder.status = Status.FILLED;
+        }
+
+        if (sendOrder === null) {
+            //TODO: send failed notification for broker
+        } else {
+
+            buyTrade.exchange = dbSubOrder.exchange;
+            buyTrade.exchangeOrderId = sendOrder.exchangeOrderId;
+            buyTrade.order = dbSubOrder;
+            buyTrade.symbol = symbol;
+            buyTrade.symbolAlias = symbolAlias;
+            buyTrade.price = price;
+            buyTrade.amount = sendOrder ? amount : new BigNumber(0);
+            buyTrade.side = side;
+            buyTrade.timestamp = sendOrder.timestamp;
+            buyTrade.type = type;
+            buyTrade.status = sendOrder ? 'pending' : 'failed';
+
+            await this.db.insertTrade(buyTrade);
+        }
+
+        if(trade.type === 'market' && !filled) {
+            log.log('Confirmation needed');
+            //TODO: notification for broker
+        }
+
+
+        await this.db.getTradeRepository().update(trade.id, {amount: trade.amount, status: trade.status});
+        await this.db.getOrderRepository().update(dbSubOrder.id, {status: dbSubOrder.status, filledAmount: executedAmount});
+
+    }
+
     // DEPOSIT/WITHDRAW
 
     /**
      * @param amount     1.23
      * @param assetName 'USDT'
      */
-    async getExchangeForWithdraw(amount: BigNumber, assetName: string): Promise<{exchange: string, amountWithFee: BigNumber} | undefined> {
+    async getExchangeForWithdraw(amount: BigNumber, assetName: string): Promise<{ exchange: string, amountWithFee: BigNumber } | undefined> {
         for (const exchange in this.lastBalances) {
             if (this.lastBalances.hasOwnProperty(exchange)) {
                 try {
@@ -420,13 +554,13 @@ export class Broker {
         log.log('Withdrawing ' + amount.toString() + ' ' + assetName + ' from ' + exchange);
         const exchangeWithdrawId: string = await this.connector.withdraw(exchange, assetName, amount, this.orionBlockchain.address);
         if (exchangeWithdrawId) {
-            await this.db.insertWithdraw({
+            await this.db.insertWithdraw(Object.assign(new Withdraw, {
                 exchangeWithdrawId,
                 exchange,
                 currency: assetName,
                 amount,
                 status: 'pending'
-            });
+            }));
         }
     }
 

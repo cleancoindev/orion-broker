@@ -15,6 +15,7 @@ import express from 'express';
 import BigNumber from 'bignumber.js';
 import {Tokens} from './Tokens';
 import fetch from 'node-fetch';
+import 'reflect-metadata';
 
 export let tokensDecimals: Dictionary<number>;
 export let tokens: Tokens;
@@ -89,6 +90,7 @@ const init = async (): Promise<void> => {
 
     terminal.onConnectExchange = (exchange: string, apiKey: string, privateKey: string, password: string): void => {
         settings.exchanges[exchange] = {
+            ...settings.exchanges[exchange],
             key: apiKey,
             secret: privateKey,
             password: password
@@ -219,6 +221,39 @@ const init = async (): Promise<void> => {
             await broker.releaseStake();
         } catch (e) {
             log.error('Release stake error:', e);
+        }
+    };
+
+    terminal.onSetAlias = async (exchange: string, symbol: string, alias: string): Promise<void> => {
+        try {
+            if (!settings.exchanges[exchange])
+                throw new Error(`You must connect ${exchange} first`);
+
+            if( !settings.exchanges[exchange]['aliases'] )
+                settings.exchanges[exchange]['aliases'] = {};
+            settings.exchanges[exchange]['aliases'][symbol] = alias;
+            await settingsManager.save();
+        } catch (e) {
+            log.error('Set alias error:', e);
+        }
+    };
+
+    terminal.onDelAlias = async (exchange: string, symbol: string): Promise<void> => {
+        try {
+            delete(settings.exchanges[exchange]['aliases'][symbol]);
+            await settingsManager.save();
+        } catch (e) {
+            log.error('Del alias error:', e);
+        }
+    };
+
+    terminal.onAliasesList = (exchange: string) : void => {
+        try {
+            Object.entries(settings.exchanges[exchange]['aliases']).forEach(([symbol, alias])=>{
+                terminal.ui.log.add(`${symbol} : ${alias}`);
+            });
+        }  catch (e) {
+            log.error('Aliases list error:', e);
         }
     };
 

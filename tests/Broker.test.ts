@@ -68,12 +68,12 @@ const data = {
 }
 
 function mockTradeObject(exchangeOrderId: string, amount: number): Trade {
-    return {
+    return Object.assign(new Trade(), {
         exchange: data.exchange,
         exchangeOrderId: exchangeOrderId,
         price: new BigNumber(data.price),
         amount: new BigNumber(amount),
-    }
+    });
 }
 
 test("order creation", async () => {
