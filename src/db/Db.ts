@@ -56,7 +56,7 @@ export class Db {
             database: dbPath,
             migrations: [
                 // './src/db/migrations/**/*.ts'
-                './dist/db/migrations/**/*.js'
+                __dirname+'/migrations/**/*.js'
             ],
             entities: [SubOrder, Trade, Transaction, Withdraw],
             synchronize,
