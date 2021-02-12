@@ -4,6 +4,9 @@ import BigNumber from 'bignumber.js';
 export interface Connector {
     exchange: Exchange;
 
+    amountToPrecision(amount: BigNumber, symbol: string, mode: 'floor' | 'ceil' | 'round'): BigNumber;
+    priceToPrecision(amount: BigNumber, symbol: string, mode: 'floor' | 'ceil' | 'round'): BigNumber;
+
     submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string, params : any ): Promise<SendOrder>;
 
     cancelSubOrder(subOrder: SubOrder): Promise<void>;

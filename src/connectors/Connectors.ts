@@ -120,6 +120,13 @@ export class Connectors {
         return connector;
     }
 
+    amountToPrecision(exchangeId: string, amount: BigNumber, symbol: string, mode: 'floor' | 'ceil' | 'round'): BigNumber {
+        return this.getConnector(exchangeId).amountToPrecision(amount, symbol, mode);
+    }
+    priceToPrecision(exchangeId: string, price: BigNumber, symbol: string, mode: 'floor' | 'ceil' | 'round'): BigNumber {
+        return this.getConnector(exchangeId).priceToPrecision(price, symbol, mode);
+    }
+
     async submitSubOrder(exchangeId: string, subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type = 'limit', params = {}): Promise<SendOrder> {
         return this.getConnector(exchangeId).submitSubOrder(subOrderId, symbol, side, amount, price, type, params);
     }

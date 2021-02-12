@@ -67,6 +67,25 @@ export class CCXTConnector implements Connector {
     destroy(): void {
     }
 
+    // TODO: implement ccxtExchange.precisionMode === SIGNIFICANT_DIGITS
+    amountToPrecision(amount: BigNumber, symbol: string, mode: 'floor' | 'ceil' | 'round' = 'round'): BigNumber {
+        const
+            exPrecision = this.ccxtExchange.getMarket(toSymbol(symbol)).precision.amount,
+            precision = this.ccxtExchange.precisionMode === 0 ? exPrecision : Math.abs(Math.log10(exPrecision)),
+            roundMode = mode !== 'floor' ? mode !== 'ceil' ? undefined : BigNumber.ROUND_CEIL : BigNumber.ROUND_FLOOR
+        ;
+        return amount.decimalPlaces(precision, roundMode);
+    }
+
+    priceToPrecision(price: BigNumber, symbol: string, mode: 'floor' | 'ceil' | 'round' = 'round'): BigNumber {
+        const
+            exPrecision = this.ccxtExchange.getMarket(toSymbol(symbol)).precision.price,
+            precision = this.ccxtExchange.precisionMode === 0 ? exPrecision : Math.abs(Math.log10(exPrecision)),
+            roundMode = mode !== 'floor' ? mode !== 'ceil' ? undefined : BigNumber.ROUND_CEIL : BigNumber.ROUND_FLOOR
+        ;
+        return price.decimalPlaces(precision, roundMode);
+    }
+
     /**
      * https://github.com/ccxt/ccxt/wiki/Manual#placing-orders
      * https://github.com/ccxt/ccxt/wiki/Manual#limit-orders

@@ -132,6 +132,10 @@ export class BrokerHubWebsocket implements BrokerHub {
             try {
                 log.debug('Receive suborder', data);
                 const request = parseCreateSubOrder(data);
+
+                if( request.currentDev && request.currentDev.lt(0))
+                    return log.debug('Order with negative dev: ', request);
+
                 log.debug('Received suborder after parse', request);
                 log.log('Receive suborder ' + request.id + ' ' + request.side + ' ' + request.amount + ' ' + request.symbol + ' on ' + request.exchange);
                 const subOrderStatus = await this.onCreateSubOrder(request);

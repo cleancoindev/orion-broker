@@ -74,6 +74,17 @@ export class Broker {
         }
     };
 
+    executedPrice (subOrder: SubOrder): BigNumber {
+        if(subOrder.orderType === OrderType.SUB)
+            return subOrder.price;
+        const
+            executedAmount  = subOrder.trades.filter(trade=>trade.side === 'sell').reduce((sum, trade)=>sum.plus(trade.amount), new BigNumber(0)),
+            traderExecutedAmount = subOrder.trades.filter(trade=>trade.side === 'buy').reduce((sum, trade)=>sum.plus(trade.amount), new BigNumber(0)),
+            price = this.connector.priceToPrecision(subOrder.exchange, traderExecutedAmount.dividedBy(executedAmount), subOrder.symbol, 'ceil')
+        ;
+        return price.gte(subOrder.price) ? price : subOrder.price;
+    }
+
     async onCheckSubOrder(id: number): Promise<SubOrderStatus> {
         const dbSubOrder: SubOrder = await this.db.getSubOrderById(id);
 
@@ -89,7 +100,7 @@ export class Broker {
             throw new Error('Cant support multiple trades yet ' + dbSubOrder.id);
         }
 
-        const blockchainOrder: BlockchainOrder = dbSubOrder.status !== Status.FILLED ? undefined : (await this.orionBlockchain.signTrade(dbSubOrder, dbSubOrder.trades[0]));
+        const blockchainOrder: BlockchainOrder = dbSubOrder.status !== Status.FILLED ? undefined : (await this.orionBlockchain.signTrade(dbSubOrder, dbSubOrder.trades[0].amount, this.executedPrice(dbSubOrder)));
 
         return {
             id: id,
@@ -117,9 +128,10 @@ export class Broker {
             symbol: string = (isRevert ? pair.reverse() : pair).join('-'),
             symbolAlias: string = this.symbolAlias(symbol, dbSubOrder.exchange),
             amount: BigNumber = request.amount,
-            sellPrice: BigNumber = isSwap ? request.sellPrice : request.price,
-            price = isRevert ? new BigNumber(1).dividedBy(sellPrice) : sellPrice,
-            side: Side = isSwap ? 'sell' : request.side || 'sell',
+            // sellPrice: BigNumber = isSwap ? request.sellPrice : request.price,
+            // price = !isRevert ?  dbSubOrder.side === 'sell' ? request.sellPrice : request.buyPrice : new BigNumber(1).dividedBy(request.sellPrice),
+            price = !isSwap ? request.price : request.sellPrice,
+            side: Side = isSwap ? 'sell' : request.side,
             allBalances = await this.connector.getBalances(),
             targetBalances: ExchangeResolve<Balances> = allBalances[request.exchange],
             {result: balances} = targetBalances,
@@ -151,7 +163,7 @@ export class Broker {
             ...isSwap ? {
                 currentDev: request.currentDev,
                 sellPrice: request.sellPrice,
-                buyPrice: request.sellPrice
+                buyPrice: request.buyPrice
             } : null
         });
 

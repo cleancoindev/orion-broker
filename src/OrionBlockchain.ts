@@ -150,7 +150,7 @@ export class OrionBlockchain {
         return side === 'buy' ? 0 : 1;
     }
 
-    private createBlockchainOrder(subOrder: SubOrder, trade: Trade): BlockchainOrder {
+    private createBlockchainOrder(subOrder: SubOrder, amount: BigNumber, price: BigNumber): BlockchainOrder {
         const assets = tokens.symbolToAddresses(subOrder.symbol);
         const buySide = this.counterSide(subOrder.side);
         const matcherFeeAsset = tokens.nameToAddress['ORN'];
@@ -166,8 +166,8 @@ export class OrionBlockchain {
             baseAsset: assets[0],
             quoteAsset: assets[1],
             matcherFeeAsset: matcherFeeAsset,
-            amount: this.toBaseUnit(trade.amount),
-            price: this.toBaseUnit(subOrder.price),
+            amount: this.toBaseUnit(amount),
+            price: this.toBaseUnit(price),
             matcherFee: 0,
             nonce: subOrder.timestamp,
             expiration: subOrder.timestamp + DEFAULT_EXPIRATION,
@@ -176,8 +176,8 @@ export class OrionBlockchain {
         };
     }
 
-    public async signTrade(subOrder: SubOrder, trade: Trade): Promise<BlockchainOrder> {
-        const bo = this.createBlockchainOrder(subOrder, trade);
+    public async signTrade(subOrder: SubOrder, amount: BigNumber, price: BigNumber): Promise<BlockchainOrder> {
+        const bo = this.createBlockchainOrder(subOrder, amount, price);
         bo.id = hashOrder(bo);
         bo.signature = this.signOrder(bo);
         return bo;

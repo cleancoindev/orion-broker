@@ -19,6 +19,14 @@ export class EmulatorConnector implements Connector {
     destroy(): void {
     }
 
+    amountToPrecision(amount: BigNumber, symbol: string, mode: 'floor' | 'ceil' | 'round' = 'round'): BigNumber {
+        return amount;
+    }
+
+    priceToPrecision(price: BigNumber, symbol: string, mode: 'floor' | 'ceil' | 'round' = 'round'): BigNumber {
+        return price;
+    }
+
     async submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string, params: any): Promise<SendOrder> {
         return {
             exchangeOrderId: uuid().toString(),
