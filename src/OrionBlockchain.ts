@@ -167,7 +167,7 @@ export class OrionBlockchain {
             quoteAsset: assets[1],
             matcherFeeAsset: matcherFeeAsset,
             amount: this.toBaseUnit(trade.amount),
-            price: this.toBaseUnit(trade.price),
+            price: this.toBaseUnit(subOrder.price),
             matcherFee: 0,
             nonce: subOrder.timestamp,
             expiration: subOrder.timestamp + DEFAULT_EXPIRATION,
