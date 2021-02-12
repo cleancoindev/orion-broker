@@ -1,4 +1,4 @@
-import {BrokerHub, CreateSubOrder, SubOrderStatus, SubOrderStatusAccepted} from './hub/BrokerHub';
+import {BrokerHub, CreateSubOrder, isSwapOrder, SubOrderStatus, SubOrderStatusAccepted} from './hub/BrokerHub';
 import {Db} from './db/Db';
 import {log} from './log';
 import {
@@ -136,6 +136,7 @@ export class Broker {
             targetBalances: ExchangeResolve<Balances> = allBalances[request.exchange],
             {result: balances} = targetBalances,
             srcBalance: BigNumber = balances[srcAsset],
+            fixPrecision = isSwap,
             timeInForce = isSwap ? 'IOC' : 'GTC'
         ;
 
@@ -173,7 +174,7 @@ export class Broker {
         let sendOrder: SendOrder = null;
 
         try {
-            sendOrder = await this.connector.submitSubOrder(dbSubOrder.exchange, dbSubOrder.id, symbolAlias, dbSubOrder.side, amount, price, 'limit', {timeInForce});
+            sendOrder = await this.connector.submitSubOrder(dbSubOrder.exchange, dbSubOrder.id, symbolAlias, dbSubOrder.side, amount, price, 'limit', {timeInForce, fixPrecision});
         } catch (e) {
             log.error('Submit order error:', e);
         }
@@ -476,13 +477,14 @@ export class Broker {
             type = isSellOrder ? 'limit' : 'market',
             filled = missedAmount.eq(0),
             timeInForce = isSellOrder ? 'IOC' : 'GTC',
+            fixPrecision = true,
             buyTrade: Trade = new Trade()
         ;
 
         let sendOrder: SendOrder = null;
         if (isSellOrder || (dbSubOrder.trades.length === 2 && !filled)) {
             try {
-                sendOrder = await this.connector.submitSubOrder(dbSubOrder.exchange, dbSubOrder.id, symbolAlias, side, amount, price, type, {timeInForce});
+                sendOrder = await this.connector.submitSubOrder(dbSubOrder.exchange, dbSubOrder.id, symbolAlias, side, amount, price, type, {timeInForce, fixPrecision});
             } catch (e) {
                 log.error(e);
             }
