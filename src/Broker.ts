@@ -131,8 +131,6 @@ export class Broker {
             symbol: string = (isRevert ? pair.reverse() : pair).join('-'),
             symbolAlias: string = this.symbolAlias(symbol, dbSubOrder.exchange),
             amount: BigNumber = request.amount,
-            // sellPrice: BigNumber = isSwap ? request.sellPrice : request.price,
-            // price = !isRevert ?  dbSubOrder.side === 'sell' ? request.sellPrice : request.buyPrice : new BigNumber(1).dividedBy(request.sellPrice),
             price = !isSwap ? request.price : request.sellPrice,
             side: Side = isSwap ? 'sell' : request.side,
             allBalances = await this.connector.getBalances(),
@@ -146,7 +144,7 @@ export class Broker {
         if (srcBalance.isZero() && isSwap) {
             return {
                 id: request.id,
-                status: Status.CANCELED,
+                status: Status.REJECTED,
                 filledAmount: '0'
             };
         }
@@ -492,7 +490,7 @@ export class Broker {
                 log.error(e);
             }
         } else {
-            dbSubOrder.status = executedAmount.gt(0) ? Status.CANCELED : Status.FILLED;
+            dbSubOrder.status = executedAmount.gt(0) ? Status.FILLED : Status.CANCELED;
         }
 
         if (sendOrder === null) {
