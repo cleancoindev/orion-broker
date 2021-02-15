@@ -82,7 +82,7 @@ export class Broker {
         const
             executedAmount  = subOrder.trades.filter(trade=>trade.side === 'sell').reduce((sum, trade)=>sum.plus(trade.amount), new BigNumber(0)),
             traderExecutedAmount = subOrder.trades.filter(trade=>trade.side === 'buy').reduce((sum, trade)=>sum.plus(trade.amount), new BigNumber(0)),
-            precisionFromMinPrice = subOrder.price.precision(true)-1,
+            precisionFromMinPrice = subOrder.price.decimalPlaces(),
             price =  traderExecutedAmount.dividedBy(executedAmount).decimalPlaces(precisionFromMinPrice, BigNumber.ROUND_CEIL)
         ;
         return price.gte(subOrder.price) ? price : subOrder.price;
