@@ -93,11 +93,14 @@ export class CCXTConnector implements Connector {
      */
     async submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string, params: any): Promise<SendOrder> {
 
-        if(params.fixPrecision) {
+        if(params.fixPrecision === true) {
             amount = this.amountToPrecision(amount, symbol, side === 'sell' ? 'floor' : 'ceil');
             price = this.priceToPrecision(price, symbol, side === 'sell' ? 'ceil' : 'floor');
             delete(params.fixPrecision);
         }
+
+        if(params.timeInForce && type === 'market')
+            delete(params.timeInForce);
 
         const ccxtOrder: ccxt.Order = await this.ccxtExchange.createOrder(
             toSymbol(symbol),
@@ -105,7 +108,7 @@ export class CCXTConnector implements Connector {
             side,
             toNumber(amount),
             toNumber(price),
-            {timeInForce: 'GTC' , ...params, clientOrderId: subOrderId}
+            {...params, clientOrderId: subOrderId}
         );
         log.debug(this.exchange.id + ' submit order response: ', ccxtOrder);
 

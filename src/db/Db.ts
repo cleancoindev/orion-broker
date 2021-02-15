@@ -157,7 +157,7 @@ export class Db {
         return this.db.getRepository(SubOrder).find({
             where: {
                 sentToAggregator: false,
-                status: In(['FILLED', 'CANCELED', 'REJECTED'])
+                status: In(['FILLED', 'CANCELED', 'REJECTED', 'PARTIALLY_FILLED'])
             },
         });
     }

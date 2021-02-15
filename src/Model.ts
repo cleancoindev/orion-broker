@@ -34,6 +34,7 @@ export enum Status {
     PREPARE = 'PREPARE', // internal broker status
     ACCEPTED = 'ACCEPTED',
     FILLED = 'FILLED',
+    PARTIALLY_FILLED = 'PARTIALLY_FILLED',
     CANCELED = 'CANCELED',
     REJECTED = 'REJECTED',
 }

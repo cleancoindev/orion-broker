@@ -17,7 +17,7 @@ export function parseCreateSubOrder(request: any): CreateSubOrder {
     return {
         id: request.id,
         side: request.hasOwnProperty('sellPrice') ? 'sell' : 'buy',
-        symbol: request.symbol,
+        symbol: request.symbol, //TODO: pair to symbol
         pair: request.pair,
         exchange: request.exchange.toLowerCase(),
         price: new BigNumber(request.price),
@@ -137,7 +137,7 @@ export class BrokerHubWebsocket implements BrokerHub {
                     return log.debug('Order with negative dev: ', request);
 
                 log.debug('Received suborder after parse', request);
-                log.log('Receive suborder ' + request.id + ' ' + request.side + ' ' + request.amount + ' ' + request.symbol + ' on ' + request.exchange);
+                log.log('Receive suborder ' + request.id + ' ' + request.side + ' ' + request.amount + ' ' + request.pair + ' on ' + request.exchange);
                 const subOrderStatus = await this.onCreateSubOrder(request);
                 await this.sendSubOrderStatus(subOrderStatus);
             } catch (error) {

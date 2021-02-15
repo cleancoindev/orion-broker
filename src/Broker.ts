@@ -1,4 +1,4 @@
-import {BrokerHub, CreateSubOrder, isSwapOrder, SubOrderStatus, SubOrderStatusAccepted} from './hub/BrokerHub';
+import {BrokerHub, CreateSubOrder, SubOrderStatus, SubOrderStatusAccepted} from './hub/BrokerHub';
 import {Db} from './db/Db';
 import {log} from './log';
 import {
@@ -36,6 +36,8 @@ export class Broker {
     private checkWithdrawsInterval: NodeJS.Timeout;
     private checkTransactionsInterval: NodeJS.Timeout;
     private checkLiabilitiesInterval: NodeJS.Timeout;
+
+    private CHECK_TRADES_INTERVAL = 3;
 
     constructor(settings: Settings, brokerHub: BrokerHub, db: Db, webUI: WebUI, connector: Connectors) {
         this.settings = settings;
@@ -80,7 +82,8 @@ export class Broker {
         const
             executedAmount  = subOrder.trades.filter(trade=>trade.side === 'sell').reduce((sum, trade)=>sum.plus(trade.amount), new BigNumber(0)),
             traderExecutedAmount = subOrder.trades.filter(trade=>trade.side === 'buy').reduce((sum, trade)=>sum.plus(trade.amount), new BigNumber(0)),
-            price = this.connector.priceToPrecision(subOrder.exchange, traderExecutedAmount.dividedBy(executedAmount), subOrder.symbol, 'ceil')
+            precisionFromMinPrice = subOrder.price.precision(true)-1,
+            price =  traderExecutedAmount.dividedBy(executedAmount).decimalPlaces(precisionFromMinPrice, BigNumber.ROUND_CEIL)
         ;
         return price.gte(subOrder.price) ? price : subOrder.price;
     }
@@ -282,7 +285,7 @@ export class Broker {
             } catch (e) {
                 log.error('Suborders check error:', e);
             }
-        }, 10 * 1000);
+        }, this.CHECK_TRADES_INTERVAL * 1000);
     }
 
     startCheckWithdraws(): void {
@@ -462,7 +465,7 @@ export class Broker {
             [srcAsset, dstAsset]: string[] = dbSubOrder.symbol.split('-'),
             isSellOrder = dbSubOrder.trades.length === 1,
             revert = dstAsset === 'DAI' ? true : false,
-            executedAmount = dbSubOrder.trades.find((sellTrade: Trade) => sellTrade.side === 'sell').amount,
+            executedAmount = isSellOrder ? trade.amount : dbSubOrder.trades.find((sellTrade: Trade) => sellTrade.side === 'sell').amount,
             traderAmount = executedAmount.multipliedBy(dbSubOrder.price),
             actualAmount = traderAmount.dividedBy(dbSubOrder.buyPrice),
             filledAmount = dbSubOrder.trades.filter(buyTrade => buyTrade.side === 'buy' && buyTrade.id !== trade.id)
@@ -476,20 +479,20 @@ export class Broker {
             price = revert ? new BigNumber(1).dividedBy(divPrice) : divPrice,
             type = isSellOrder ? 'limit' : 'market',
             filled = missedAmount.eq(0),
-            timeInForce = isSellOrder ? 'IOC' : 'GTC',
+            timeInForce = isSellOrder ? {timeInForce: 'IOC'} : null,
             fixPrecision = true,
             buyTrade: Trade = new Trade()
         ;
 
         let sendOrder: SendOrder = null;
-        if (isSellOrder || (dbSubOrder.trades.length === 2 && !filled)) {
+        if ( (isSellOrder && executedAmount.gt(0) ) || (dbSubOrder.trades.length === 2 && !filled) ) {
             try {
-                sendOrder = await this.connector.submitSubOrder(dbSubOrder.exchange, dbSubOrder.id, symbolAlias, side, amount, price, type, {timeInForce, fixPrecision});
+                sendOrder = await this.connector.submitSubOrder(dbSubOrder.exchange, dbSubOrder.id, symbolAlias, side, amount, price, type, {...timeInForce, fixPrecision});
             } catch (e) {
                 log.error(e);
             }
         } else {
-            dbSubOrder.status = Status.FILLED;
+            dbSubOrder.status = executedAmount.gt(0) ? Status.CANCELED : Status.FILLED;
         }
 
         if (sendOrder === null) {
@@ -516,9 +519,10 @@ export class Broker {
             //TODO: notification for broker
         }
 
+        dbSubOrder.filledAmount = executedAmount;
 
         await this.db.getTradeRepository().update(trade.id, {amount: trade.amount, status: trade.status});
-        await this.db.getOrderRepository().update(dbSubOrder.id, {status: dbSubOrder.status, filledAmount: executedAmount});
+        await this.db.getOrderRepository().update(dbSubOrder.id, {status: dbSubOrder.status, filledAmount: dbSubOrder.filledAmount});
 
     }
 
