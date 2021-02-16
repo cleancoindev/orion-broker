@@ -18,7 +18,7 @@ import {
 import BigNumber from 'bignumber.js';
 import {WebUI} from './ui/WebUI';
 import {Connectors, ExchangeResolve} from './connectors/Connectors';
-import {fromWei8, OrionBlockchain} from './OrionBlockchain';
+import {fromWeiAsset, OrionBlockchain} from './OrionBlockchain';
 import {Settings} from './Settings';
 import {Connector, ExchangeWithdrawLimit, ExchangeWithdrawStatus} from './connectors/Connector';
 
@@ -329,8 +329,10 @@ export class Broker {
     async manageLiability(liability: Liability): Promise<void> {
         const now = Date.now() / 1000;
         if (liability.outstandingAmount.gt(0) && (now - liability.timestamp > this.settings.duePeriodSeconds)) {
-            const assetName = liability.assetName;
-            const amount: BigNumber = fromWei8(liability.outstandingAmount);
+            const
+                assetName = liability.assetName,
+                amount: BigNumber = fromWeiAsset(liability.outstandingAmount, assetName)
+            ;
 
             if ((await this.db.getPendingTransactions()).length) {
                 return;
