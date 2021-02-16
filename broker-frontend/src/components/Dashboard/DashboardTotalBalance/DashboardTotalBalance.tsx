@@ -93,9 +93,14 @@ export const DashboardTotalBalance: FC<Props> = (props) => {
     return (
         <div className={styles.root}>
             <div className={styles.header}>
-                <Trans id="total_balance">
-                    Total Balance
-                </Trans>
+                {props.inUsd ?
+                    <Trans id="total_balance">
+                        Total Balance
+                    </Trans> :
+                    <Trans id="total_profit">
+                        Total Profit
+                    </Trans>
+                }
             </div>
 
             <div className={styles.balanceContainer}>

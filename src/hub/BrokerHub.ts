@@ -1,4 +1,4 @@
-import {BlockchainOrder, Dictionary, Side, Status} from '../Model';
+import {BlockchainOrder, Dictionary, OrderType, Side, Status} from '../Model';
 import BigNumber from 'bignumber.js';
 
 export interface BrokerHub {
@@ -36,10 +36,19 @@ export interface BalancesRequest {
 export interface CreateSubOrder {
     id: number;
     side: Side;
-    symbol: string;
+    symbol?: string;
+    pair?: string;
     exchange: string;
     price: BigNumber;
     amount: BigNumber;
+    currentDev?: BigNumber;
+    sellPrice?: BigNumber;
+    buyPrice?: BigNumber;
+    orderType: OrderType;
+}
+
+export function isSwapOrder(order: CreateSubOrder): boolean {
+    return order.hasOwnProperty('currentDev') && order.hasOwnProperty('sellPrice') && order.hasOwnProperty('buyPrice');
 }
 
 export interface CancelSubOrder {

@@ -8,6 +8,9 @@ export class Terminal {
     onCreatePassword: (password: string) => Promise<void>;
     onLoginPassword: (password: string) => boolean;
     onConnectExchange: (exchange: string, apiKey: string, privateKey: string, password: string) => void;
+    onSetAlias: (exchange: string, symbolFrom: string, symbolTo: string) => void;
+    onDelAlias: (exchange: string, symbol: string) => void;
+    onAliasesList: (exchange: string) => void;
     onDisconnectExchange: (exchange: string) => void;
     onListExchanges: () => string;
     onPrintExchangesBalances: () => string;
@@ -275,6 +278,71 @@ export class Terminal {
                 asks: [],
                 after: (state: any) => {
                     this.onReleaseStake();
+                    return '';
+                }
+            },
+            {
+                name: 'alias-set',
+                help: 'Set token alias for exchange',
+                params: [
+                    {
+                        name: 'exchange',
+                        fieldName: 'exchange',
+                        type: DataType.EXCHANGE
+                    }
+                ],
+                asks: [
+                    {
+                        askText: (state: any) => `Please enter asset pair for ${state.exchange}`,
+                        fieldName: 'symbol',
+                        type: DataType.ASSET_PAIR
+                    },
+                    {
+                        askText: (state: any) => `Please enter alias for asset pair ${state.symbol}`,
+                        fieldName: 'alias',
+                        type: DataType.ASSET_PAIR
+                    }
+                ],
+                after: (state: any) => {
+                    this.onSetAlias(state.exchange, state.symbol, state.alias);
+                    return '';
+                }
+            },
+            {
+                name: 'alias-list',
+                help: 'Print token aliases for exchange',
+                params: [
+                    {
+                        name: 'exchange',
+                        fieldName: 'exchange',
+                        type: DataType.EXCHANGE
+                    }
+                ],
+                asks: [],
+                after: (state: any) => {
+                    this.onAliasesList(state.exchange);
+                    return '';
+                }
+            },
+            {
+                name: 'alias-delete',
+                help: 'Delete token alias for exchange',
+                params: [
+                    {
+                        name: 'exchange',
+                        fieldName: 'exchange',
+                        type: DataType.EXCHANGE
+                    }
+                ],
+                asks: [
+                    {
+                        askText: (state: any) => `Please enter asset pair for ${state.exchange}`,
+                        fieldName: 'symbol',
+                        type: DataType.ASSET_PAIR
+                    }
+                ],
+                after: (state: any) => {
+                    this.onDelAlias(state.exchange, state.symbol);
                     return '';
                 }
             },

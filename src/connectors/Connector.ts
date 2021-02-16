@@ -1,10 +1,13 @@
-import {Balances, Exchange, Side, SubOrder, Trade, Withdraw} from '../Model';
+import {Balances, Exchange, SendOrder, Side, SubOrder, Trade, Withdraw} from '../Model';
 import BigNumber from 'bignumber.js';
 
 export interface Connector {
     exchange: Exchange;
 
-    submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber): Promise<SubOrder>;
+    amountToPrecision(amount: BigNumber, symbol: string, mode: 'floor' | 'ceil' | 'round'): BigNumber;
+    priceToPrecision(amount: BigNumber, symbol: string, mode: 'floor' | 'ceil' | 'round'): BigNumber;
+
+    submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string, params : any ): Promise<SendOrder>;
 
     cancelSubOrder(subOrder: SubOrder): Promise<void>;
 
@@ -12,7 +15,7 @@ export interface Connector {
 
     setOnTradeListener(onTrade: (trade: Trade) => void): void;
 
-    checkSubOrders(subOrders: SubOrder[]): Promise<void>;
+    checkTrades(trades: Trade[]): Promise<void>;
 
     hasWithdraw(): boolean;
 

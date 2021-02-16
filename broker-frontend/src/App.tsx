@@ -64,7 +64,6 @@ export const App: FC = () => {
             dispatch(setPairs({
                 [pair.name]: pair
             }));
-            document.title = formatPairPrice(pair.lastPrice, pair.name, numberFormat) + ' | ' + pair.name + ' | Orion Protocol';
         }
 
         if (orderBookWebSocket !== null) {

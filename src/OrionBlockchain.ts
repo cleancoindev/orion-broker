@@ -1,5 +1,4 @@
-import {BlockchainOrder, Dictionary, Liability, parseLiability, Side, Trade, Transaction} from './Model';
-import {DbSubOrder} from './db/Db';
+import {BlockchainOrder, Dictionary, Liability, parseLiability, Side, Trade, Transaction, SubOrder} from './Model';
 import BigNumber from 'bignumber.js';
 import {log} from './log';
 import fetch from 'node-fetch';
@@ -82,6 +81,12 @@ export function fromWei8(wei: BigNumber.Value): BigNumber {
     return fromWei(wei, 8);
 }
 
+export function fromWeiAsset(wei: BigNumber.Value, assetName: string): BigNumber {
+    const decimals = assetName === 'ETH' ? 18 : tokensDecimals[assetName];
+    if (decimals === undefined) throw new Error('no decimals for ' + assetName);
+    return fromWei(wei, decimals);
+}
+
 export class OrionBlockchain {
     private readonly chainId: number;
     private readonly orionBlockchainUrl: string;
@@ -151,7 +156,7 @@ export class OrionBlockchain {
         return side === 'buy' ? 0 : 1;
     }
 
-    private createBlockchainOrder(subOrder: DbSubOrder, trade: Trade): BlockchainOrder {
+    private createBlockchainOrder(subOrder: SubOrder, amount: BigNumber, price: BigNumber): BlockchainOrder {
         const assets = tokens.symbolToAddresses(subOrder.symbol);
         const buySide = this.counterSide(subOrder.side);
         const matcherFeeAsset = tokens.nameToAddress['ORN'];
@@ -167,8 +172,8 @@ export class OrionBlockchain {
             baseAsset: assets[0],
             quoteAsset: assets[1],
             matcherFeeAsset: matcherFeeAsset,
-            amount: this.toBaseUnit(trade.amount),
-            price: this.toBaseUnit(trade.price),
+            amount: this.toBaseUnit(amount),
+            price: this.toBaseUnit(price),
             matcherFee: 0,
             nonce: subOrder.timestamp,
             expiration: subOrder.timestamp + DEFAULT_EXPIRATION,
@@ -177,8 +182,8 @@ export class OrionBlockchain {
         };
     }
 
-    public async signTrade(subOrder: DbSubOrder, trade: Trade): Promise<BlockchainOrder> {
-        const bo = this.createBlockchainOrder(subOrder, trade);
+    public async signTrade(subOrder: SubOrder, amount: BigNumber, price: BigNumber): Promise<BlockchainOrder> {
+        const bo = this.createBlockchainOrder(subOrder, amount, price);
         bo.id = hashOrder(bo);
         bo.signature = this.signOrder(bo);
         return bo;
@@ -398,7 +403,7 @@ export class OrionBlockchain {
         } else {
             const decimals = tokensDecimals[currency];
             if (decimals === undefined) throw new Error('no decimals for ' + currency);
-            return n.multipliedBy(Math.pow(10, decimals)).toFixed(0);
+            return n.multipliedBy(Math.pow(10, decimals)).integerValue(BigNumber.ROUND_CEIL).toFixed(0);
         }
     }
 }

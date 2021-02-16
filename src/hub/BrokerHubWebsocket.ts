@@ -5,21 +5,29 @@ import {
     BrokerHubRegisterRequest,
     CreateSubOrder,
     SubOrderStatus,
-    SubOrderStatusAccepted
+    SubOrderStatusAccepted,
+    isSwapOrder
 } from './BrokerHub';
 import {Settings} from '../Settings';
-import {Dictionary, Status} from '../Model';
+import {Dictionary, Status, OrderType} from '../Model';
 import BigNumber from 'bignumber.js';
 import io from 'socket.io-client';
 
 export function parseCreateSubOrder(request: any): CreateSubOrder {
     return {
         id: request.id,
-        side: request.side,
-        symbol: request.symbol,
+        side: request.hasOwnProperty('sellPrice') ? 'sell' : 'buy',
+        symbol: request.symbol, //TODO: pair to symbol
+        pair: request.pair,
         exchange: request.exchange.toLowerCase(),
         price: new BigNumber(request.price),
         amount: new BigNumber(request.amount),
+        ...isSwapOrder(request) ? {
+            sellPrice: new BigNumber(request.sellPrice),
+            buyPrice: new BigNumber(request.buyPrice),
+            currentDev: new BigNumber(request.currentDev),
+            orderType: OrderType.SWAP
+        } : {orderType: OrderType.SUB}
     };
 }
 
@@ -124,8 +132,12 @@ export class BrokerHubWebsocket implements BrokerHub {
             try {
                 log.debug('Receive suborder', data);
                 const request = parseCreateSubOrder(data);
+
+                if( request.currentDev && request.currentDev.lt(0))
+                    return log.debug('Order with negative dev: ', request);
+
                 log.debug('Received suborder after parse', request);
-                log.log('Receive suborder ' + request.id + ' ' + request.side + ' ' + request.amount + ' ' + request.symbol + ' on ' + request.exchange);
+                log.log('Receive suborder ' + request.id + ' ' + request.side + ' ' + request.amount + ' ' + request.pair + ' on ' + request.exchange);
                 const subOrderStatus = await this.onCreateSubOrder(request);
                 await this.sendSubOrderStatus(subOrderStatus);
             } catch (error) {

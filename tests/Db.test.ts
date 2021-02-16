@@ -1,5 +1,5 @@
-import {Db, DbSubOrder} from "../src/db/Db";
-import {Status, Trade} from "../src/Model";
+import {Db} from "../src/db/Db";
+import {Status, Trade, SubOrder} from "../src/Model";
 import BigNumber from "bignumber.js";
 import {v1 as uuid} from "uuid";
 
@@ -9,7 +9,7 @@ export async function createTestDatabase(): Promise<Db> {
     return db
 }
 
-const dbOrder: DbSubOrder = {
+const dbOrder: SubOrder = Object.assign(new SubOrder(), {
     exchange: "bittrex",
     exchangeOrderId: '1',
     id: 1,
@@ -21,7 +21,7 @@ const dbOrder: DbSubOrder = {
     status: Status.PREPARE,
     filledAmount: new BigNumber(0),
     sentToAggregator: false
-};
+});
 
 test("orders", async () => {
     const db = await createTestDatabase()
@@ -86,12 +86,12 @@ test("in transaction", async () => {
 test("trades", async () => {
     const db = await createTestDatabase()
 
-    const trade: Trade = {
+    const trade: Trade = Object.assign(new Trade(), {
         exchange: 'bittrex',
         exchangeOrderId: '123',
         price: new BigNumber(100.500),
         amount: new BigNumber(200.700),
-    };
+    });
 
     await expect(db.insertTrade(trade)).resolves.toBe(1)
 

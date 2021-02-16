@@ -1,5 +1,6 @@
 import {log} from '../log';
-import {Db, DbSubOrder} from '../db/Db';
+import {Db} from '../db/Db';
+import {SubOrder} from '../Model';
 import {Settings} from '../Settings';
 
 import express, {Express} from 'express';
@@ -74,7 +75,7 @@ export class WebUI {
         });
     }
 
-    sendToFrontend(data: DbSubOrder): void {
+    sendToFrontend(data: SubOrder): void {
         try {
             if (this.frontendWs) {
                 this.frontendWs.send(JSON.stringify(data));
