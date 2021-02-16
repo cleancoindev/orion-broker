@@ -39,6 +39,7 @@ function fromStatus(status: string): Status {
         case 'closed':
             return Status.FILLED;
         case 'canceled':
+        case 'expired' :
             return Status.CANCELED;
         default:
             throw new Error('Unknown ccxt status ' + status);
