@@ -81,6 +81,12 @@ export function fromWei8(wei: BigNumber.Value): BigNumber {
     return fromWei(wei, 8);
 }
 
+export function fromWeiAsset(wei: BigNumber.Value, assetName: string): BigNumber {
+    const decimals = assetName === 'ETH' ? 18 : tokensDecimals[assetName];
+    if (decimals === undefined) throw new Error('no decimals for ' + assetName);
+    return fromWei(wei, decimals);
+}
+
 export class OrionBlockchain {
     private readonly chainId: number;
     private readonly orionBlockchainUrl: string;
@@ -397,7 +403,7 @@ export class OrionBlockchain {
         } else {
             const decimals = tokensDecimals[currency];
             if (decimals === undefined) throw new Error('no decimals for ' + currency);
-            return n.multipliedBy(Math.pow(10, decimals)).toFixed(0);
+            return n.multipliedBy(Math.pow(10, decimals)).integerValue(BigNumber.ROUND_CEIL).toFixed(0);
         }
     }
 }
