@@ -70,7 +70,7 @@ export class CCXTConnector implements Connector {
     // TODO: implement ccxtExchange.precisionMode === SIGNIFICANT_DIGITS
     amountToPrecision(amount: BigNumber, symbol: string, mode: 'floor' | 'ceil' | 'round' = 'round'): BigNumber {
         const
-            exPrecision = this.ccxtExchange.getMarket(toSymbol(symbol)).precision.amount,
+            exPrecision = this.ccxtExchange.markets[toSymbol(symbol)].precision.amount,
             precision = this.ccxtExchange.precisionMode === 0 ? exPrecision : Math.abs(Math.log10(exPrecision)),
             roundMode = mode !== 'floor' ? mode !== 'ceil' ? undefined : BigNumber.ROUND_CEIL : BigNumber.ROUND_FLOOR
         ;
@@ -79,7 +79,7 @@ export class CCXTConnector implements Connector {
 
     priceToPrecision(price: BigNumber, symbol: string, mode: 'floor' | 'ceil' | 'round' = 'round'): BigNumber {
         const
-            exPrecision = this.ccxtExchange.getMarket(toSymbol(symbol)).precision.price,
+            exPrecision = this.ccxtExchange.markets[toSymbol(symbol)].precision.price,
             precision = this.ccxtExchange.precisionMode === 0 ? exPrecision : Math.abs(Math.log10(exPrecision)),
             roundMode = mode !== 'floor' ? mode !== 'ceil' ? undefined : BigNumber.ROUND_CEIL : BigNumber.ROUND_FLOOR
         ;
