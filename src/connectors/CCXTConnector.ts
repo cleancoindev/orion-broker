@@ -96,8 +96,8 @@ export class CCXTConnector implements Connector {
         if(params.fixPrecision === true) {
             amount = this.amountToPrecision(amount, symbol, side === 'sell' ? 'floor' : 'ceil');
             price = this.priceToPrecision(price, symbol, side === 'sell' ? 'ceil' : 'floor');
-            delete(params.fixPrecision);
         }
+        delete(params.fixPrecision);
 
         if(params.timeInForce && type === 'market')
             delete(params.timeInForce);
