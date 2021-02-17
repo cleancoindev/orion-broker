@@ -21,6 +21,7 @@ import {Connectors, ExchangeResolve} from './connectors/Connectors';
 import {fromWei8, OrionBlockchain} from './OrionBlockchain';
 import {Settings} from './Settings';
 import {Connector, ExchangeWithdrawLimit, ExchangeWithdrawStatus} from './connectors/Connector';
+import {tokensDecimals} from './main';
 
 export class Broker {
     settings: Settings;
@@ -142,7 +143,6 @@ export class Broker {
         ;
 
         if (srcBalance.isZero() && isSwap) {
-        // if (true) {
             return {
                 id: request.id,
                 status: Status.REJECTED,
@@ -332,7 +332,9 @@ export class Broker {
         if (liability.outstandingAmount.gt(0) && (now - liability.timestamp > this.settings.duePeriodSeconds)) {
             const
                 assetName = liability.assetName,
-                amount: BigNumber = fromWei8(liability.outstandingAmount)
+                assetDecimals = tokensDecimals[assetName]||8, // process asset without decimals error
+                amountWei8: BigNumber = fromWei8(liability.outstandingAmount),
+                amount: BigNumber = assetDecimals < 8 ? amountWei8.decimalPlaces(assetDecimals, BigNumber.ROUND_CEIL) : amountWei8
             ;
 
             if ((await this.db.getPendingTransactions()).length) {
