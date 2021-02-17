@@ -18,7 +18,7 @@ import {
 import BigNumber from 'bignumber.js';
 import {WebUI} from './ui/WebUI';
 import {Connectors, ExchangeResolve} from './connectors/Connectors';
-import {fromWeiAsset, OrionBlockchain} from './OrionBlockchain';
+import {fromWei8, OrionBlockchain} from './OrionBlockchain';
 import {Settings} from './Settings';
 import {Connector, ExchangeWithdrawLimit, ExchangeWithdrawStatus} from './connectors/Connector';
 
@@ -142,6 +142,7 @@ export class Broker {
         ;
 
         if (srcBalance.isZero() && isSwap) {
+        // if (true) {
             return {
                 id: request.id,
                 status: Status.REJECTED,
@@ -331,7 +332,7 @@ export class Broker {
         if (liability.outstandingAmount.gt(0) && (now - liability.timestamp > this.settings.duePeriodSeconds)) {
             const
                 assetName = liability.assetName,
-                amount: BigNumber = fromWeiAsset(liability.outstandingAmount, assetName)
+                amount: BigNumber = fromWei8(liability.outstandingAmount)
             ;
 
             if ((await this.db.getPendingTransactions()).length) {
@@ -481,6 +482,7 @@ export class Broker {
             filled = missedAmount.eq(0),
             timeInForce = isSellOrder ? {timeInForce: 'IOC'} : null,
             fixPrecision = true,
+            newOrderStatus : Status = executedAmount.gt(0) ? Status.FILLED : Status.CANCELED,
             buyTrade: Trade = new Trade()
         ;
 
@@ -491,12 +493,11 @@ export class Broker {
             } catch (e) {
                 log.error(e);
             }
-        } else {
-            dbSubOrder.status = executedAmount.gt(0) ? Status.FILLED : Status.CANCELED;
         }
 
         if (sendOrder === null) {
             //TODO: send failed notification for broker
+            dbSubOrder.status = newOrderStatus;
         } else {
 
             buyTrade.exchange = dbSubOrder.exchange;

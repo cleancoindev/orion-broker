@@ -166,7 +166,7 @@ export class CCXTConnector implements Connector {
                 status = newStatus === Status.FILLED ? 'ok' : 'canceled'
             ;
             log.debug(this.exchange.id + ' check order response: ', ccxtOrder);
-            if (newStatus === Status.FILLED) {
+            if (newStatus === Status.FILLED || newStatus === Status.CANCELED) {
                 this.onTrade(Object.assign(trade, {amount, status}));
             }
         }
