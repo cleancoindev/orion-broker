@@ -103,6 +103,7 @@ export class CCXTConnector implements Connector {
         if(params.timeInForce && type === 'market')
             delete(params.timeInForce);
 
+        log.debug(this.exchange.id + ' submit order: ', {subOrderId, symbol, side, amount, price, type, params});
         const ccxtOrder: ccxt.Order = await this.ccxtExchange.createOrder(
             toSymbol(symbol),
             type,

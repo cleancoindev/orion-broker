@@ -403,7 +403,9 @@ export class OrionBlockchain {
         } else {
             const decimals = tokensDecimals[currency];
             if (decimals === undefined) throw new Error('no decimals for ' + currency);
-            return n.multipliedBy(Math.pow(10, decimals)).integerValue(BigNumber.ROUND_CEIL).toFixed(0);
+            const inWei : BigNumber = n.multipliedBy(Math.pow(10, decimals)).integerValue();
+            if(inWei.isZero()) throw new Error(`amount of ${currency} with ${decimals} decimals is zero`);
+            return inWei.toFixed(0);
         }
     }
 }
