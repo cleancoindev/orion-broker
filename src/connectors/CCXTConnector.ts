@@ -94,14 +94,14 @@ export class CCXTConnector implements Connector {
      */
     async submitSubOrder(subOrderId: number, symbol: string, side: Side, amount: BigNumber, price: BigNumber, type: string, params: any): Promise<SendOrder> {
 
-        if(params.fixPrecision === true) {
+        if (params.fixPrecision === true) {
             amount = this.amountToPrecision(amount, symbol, side === 'sell' ? 'floor' : 'ceil');
             price = this.priceToPrecision(price, symbol, side === 'sell' ? 'ceil' : 'floor');
         }
-        delete(params.fixPrecision);
+        delete (params.fixPrecision);
 
-        if(params.timeInForce && type === 'market')
-            delete(params.timeInForce);
+        if (params.timeInForce && type === 'market')
+            delete (params.timeInForce);
 
         log.debug(this.exchange.id + ' submit order: ', {subOrderId, symbol, side, amount, price, type, params});
         const ccxtOrder: ccxt.Order = await this.ccxtExchange.createOrder(
@@ -114,12 +114,24 @@ export class CCXTConnector implements Connector {
         );
         log.debug(this.exchange.id + ' submit order response: ', ccxtOrder);
 
+        let executeStatus = null;
+        try {
+            executeStatus = fromStatus(ccxtOrder.status);
+        } catch (e) {
+            log.error('submit order unknown status error: ', ccxtOrder.status, e); //TODO: inspect real answer from exchanges & add to .fromStatus
+        }
+        const
+            executedAmount = parseFilledAmount(ccxtOrder.amount),
+            executedPrice = parseFilledAmount(ccxtOrder.price)
+        ;
+
         return {
             exchangeOrderId: ccxtOrder.id,
             timestamp: ccxtOrder.timestamp || Date.now(),
-            status: Status.ACCEPTED, // todo: OPTIMIZATION some exchanges can return Status.FILLED right here - we need to be able to handle it
-            // status: Status.ACCEPTED, // todo: OPTIMIZATION некоторые биржи могут вернуть Status.FILLED прямо здесь - неплохо бы уметь это обрабатывать
-            // sentToAggregator: false
+            status: executeStatus === null ? Status.ACCEPTED : executeStatus, // todo: OPTIMIZATION some exchanges can return Status.FILLED right here - we need to be able to handle it
+            price: executedPrice.isZero() ? price : executedPrice,
+            amount: executedAmount.isZero() ? amount : executedAmount,
+            filled: new BigNumber(ccxtOrder.filled)
         };
     }
 

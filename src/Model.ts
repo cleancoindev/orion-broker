@@ -62,6 +62,9 @@ export interface SendOrder {
     exchangeOrderId: string;
     timestamp: number;
     status: Status;
+    price : BigNumber;
+    amount : BigNumber;
+    filled? : BigNumber;
 }
 
 export interface SubOrder {
