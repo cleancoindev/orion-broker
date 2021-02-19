@@ -77,14 +77,14 @@ export class Broker {
         }
     };
 
-    executedPrice (subOrder: SubOrder): BigNumber {
-        if(subOrder.orderType === OrderType.SUB)
+    executedPrice(subOrder: SubOrder): BigNumber {
+        if (subOrder.orderType === OrderType.SUB)
             return subOrder.price;
         const
-            executedAmount  = subOrder.trades.filter(trade=>trade.side === 'sell').reduce((sum, trade)=>sum.plus(trade.amount), new BigNumber(0)),
-            traderExecutedAmount = subOrder.trades.filter(trade=>trade.side === 'buy').reduce((sum, trade)=>sum.plus(trade.amount), new BigNumber(0)),
+            executedAmount = subOrder.trades.filter(trade => trade.side === 'sell').reduce((sum, trade) => sum.plus(trade.amount), new BigNumber(0)),
+            traderExecutedAmount = subOrder.trades.filter(trade => trade.side === 'buy').reduce((sum, trade) => sum.plus(trade.amount), new BigNumber(0)),
             precisionFromMinPrice = subOrder.price.decimalPlaces(),
-            price =  traderExecutedAmount.dividedBy(executedAmount).decimalPlaces(precisionFromMinPrice, BigNumber.ROUND_CEIL)
+            price = traderExecutedAmount.dividedBy(executedAmount).decimalPlaces(precisionFromMinPrice, BigNumber.ROUND_CEIL)
         ;
         return price.gte(subOrder.price) ? price : subOrder.price;
     }
@@ -127,7 +127,7 @@ export class Broker {
             dbSubOrder = new SubOrder(),
             reqSymbol = request.symbol || request.pair,
             [srcAsset, dstAsset]: string[] = reqSymbol.split('-'),
-            isRevert  = srcAsset === 'DAI',
+            isRevert = srcAsset === 'DAI',
             pair: string[] = [srcAsset, isSwap ? 'USDT' : dstAsset],
             symbol: string = (isRevert ? pair.reverse() : pair).join('-'),
             symbolAlias: string = this.symbolAlias(symbol, dbSubOrder.exchange),
@@ -176,7 +176,10 @@ export class Broker {
         let sendOrder: SendOrder = null;
 
         try {
-            sendOrder = await this.connector.submitSubOrder(dbSubOrder.exchange, dbSubOrder.id, symbolAlias, dbSubOrder.side, amount, price, 'limit', {timeInForce, fixPrecision});
+            sendOrder = await this.connector.submitSubOrder(dbSubOrder.exchange, dbSubOrder.id, symbolAlias, dbSubOrder.side, amount, price, 'limit', {
+                timeInForce,
+                fixPrecision
+            });
         } catch (e) {
             log.error('Submit order error:', e);
         }
@@ -191,8 +194,8 @@ export class Broker {
             trade.order = dbSubOrder;
             trade.symbol = symbol;
             trade.symbolAlias = symbolAlias;
-            trade.price = price;
-            trade.amount = amount;
+            trade.price = sendOrder.price;
+            trade.amount = sendOrder.amount;
             trade.side = side;
             trade.timestamp = sendOrder.timestamp;
             trade.type = 'limit';
@@ -332,7 +335,7 @@ export class Broker {
         if (liability.outstandingAmount.gt(0) && (now - liability.timestamp > this.settings.duePeriodSeconds)) {
             const
                 assetName = liability.assetName,
-                assetDecimals = tokensDecimals[assetName]||8, // process asset without decimals error
+                assetDecimals = tokensDecimals[assetName] || 8, // process asset without decimals error
                 amountWei8: BigNumber = fromWei8(liability.outstandingAmount),
                 amount: BigNumber = assetDecimals < 8 ? amountWei8.decimalPlaces(assetDecimals, BigNumber.ROUND_CEIL) : amountWei8
             ;
@@ -451,14 +454,17 @@ export class Broker {
     }
 
     async processSubOrderTrade(dbSubOrder: SubOrder, trade: Trade): Promise<void> {
-        if (trade.status === 'ok'  && !new BigNumber(dbSubOrder.amount).eq(trade.amount)) {
+        if (trade.status === 'ok' && !dbSubOrder.amount.eq(trade.amount)) {
             throw new Error('Partially trade not supported yet ' + dbSubOrder.id);
         }
 
         dbSubOrder.filledAmount = trade.amount;
         dbSubOrder.status = Status.FILLED;
 
-        await this.db.getOrderRepository().update(dbSubOrder.id, {filledAmount: trade.amount, status: dbSubOrder.status});
+        await this.db.getOrderRepository().update(dbSubOrder.id, {
+            filledAmount: trade.amount,
+            status: dbSubOrder.status
+        });
         await this.db.getTradeRepository().update(trade.id, {amount: trade.amount, status: trade.status});
 
     }
@@ -481,17 +487,20 @@ export class Broker {
             divPrice = dbSubOrder.buyPrice.multipliedBy(dbSubOrder.currentDev.plus(1)),
             price = revert ? new BigNumber(1).dividedBy(divPrice) : divPrice,
             type = isSellOrder ? 'limit' : 'market',
-            filled = missedAmount.eq(0),
+            filled = missedAmount.lte(0), // if filled more -> filled
             timeInForce = isSellOrder ? {timeInForce: 'IOC'} : null,
             fixPrecision = true,
-            newOrderStatus : Status = executedAmount.gt(0) ? Status.FILLED : Status.CANCELED,
+            newOrderStatus: Status = executedAmount.gt(0) ? Status.FILLED : Status.CANCELED,
             buyTrade: Trade = new Trade()
         ;
 
         let sendOrder: SendOrder = null;
-        if ( (isSellOrder && executedAmount.gt(0) ) || (dbSubOrder.trades.length === 2 && !filled) ) {
+        if ((isSellOrder && executedAmount.gt(0)) || (dbSubOrder.trades.length === 2 && !filled)) {
             try {
-                sendOrder = await this.connector.submitSubOrder(dbSubOrder.exchange, dbSubOrder.id, symbolAlias, side, amount, price, type, {...timeInForce, fixPrecision});
+                sendOrder = await this.connector.submitSubOrder(dbSubOrder.exchange, dbSubOrder.id, symbolAlias, side, amount, price, type, {
+                    ...timeInForce,
+                    fixPrecision
+                });
             } catch (e) {
                 log.error(e);
             }
@@ -507,17 +516,17 @@ export class Broker {
             buyTrade.order = dbSubOrder;
             buyTrade.symbol = symbol;
             buyTrade.symbolAlias = symbolAlias;
-            buyTrade.price = price;
-            buyTrade.amount = sendOrder ? amount : new BigNumber(0);
+            buyTrade.price = sendOrder.price;
+            buyTrade.amount = sendOrder.amount;
             buyTrade.side = side;
             buyTrade.timestamp = sendOrder.timestamp;
             buyTrade.type = type;
-            buyTrade.status = sendOrder ? 'pending' : 'failed';
+            buyTrade.status = 'pending';
 
             await this.db.insertTrade(buyTrade);
         }
 
-        if(trade.type === 'market' && !filled) {
+        if (trade.type === 'market' && !filled) {
             log.log('Confirmation needed');
             //TODO: notification for broker
         }
@@ -525,7 +534,10 @@ export class Broker {
         dbSubOrder.filledAmount = executedAmount;
 
         await this.db.getTradeRepository().update(trade.id, {amount: trade.amount, status: trade.status});
-        await this.db.getOrderRepository().update(dbSubOrder.id, {status: dbSubOrder.status, filledAmount: dbSubOrder.filledAmount});
+        await this.db.getOrderRepository().update(dbSubOrder.id, {
+            status: dbSubOrder.status,
+            filledAmount: dbSubOrder.filledAmount
+        });
 
     }
 

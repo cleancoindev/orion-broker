@@ -31,6 +31,8 @@ export class EmulatorConnector implements Connector {
         return {
             exchangeOrderId: uuid().toString(),
             timestamp: Date.now(),
+            amount,
+            price,
             status: Status.ACCEPTED
         };
     }
