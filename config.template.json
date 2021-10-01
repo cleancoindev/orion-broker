@@ -9,8 +9,48 @@
   "wsPort": 4001,
   "passwordHash": "",
   "passwordSalt": "",
+  "network": "ethereum",
   "production": true,
-  "duePeriodSeconds": 10800,
+  "duePeriodSeconds": 3600,
+  "hardDuePeriodSeconds": 7200,
+  "liabilityCheckInterval": 300,
+  "USDTLiabilityThreshold": 100,
+  "externalRepayCheckInterval": 3600,
+  "feeAssetHoldThreshold": 1,
+  "minBalanceLimitCheckInterval": 1800,
+  "MinBalanceLimitTransferMultiplier": 1.2,
+  "minBalanceLimits": {
+    "binance": {
+      "ORN": {
+        "spot": 500,
+        "contract": 500
+      },
+      "USDT": {
+        "spot": 30000,
+        "margin": 60000
+      }
+    }
+  },
+  "complexOrderDeviationToFirstOrder": 1,
+  "marginAssetsList": {
+    "binance": [
+      "BNB",
+      "BTC",
+      "ETH",
+      "LTC",
+      "BCH",
+      "LINK",
+      "DOT",
+      "ADA",
+      "USDC",
+      "USDT"
+    ],
+    "kucoin": [
+      "USDT",
+      "ETH",
+      "MATIC"
+    ]
+  },
   "exchanges": {
   }
 }
