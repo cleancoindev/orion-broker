@@ -55,7 +55,7 @@
     "ethers": "^5.0.20",
     "express": "^4.17.1",
     "long": "^4.0.0",
-    "node-fetch": "^2.3.0",
+    "node-fetch": "^3.2.10",
     "reflect-metadata": "^0.1.13",
     "socket.io-client": "^2.3.1",
     "sqlite3": "^5.0.0",
